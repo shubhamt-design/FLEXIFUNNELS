@@ -25,6 +25,9 @@
     --grad-warm:linear-gradient(120deg,var(--amber),var(--pink));
     --radius:22px;
     --shadow:0 20px 60px -20px rgba(123,92,255,.55);
+    --ff-accent:#ff3d9a;
+    --ff-accent-hover:#7b5cff;
+    --ff-btn-text:#ffffff;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -246,11 +249,10 @@
   .cta form{display:flex;gap:10px;max-width:520px;margin:0 auto;flex-wrap:wrap;justify-content:center}
   .cta input{flex:1 1 260px;padding:16px 22px;border-radius:999px;border:1px solid var(--card-border);background:rgba(255,255,255,.08);color:var(--text);font:inherit;outline:none;transition:border-color .3s,box-shadow .3s}
   .cta input:focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(123,92,255,.25)}
+  .lead-wrap{max-width:520px;margin:0 auto;text-align:left}
+  .ff-orderform-theme input{background:rgba(255,255,255,.08);color:var(--text);border-color:var(--card-border)}
+  .ff-orderform-theme input:focus{border-color:var(--violet)}
   .cta .note{margin-top:14px;font-size:.9rem;color:var(--muted)}
-  .countdown{display:flex;justify-content:center;gap:12px;margin-bottom:30px}
-  .countdown div{min-width:74px;padding:12px 8px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid var(--card-border)}
-  .countdown b{display:block;font-size:1.7rem;font-variant-numeric:tabular-nums}
-  .countdown small{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em}
 
   /* ---------- Footer ---------- */
   footer{padding:60px 0 40px;border-top:1px solid var(--card-border);margin-top:120px}
@@ -294,7 +296,6 @@
     .p-main{width:260px;height:340px}
     .p-back,.p-back-2{width:200px;height:270px}
     .chip-1{left:0}.chip-2{right:0}.chip-3{display:none}
-    .countdown div{min-width:62px}
   }
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
@@ -310,7 +311,6 @@
     <ul class="nav-links" id="navLinks">
       <li><a href="#products">Products</a></li>
       <li><a href="#features">Why us</a></li>
-      <li><a href="#reviews">Reviews</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#faq">FAQ</a></li>
     </ul>
@@ -328,7 +328,7 @@
 
   <div class="container hero-inner">
     <div>
-      <span class="badge reveal"><span class="pill">NEW</span> 120+ fresh products added this month</span>
+      <span class="badge reveal"><span class="pill">NEW</span> Instant download · Lifetime updates</span>
       <h1 class="reveal d1">Launch faster with<br>
         <span class="rotator grad-text" id="rotator"><span>templates</span></span><br>that actually sell.
       </h1>
@@ -336,15 +336,6 @@
       <div class="hero-ctas reveal d3">
         <a href="#products" class="btn btn-primary">Browse Products <span class="arrow">→</span></a>
         <a href="#pricing" class="btn btn-ghost">▶ Get All-Access</a>
-      </div>
-      <div class="proof reveal d3">
-        <div class="avatars">
-          <i style="background:#ff3d9a">AK</i><i style="background:#7b5cff">JS</i><i style="background:#22d3ee">MR</i><i style="background:#ffb547">LP</i><i style="background:#a3e635;color:#0b0820">+</i>
-        </div>
-        <div>
-          <span class="stars">★★★★★</span> <b>4.9/5</b>
-          <small>Loved by 25,000+ creators worldwide</small>
-        </div>
       </div>
     </div>
 
@@ -362,9 +353,8 @@
             <span class="mini-btn">Buy now</span>
           </div>
         </div>
-        <div class="float-chip chip-1"><span class="ic" style="background:rgba(163,230,53,.2)">💸</span><div>+$1,284<small>Sales today</small></div></div>
+        <div class="float-chip chip-1"><span class="ic" style="background:rgba(163,230,53,.2)">♾️</span><div>Lifetime updates<small>Free, forever</small></div></div>
         <div class="float-chip chip-2"><span class="ic" style="background:rgba(255,61,154,.2)">⚡</span><div>Instant download<small>Delivered in 2 seconds</small></div></div>
-        <div class="float-chip chip-3"><span class="ic" style="background:rgba(34,211,238,.2)">🔥</span><div>Bestseller<small>3,200+ sold</small></div></div>
       </div>
     </div>
   </div>
@@ -440,18 +430,8 @@
       <div class="feature reveal"><div class="f-icon" style="background:rgba(255,61,154,.18)">⚡</div><h3>Instant delivery</h3><p>Pay once and your files land in your inbox within seconds.</p></div>
       <div class="feature reveal d1"><div class="f-icon" style="background:rgba(123,92,255,.2)">♾️</div><h3>Lifetime updates</h3><p>Every new version is yours free, forever. No subscriptions.</p></div>
       <div class="feature reveal d2"><div class="f-icon" style="background:rgba(34,211,238,.18)">🛡️</div><h3>30-day guarantee</h3><p>Not happy? Get a full refund, no questions asked.</p></div>
-      <div class="feature reveal d3"><div class="f-icon" style="background:rgba(255,181,71,.2)">💬</div><h3>Creator community</h3><p>Join 25K+ makers sharing wins, feedback and launches.</p></div>
+      <div class="feature reveal d3"><div class="f-icon" style="background:rgba(255,181,71,.2)">💬</div><h3>Creator community</h3><p>Share wins, get feedback and launch alongside other makers.</p></div>
     </div>
-  </div>
-</section>
-
-<!-- ================= STATS ================= -->
-<section class="container reveal">
-  <div class="stats">
-    <div class="stat"><b data-count="25000" data-suffix="+">0</b><span>Happy creators</span></div>
-    <div class="stat"><b data-count="180" data-suffix="+">0</b><span>Digital products</span></div>
-    <div class="stat"><b data-count="4.9" data-dec="1" data-suffix="★">0</b><span>Average rating</span></div>
-    <div class="stat"><b data-count="2" data-prefix="$" data-suffix="M+">0</b><span>Earned by customers</span></div>
   </div>
 </section>
 
@@ -466,24 +446,6 @@
       <div class="step reveal"><h3>Pick your product</h3><p>Browse proven templates, guides and kits built for your niche.</p></div>
       <div class="step reveal d1"><h3>Download instantly</h3><p>Secure checkout, then immediate access to every file and bonus.</p></div>
       <div class="step reveal d2"><h3>Customise &amp; launch</h3><p>Make it yours in minutes and put it to work the same day.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= TESTIMONIALS ================= -->
-<section class="section" id="reviews" style="padding-top:0">
-  <div class="container">
-    <div class="section-head reveal">
-      <span class="eyebrow">Reviews</span>
-      <h2>Creators <span class="grad-text">can't stop</span> talking</h2>
-    </div>
-    <div class="testis">
-      <div class="testi reveal"><span class="stars">★★★★★</span><p>"The Launch Guide paid for itself 200x over. I made $4,300 on my first product launch within two weeks."</p>
-        <div class="who"><i style="background:var(--pink)">PR</i><div><b>Priya R.</b><small>Course creator</small></div></div></div>
-      <div class="testi reveal d1"><span class="stars">★★★★★</span><p>"Second Brain OS replaced five apps for me. It's the first productivity system I've actually stuck with."</p>
-        <div class="who"><i style="background:var(--violet)">DM</i><div><b>Daniel M.</b><small>Freelance designer</small></div></div></div>
-      <div class="testi reveal d2"><span class="stars">★★★★★</span><p>"All-Access is a no-brainer. The Social Pack alone saves my team ten hours every single week."</p>
-        <div class="who"><i style="background:var(--cyan);color:#0b0820">SL</i><div><b>Sofia L.</b><small>Agency owner</small></div></div></div>
     </div>
   </div>
 </section>
@@ -503,10 +465,10 @@
         <a href="#products" class="btn btn-ghost">Browse products</a>
       </div>
       <div class="plan featured reveal d1">
-        <span class="ribbon">MOST POPULAR · SAVE 85%</span>
+        <span class="ribbon">MOST POPULAR · BEST VALUE</span>
         <h3>All-Access Pass</h3><div class="amount">$149<small> one-time</small></div><p>Every product, now and forever.</p>
-        <ul><li>All 180+ products</li><li>Every future release free</li><li>Commercial license</li><li>Private creator community</li><li>Priority support</li></ul>
-        <a href="#cta" class="btn btn-primary">Get All-Access <span class="arrow">→</span></a>
+        <ul><li>Every product in the store</li><li>Every future release free</li><li>Commercial license</li><li>Private creator community</li><li>Priority support</li></ul>
+        <a href="#cta" data-flexi-wire="product" class="btn btn-primary">Get All-Access <span class="arrow">→</span></a>
       </div>
       <div class="plan reveal d2">
         <h3>Team</h3><div class="amount">$399<small> one-time</small></div><p>For agencies and studios.</p>
@@ -536,20 +498,11 @@
 <!-- ================= CTA ================= -->
 <section class="container" id="cta">
   <div class="cta reveal">
-    <span class="eyebrow">Launch offer ends soon</span>
-    <h2>Grab All-Access for <span class="grad-text">85% off</span></h2>
-    <p>Lock in lifetime access to every product before the price goes up.</p>
-    <div class="countdown" id="countdown">
-      <div><b id="cd-d">00</b><small>Days</small></div>
-      <div><b id="cd-h">00</b><small>Hours</small></div>
-      <div><b id="cd-m">00</b><small>Mins</small></div>
-      <div><b id="cd-s">00</b><small>Secs</small></div>
-    </div>
-    <form id="ctaForm">
-      <input type="email" required placeholder="Enter your email address" aria-label="Email address">
-      <button class="btn btn-primary" type="submit">Claim my discount <span class="arrow">→</span></button>
-    </form>
-    <div class="note">🔒 Secure checkout · 30-day money-back guarantee</div>
+    <span class="eyebrow">Stay in the loop</span>
+    <h2>Get new products <span class="grad-text">first</span></h2>
+    <p>Join the list and be the first to hear about new releases and members-only deals.</p>
+    <div class="lead-wrap ff-orderform-theme"><!--FLEXI_LEAD_FORM: first_name, email--></div>
+    <div class="note">🔒 No spam. Unsubscribe anytime.</div>
   </div>
 </section>
 
@@ -584,23 +537,10 @@
     entries.forEach(e => {
       if (!e.isIntersecting) return;
       e.target.classList.add('in');
-      e.target.querySelectorAll('[data-count]').forEach(countUp);
       io.unobserve(e.target);
     });
   }, {threshold:.15});
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-  function countUp(el){
-    const end = parseFloat(el.dataset.count), dec = +el.dataset.dec || 0;
-    const pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
-    const t0 = performance.now(), dur = 1800;
-    const tick = now => {
-      const p = Math.min((now - t0) / dur, 1), v = end * (1 - Math.pow(1 - p, 3));
-      el.textContent = pre + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString()) + suf;
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }
 
   // 3D tilt on hero product stack
   const hv = document.getElementById('heroVisual'), stack = document.getElementById('stack');
@@ -629,23 +569,6 @@
     b.classList.add('added'); b.textContent = '✓';
     showToast('✓ ' + b.closest('.product').querySelector('h3').textContent + ' added to cart');
   }));
-
-  // CTA form
-  document.getElementById('ctaForm').addEventListener('submit', e => { e.preventDefault(); e.target.reset(); showToast('🎉 Discount sent! Check your inbox.'); });
-
-  // Countdown (3 days from first visit)
-  let deadline;
-  try { deadline = +localStorage.getItem('nk-deadline'); } catch {}
-  if (!deadline || deadline < Date.now()) { deadline = Date.now() + 3 * 864e5; try { localStorage.setItem('nk-deadline', deadline); } catch {} }
-  const pad = n => String(n).padStart(2, '0');
-  (function cd(){
-    const ms = Math.max(0, deadline - Date.now());
-    document.getElementById('cd-d').textContent = pad(Math.floor(ms / 864e5));
-    document.getElementById('cd-h').textContent = pad(Math.floor(ms / 36e5) % 24);
-    document.getElementById('cd-m').textContent = pad(Math.floor(ms / 6e4) % 60);
-    document.getElementById('cd-s').textContent = pad(Math.floor(ms / 1e3) % 60);
-    setTimeout(cd, 1000);
-  })();
 </script>
 </body>
 </html>
