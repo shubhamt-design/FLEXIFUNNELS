@@ -70,6 +70,9 @@ a:hover { text-decoration: underline; }
 .stat .value { font-size: 26px; font-weight: 650; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .stat .meta { color: var(--text-3); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+.srcs { list-style: none; margin: 4px 0 2px; padding: 0; font-size: 12px; }
+.srcs li { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.srcs li span { color: var(--text-2); font-variant-numeric: tabular-nums; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .card h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
@@ -265,11 +268,11 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
         <div class="meta" id="statContactsMeta">&nbsp;</div>
       </div>
       <div class="stat">
-        <div class="label">Buyers (excluded everywhere)</div>
+        <div class="label">Always removed (buyers &amp; opt-outs)</div>
         <div class="value" id="statBuyers">0</div>
+        <ul class="srcs" id="statSources"></ul>
         <div class="meta"><span id="statSync">Not synced yet</span>
-          <button class="btn small ghost" id="syncBtn" title="Re-read the buyers sheet now">↻ Sync now</button>
-          <a id="buyersLink" href="#" target="_blank" rel="noopener">Buyers sheet ↗</a></div>
+          <button class="btn small ghost" id="syncBtn" title="Re-read the buyers and opt-out sheets now">↻ Sync now</button></div>
       </div>
     </section>
 
@@ -277,7 +280,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <!-- STEP 1: BUILD LIST -->
       <div class="card">
         <h2><span class="step">1</span> Build a broadcast list</h2>
-        <p class="hint">Pick one audience or merge several, subtract the audiences you've already messaged. Overlaps and buyers are always removed.</p>
+        <p class="hint">Pick one audience or merge several, subtract the audiences you've already messaged. Overlaps, buyers and opt-outs are always removed.</p>
 
         <label class="f">Audiences to send to <span class="opt">— pick one, or several to merge</span></label>
         <div class="ms" id="msSend">
@@ -317,7 +320,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <!-- STEP 2: UPLOAD -->
       <div class="card">
         <h2><span class="step">2</span> Upload a new audience</h2>
-        <p class="hint">Each upload is saved under its name. Duplicates (same email <em>or</em> phone) and buyers are removed automatically.</p>
+        <p class="hint">Each upload is saved under its name. Duplicates (same email <em>or</em> phone), buyers and opt-outs are removed automatically.</p>
 
         <label class="f" for="upName">Audience name</label>
         <input type="text" id="upName" placeholder="e.g. Webinar – 12 Oct 2026" maxlength="90">
@@ -461,7 +464,6 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     var st = S.state, aud = S.audiences;
     $('userEmail').textContent = st.user || '';
     $('dbLink').href = st.dbUrl || '#';
-    $('buyersLink').href = st.buyers.sheetUrl;
     $('statAud').textContent = fmt(aud.length);
     var last = aud.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; })[0];
     $('statAudMeta').textContent = last ? 'Latest: ' + last.name : 'No audiences yet';
@@ -470,6 +472,9 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     $('statContacts').textContent = fmt(total);
     $('statContactsMeta').textContent = fmt(phones) + ' with phone number';
     $('statBuyers').textContent = fmt(st.buyers.count);
+    $('statSources').innerHTML = (st.buyers.sources || []).map(function (x) {
+      return '<li><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.label) + ' ↗</a><span>' + fmt(x.count) + '</span></li>';
+    }).join('');
     $('statSync').textContent = 'Synced ' + ago(st.buyers.lastSync);
     renderPickers(); renderChart(); renderTable(); renderLog();
   }
@@ -697,7 +702,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
         '<div class="line"><span class="l">Rows in file</span><span class="n">' + fmt(r.uploaded) + '</span></div>' +
         '<div class="line minus"><span class="l">− Duplicates (same email or phone)</span><span class="n">−' + fmt(r.duplicates) + '</span></div>' +
         '<div class="line minus"><span class="l">− No valid email or phone</span><span class="n">−' + fmt(r.invalid) + '</span></div>' +
-        '<div class="line minus"><span class="l">− Buyers</span><span class="n">−' + fmt(r.buyers) + '</span></div></div>' +
+        '<div class="line minus"><span class="l">− Buyers &amp; opt-outs</span><span class="n">−' + fmt(r.buyers) + '</span></div></div>' +
         '<div class="total"><div><div class="cap">Saved as “' + esc(r.name) + '”</div><div class="big">' + fmt(r.saved) + '</div></div>' +
         '<div class="cap">' + fmt(r.withPhone) + ' with phone</div></div></div>';
       toast('Audience "' + r.name + '" saved.');
@@ -772,7 +777,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     var list = newestFirst().filter(function (a) { return !q || a.name.toLowerCase().indexOf(q) >= 0; });
     if (!S.audiences.length) { $('tbl').innerHTML = '<tr><td class="empty">No audiences yet — upload one above.</td></tr>'; return; }
     $('tbl').innerHTML = '<tr><th>Audience</th><th class="num">Contacts</th><th class="num">With phone</th><th class="num">Duplicates removed</th>' +
-      '<th class="num">Buyers removed</th><th>Created</th><th></th></tr>' +
+      '<th class="num">Buyers / opt-outs removed</th><th>Created</th><th></th></tr>' +
       list.map(function (a) {
         return '<tr><td><div class="nm"><span class="sw" style="background:' + colorFor(a.name) + '"></span>' + esc(a.name) + '</div>' +
           (a.source && /^Built from/.test(a.source) ? '<div class="muted">' + esc(a.source) + '</div>' : '') + '</td>' +
@@ -811,7 +816,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   $('syncBtn').addEventListener('click', function () {
     var btn = this; busy(btn, true, 'Syncing…');
     call('syncBuyersNow').then(function (r) {
-      toast(r.removed ? 'Removed ' + fmt(r.removed) + ' buyers from audiences.' : 'Buyers synced — no buyers found in audiences.');
+      toast(r.removed ? 'Removed ' + fmt(r.removed) + ' buyers / opt-outs from audiences.' : 'Synced — no buyers or opt-outs found in audiences.');
       return load();
     }).catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
   });

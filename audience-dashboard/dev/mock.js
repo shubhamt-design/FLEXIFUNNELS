@@ -12,14 +12,14 @@
       return wait({ user: 'arman@flexifunnels.com', audiences: auds, dbUrl: '#', log: [
         { time: new Date(Date.now() - 3e5).toISOString(), user: 'auto-sync', action: 'Removed new buyers', details: '14 removed: Webinar – 12 Oct −9, Webinar – 5 Oct −5' },
         { time: new Date(Date.now() - 7e6).toISOString(), user: 'arman@flexifunnels.com', action: 'Uploaded audience', details: 'Webinar – 12 Oct: 14,620 rows → 12,980 saved (1,450 duplicates, 31 invalid, 159 buyers removed)' }],
-        buyers: { count: 3412, lastSync: new Date(Date.now() - 18e5).toISOString(), sheetUrl: '#' } });
+        buyers: { count: 7520, lastSync: new Date(Date.now() - 18e5).toISOString(), sources: [{ label: 'Buyers', count: 3412, url: '#' }, { label: 'Opted-out', count: 2960, url: '#' }, { label: 'Removed by reminder team', count: 1148, url: '#' }] } });
     },
     buildList: function (bases, sub, phoneOnly) {
       var steps = bases.map(function (n) { return { label: n, count: auds.find(function (x) { return x.name === n; }).contacts, add: true }; });
       var merged = steps.reduce(function (s, x) { return s + x.count; }, 0);
       if (bases.length > 1) steps.push({ label: 'In more than one of these audiences', count: -Math.round(merged * .18) });
       if (sub.length) steps.push({ label: 'Already in subtracted audiences', count: -Math.round(merged * .2) });
-      steps.push({ label: 'Buyers', count: -42 });
+      steps.push({ label: 'Buyers', count: -42 }, { label: 'Opted-out', count: -31 }, { label: 'Removed by reminder team', count: -9 });
       if (phoneOnly) steps.push({ label: 'No phone number', count: -610 });
       var fin = merged + steps.filter(function (x) { return !x.add; }).reduce(function (s, x) { return s + x.count; }, 0);
       return wait({ bases: bases, subtract: sub, phoneOnly: phoneOnly, steps: steps, mergedTotal: merged, final: fin, rows: [['A', 'a@x.com', '919840402282']] }, 700);

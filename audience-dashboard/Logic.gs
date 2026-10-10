@@ -6,10 +6,14 @@
  * OR their PHONE matches.
  */
 
-/** Lowercase + trim. Returns '' if it does not look like an email. */
+/**
+ * Lowercase + trim. Pulls the address out of text like "Email : a@b.com".
+ * Returns '' if there is no email in it.
+ */
 function normEmail(value) {
   var s = String(value == null ? '' : value).trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s : '';
+  var m = s.match(/[^\s@:;,<>()"']+@[^\s@:;,<>()"']+\.[^\s@:;,<>()"']+/);
+  return m ? m[0] : '';
 }
 
 /**
@@ -44,6 +48,19 @@ function detectColumns(header) {
     email: find(/e-?mail/),
     phone: find(/phone|mobile|whats ?app|contact|number|cell|mob/, /e-?mail/)
   };
+}
+
+/**
+ * Find the header row in the first few rows (some sheets have a banner or
+ * blank rows on top). Returns { row: index, cols } or null if none found.
+ */
+function findHeader(values) {
+  var limit = Math.min(values.length, 10);
+  for (var i = 0; i < limit; i++) {
+    var cols = detectColumns(values[i]);
+    if (cols.email >= 0 || cols.phone >= 0) return { row: i, cols: cols };
+  }
+  return null;
 }
 
 /** Keys used for matching a cleaned row [name, email, phone]. */
@@ -133,7 +150,7 @@ function pickColumns(table, cols) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns,
+  module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns, findHeader: findHeader,
     keySetOf: keySetOf, matchesSet: matchesSet, cleanAndDedupe: cleanAndDedupe,
     removeMatching: removeMatching, pickColumns: pickColumns };
 }

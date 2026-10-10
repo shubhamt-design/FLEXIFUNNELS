@@ -4,7 +4,7 @@ A Google Sheets–backed dashboard for webinar audiences:
 
 - **Upload** a list (CSV / Excel / Google Drive link) under a fixed name. Duplicates and buyers are removed automatically.
 - **Build a broadcast list**: pick one audience — or several to **merge** — pick old audiences to subtract, see the final unique count, then download a clean CSV for the WhatsApp tool.
-- **Buyers stay current**: every hour the buyers sheet is re-read and new buyers are removed from *every* saved audience.
+- **Do-not-contact lists stay current**: every hour the buyers sheet, the opted-out sheet and the reminder-team removal sheet are re-read, and anyone on them is removed from *every* saved audience. Add more sheets in `CONFIG.EXCLUDE_SHEETS`.
 - **Pie chart** of contacts per audience, a table of all audiences and an activity log.
 - Only `@flexifunnels.com` accounts can open it.
 
@@ -16,7 +16,7 @@ A Google Sheets–backed dashboard for webinar audiences:
 | Phone format | Stored as digits with country code, no `+`: `9840402282` → `919840402282`. `--`, `NA`, blanks = no phone |
 | Invalid rows | Rows with neither a valid email nor a valid phone are dropped |
 | Duplicates in a file | First row kept; if a duplicate has the phone/email the kept row was missing, it is filled in |
-| Buyers | Removed at upload, when building a list, and hourly from every saved audience |
+| Buyers & opt-outs | Everyone on the `EXCLUDE_SHEETS` sheets is removed at upload, when building a list, and hourly from every saved audience. The header row is found automatically even under a banner row; text like `Email : a@b.com` is handled |
 | Merge | Picking several "send to" audiences combines them; a person in more than one is kept once |
 | Subtract | Nothing is pre-selected — you choose which old audiences to remove |
 
@@ -33,14 +33,14 @@ Do this signed in as the account that should own the dashboard (`arman@flexifunn
    - **+ → HTML**, name it `Index` → paste [`Index.html`](Index.html)
    - **Project Settings (⚙) → tick "Show appsscript.json"**, then replace its content with [`appsscript.json`](appsscript.json)
    Tip: on GitHub open each file and use the **Copy raw file** button (⧉ at the top right of the file) so nothing gets cut off. After pasting, the last line of each file should match the end of the file on GitHub. Press **Save (💾)** after each file.
-4. **Check the settings** at the top of `Code.gs` (`CONFIG`): buyers sheet ID, `ALLOWED_DOMAIN`, `COUNTRY_CODE`. They are pre-filled.
+4. **Check the settings** at the top of `Code.gs` (`CONFIG`): the do-not-contact sheets (`EXCLUDE_SHEETS`), `ALLOWED_DOMAIN`, `COUNTRY_CODE`. They are pre-filled.
 5. **Run setup.** Pick `setup` in the function dropdown → **Run** → approve the permissions (Sheets, Drive, triggers). This creates the `_Audiences` and `_Log` tabs, does the first buyer sync and schedules the hourly sync.
 6. **Deploy.** **Deploy → New deployment → ⚙ Web app**
    - Execute as: **Me**
    - Who has access: **Anyone within flexifunnels.com**
    - **Deploy** → copy the web app URL and share it with the team.
 
-The buyers sheet only needs to be readable by the owner account; teammates don't need access to it or to the data sheet.
+The do-not-contact sheets only need to be readable by the owner account; teammates don't need access to it or to the data sheet.
 
 ### Updating the code later
 

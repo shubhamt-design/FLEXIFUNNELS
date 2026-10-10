@@ -18,6 +18,16 @@ for (const bad of ['--', 'NA', '', null, '12345']) assert.strictEqual(L.normPhon
 assert.strictEqual(L.normEmail('  Thiru@FlexiFunnels.com '), 'thiru@flexifunnels.com');
 assert.strictEqual(L.normEmail('ms.madasamy+1@gmail.com'), 'ms.madasamy+1@gmail.com');
 assert.strictEqual(L.normEmail('NA'), '');
+assert.strictEqual(L.normEmail('Email : ads4al@gmail.com'), 'ads4al@gmail.com');
+assert.strictEqual(L.normEmail(' vaibhavdamle256@gmail.com'), 'vaibhavdamle256@gmail.com');
+
+// header detection: banner row on top (reminder-team sheet), name+phone only (opt-out sheet)
+const banner = "DO NOT EDIT OTHER TEAM MEMBER'S DATA (All Fields Are MANDATORY)";
+assert.deepStrictEqual(L.findHeader([[banner, banner, banner, banner, banner, banner],
+  ['Name', 'Email', 'Phone', "Team Member's Name", 'SOURCE OF LEAD', 'REASON OF REMOVE (What They Said)'], ['a', 'b', 'c']]),
+  { row: 1, cols: { name: 0, email: 1, phone: 2 } });
+assert.deepStrictEqual(L.findHeader([['Name', 'Phone', '', '', ''], ['', '']]), { row: 0, cols: { name: 0, email: -1, phone: 1 } });
+assert.strictEqual(L.findHeader([['x', 'y'], ['1', '2']]), null);
 
 // headers
 assert.deepStrictEqual(L.detectColumns(['Name', 'Email', 'Phone']), { name: 0, email: 1, phone: 2 });

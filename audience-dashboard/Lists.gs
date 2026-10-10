@@ -39,10 +39,12 @@ function buildList_(bases, subtract, phoneOnly) {
     steps.push({ label: 'Already in subtracted audiences', count: -afterSub.removed });
     rows = afterSub.rows;
   }
-  // 4. Buyers (read live).
-  var afterBuyers = removeMatching(rows, readBuyerKeys_());
-  steps.push({ label: 'Buyers', count: -afterBuyers.removed });
-  rows = afterBuyers.rows;
+  // 4. Buyers / opt-outs (read live), one line per sheet.
+  readExclusions_().lists.forEach(function (l) {
+    var res = removeMatching(rows, l.keys);
+    steps.push({ label: l.label, count: -res.removed });
+    rows = res.rows;
+  });
   // 5. WhatsApp needs a phone.
   if (phoneOnly) {
     var withPhone = rows.filter(function (r) { return r[2]; });
@@ -111,7 +113,8 @@ function syncBuyers() {
   var lock = LockService.getScriptLock();
   lock.waitLock(120000);
   try {
-    var buyers = readBuyerKeys_();
+    var excl = readExclusions_();
+    var buyers = excl.all;
     var ss = db_();
     var meta = ss.getSheetByName(META_TAB);
     var metaRows = readMeta_();
@@ -130,26 +133,46 @@ function syncBuyers() {
     });
     var props = PropertiesService.getScriptProperties();
     props.setProperty('LAST_SYNC', new Date().toISOString());
-    props.setProperty('BUYER_COUNT', String(buyers.buyerCount));
-    if (total) log_('auto-sync', 'Removed new buyers', total + ' removed: ' + details.join(', '));
-    return { removed: total, buyers: buyers.buyerCount, details: details };
+    props.setProperty('BUYER_COUNT', String(excl.total));
+    props.setProperty('EXCLUDE_SOURCES', JSON.stringify(excl.lists.map(function (l) {
+      return { label: l.label, count: l.count, url: l.url };
+    })));
+    if (total) log_('auto-sync', 'Removed buyers / opt-outs', total + ' removed: ' + details.join(', '));
+    return { removed: total, buyers: excl.total, details: details };
   } finally {
     lock.releaseLock();
   }
 }
 
-function readBuyerKeys_() {
-  var ss = SpreadsheetApp.openById(CONFIG.BUYERS_SHEET_ID);
-  var sh = CONFIG.BUYERS_TAB_NAME ? ss.getSheetByName(CONFIG.BUYERS_TAB_NAME) : ss.getSheets()[0];
-  var values = sh.getDataRange().getValues();
-  if (!values.length) { var empty = new Set(); empty.buyerCount = 0; return empty; }
-  var cols = detectColumns(values[0]);
-  if (cols.email < 0 && cols.phone < 0) cols = { name: 0, email: 1, phone: 2 }; // no header row
-  else values = values.slice(1);
-  var cleaned = cleanAndDedupe(pickColumns(values, cols), CONFIG.COUNTRY_CODE);
-  var set = keySetOf(cleaned.rows);
-  set.buyerCount = cleaned.rows.length;
-  return set;
+/**
+ * Read every do-not-contact sheet in CONFIG.EXCLUDE_SHEETS.
+ * Returns { all: Set of every key, total, lists: [{ label, keys, count, url }] }.
+ * A sheet that can't be opened throws, so nothing is ever sent to people
+ * who should have been removed.
+ */
+function readExclusions_() {
+  var all = new Set(), total = 0;
+  var lists = CONFIG.EXCLUDE_SHEETS.map(function (src) {
+    var ss;
+    try {
+      ss = SpreadsheetApp.openById(src.id);
+    } catch (e) {
+      throw new Error('Cannot open the "' + src.label + '" sheet. Make sure the dashboard owner has access to it.');
+    }
+    var sh = src.tab ? ss.getSheetByName(src.tab) : ss.getSheets()[0];
+    if (!sh) throw new Error('Tab "' + src.tab + '" not found in the "' + src.label + '" sheet.');
+    var values = sh.getDataRange().getValues();
+    var head = findHeader(values);
+    var data = head ? values.slice(head.row + 1) : values;
+    var cols = head ? head.cols : { name: 0, email: 1, phone: 2 }; // no header row
+    var cleaned = cleanAndDedupe(pickColumns(data, cols), CONFIG.COUNTRY_CODE);
+    var keys = keySetOf(cleaned.rows);
+    keySetOf(cleaned.rows, all);
+    total += cleaned.rows.length;
+    return { label: src.label, keys: keys, count: cleaned.rows.length,
+      url: 'https://docs.google.com/spreadsheets/d/' + src.id + '/edit' };
+  });
+  return { all: all, total: total, lists: lists };
 }
 
 /* ------------------------------------------------------------------ */

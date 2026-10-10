@@ -6,13 +6,19 @@
  *   _Log         activity log
  *   <audience>   one tab per audience: Name | Email | Phone
  *
- * Buyers are read live from CONFIG.BUYERS_SHEET_ID. syncBuyers() runs every
- * hour (installed by setup()) and removes new buyers from every audience.
+ * "Do-not-contact" sheets (buyers, opt-outs …) in CONFIG.EXCLUDE_SHEETS are read
+ * live. syncBuyers() runs every hour (installed by setup()) and removes
+ * anyone on those sheets from every saved audience.
  */
 
 var CONFIG = {
-  BUYERS_SHEET_ID: '186D8fAoGI0TiIUfyUroZsmYmeuBWha_Rh9QNBnvbzkk',
-  BUYERS_TAB_NAME: '',                 // '' = first tab of the buyers sheet
+  // People on these sheets are ALWAYS removed (matched by email OR phone).
+  // tab: '' = first tab. Add more sheets by adding lines.
+  EXCLUDE_SHEETS: [
+    { label: 'Buyers', id: '186D8fAoGI0TiIUfyUroZsmYmeuBWha_Rh9QNBnvbzkk', tab: '' },
+    { label: 'Opted-out', id: '16hkr4NXxfPq77CpqAco6Zbn94szx-PJm0OrSHELNTdY', tab: '' },
+    { label: 'Removed by reminder team', id: '1mp_Qv9l3iGqFD6c95AU2a4GaZrEpssFK6TYAjShEH7M', tab: '' }
+  ],
   ALLOWED_DOMAIN: 'flexifunnels.com',  // only these emails can use the dashboard
   COUNTRY_CODE: '91',                  // added to 10-digit numbers
   APP_TITLE: 'Audience Dashboard'
@@ -98,7 +104,7 @@ function getState() {
     buyers: {
       count: +props.getProperty('BUYER_COUNT') || 0,
       lastSync: props.getProperty('LAST_SYNC') || '',
-      sheetUrl: 'https://docs.google.com/spreadsheets/d/' + CONFIG.BUYERS_SHEET_ID + '/edit'
+      sources: JSON.parse(props.getProperty('EXCLUDE_SOURCES') || '[]')
     },
     log: log,
     dbUrl: db_().getUrl()
@@ -142,7 +148,7 @@ function finishUpload(stagingTab, name, source) {
     ss.deleteSheet(staging);
 
     var cleaned = cleanAndDedupe(raw, CONFIG.COUNTRY_CODE);
-    var noBuyers = removeMatching(cleaned.rows, readBuyerKeys_());
+    var noBuyers = removeMatching(cleaned.rows, readExclusions_().all);
     writeAudienceTab_(name, noBuyers.rows);
 
     var stats = {
@@ -152,7 +158,7 @@ function finishUpload(stagingTab, name, source) {
     ss.getSheetByName(META_TAB).appendRow([name, stats.saved, stats.withPhone, stats.uploaded,
       stats.duplicates, stats.invalid, stats.buyers, source || '', new Date(), user]);
     log_(user, 'Uploaded audience', name + ': ' + stats.uploaded + ' rows → ' + stats.saved +
-      ' saved (' + stats.duplicates + ' duplicates, ' + stats.invalid + ' invalid, ' + stats.buyers + ' buyers removed)');
+      ' saved (' + stats.duplicates + ' duplicates, ' + stats.invalid + ' invalid, ' + stats.buyers + ' buyers/opt-outs removed)');
     return stats;
   } finally {
     lock.releaseLock();
