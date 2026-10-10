@@ -1,41 +1,37 @@
 /**
- * 10 Mins Business Launch Workshop: monthly master sheet.
+ * Webinar / workshop leads: monthly master sheet.
  *
- * Collects every session's Pitch / Non-pitch / Missed tab into one master
- * spreadsheet with three tabs per month:
+ * Every session gets 5 tabs in the "Active Campaign List Upload" sheets, e.g.
+ *   08 OCT 2026 10 Mins Workshop attendee(with buyers)   <- skipped
+ *   08 OCT 2026 10 Mins Workshop attendee (w/o buyers)   <- skipped
+ *   08 OCT 2026 10 Mins Workshop pitch                   -> October Pitch
+ *   08 OCT 2026 10 Mins Workshop non-pitch               -> October Non-pitch
+ *   08 OCT 2026 10 Mins Workshop missed                  -> October Missed
+ *
+ * This script copies the pitch / non-pitch / missed tabs of the campaigns in
+ * CAMPAIGNS (10 Mins Workshop, Flexi Genie, Yearly Promo, Q&A ...) into one
+ * master spreadsheet with three tabs per month:
  *
  *   October Pitch       October Non-pitch       October Missed
- *   November Pitch      November Non-pitch      November Missed
  *
- * Where the data comes from:
- *   Active Campaign List Upload 9, 10 and 11 (EXTRA_SOURCE_IDS), plus any
- *   newer file whose name contains "Active Campaign List Upload", so 12,
- *   13 ... are picked up on their own.
- *   Inside those, only tabs whose name contains "10 Mins Workshop" are read,
- *   and each one is sorted by keyword:
- *     "... non-pitch" -> Non-pitch     (checked first)
- *     "... pitch"     -> Pitch
- *     "... missed"    -> Missed
- *   e.g. "08 OCT 2026 10 Mins Workshop pitch" -> "October Pitch".
- *   Anything else (attendee tabs, Faceless workshop tabs, Sheet62 ...) is
- *   ignored.
+ * Each row keeps Name, Email, Phone and Time, plus the Campaign, Session date
+ * and Session tab it came from.
  *
  * How it syncs:
  *   - The first run pulls ALL rows from every matching tab.
  *   - After that, each run appends only what is new: rows added to a tab
- *     since the last run, and every row of a tab created since the last run
- *     (e.g. the next session's tabs).
+ *     since the last run, and every row of a tab created since the last run.
  *   - The month comes from the date in the tab name ("08 OCT 2026",
- *     "30 Sep2026"). If a name has no date, the tab goes into the month the
- *     script first saw it.
- *   - Columns are matched by header name; a new header becomes a new column.
- *   - Two columns are added in front: "Session tab" (the source tab name) and
- *     "Synced at".
+ *     "30 Sep2026", "20 AUG"). If a name has no date, the tab goes into the
+ *     month the script first saw it.
+ *
+ * Source spreadsheets: EXTRA_SOURCE_IDS (Upload 9, 10, 11), plus any newer
+ * spreadsheet whose name contains SOURCE_FILE_NAME, so Upload 12, 13 ... are
+ * picked up on their own.
  *
  * Triggers (installTriggers): a 15-minute timer, plus an on-change trigger on
- * each source spreadsheet that has workshop tabs, so edits there sync within
- * seconds. A new upload file gets its on-change trigger the first time the
- * timer finds a workshop tab in it.
+ * each source spreadsheet that has matching tabs, so edits there sync within
+ * seconds.
  *
  * One-time setup: create the master spreadsheet, open Extensions > Apps
  * Script inside it, paste this file, run installTriggers() once and approve
@@ -57,16 +53,39 @@ const SOURCE_FILE_NAME = 'Active Campaign List Upload';
 // ...created on or after this date.
 const SOURCE_FILES_SINCE = '2026-09-01';
 
-// A tab is pulled only if its name matches this (case-insensitive).
-// Matches "10 Mins Workshop", "10 Min Workshop", "10Mins Workshop".
-const CAMPAIGN_TAB_PATTERN = /10\s*mins?\s*workshop/i;
+// Campaigns to pull. A tab is pulled only if its name matches one of these
+// (case-insensitive). First match wins, so put the more specific name first
+// ("Flexi Genie Q&A" before "Flexi Genie"). `name` goes in the Campaign column.
+const CAMPAIGNS = [
+  { name: '10 Mins Workshop', pattern: /10\s*mins?\b/i },
+  { name: 'Flexi Genie Q&A',  pattern: /flexi\s*genie.*q\s*&\s*a/i },
+  { name: 'Flexi Genie',      pattern: /flexi\s*genie/i },
+  { name: 'Yearly Promo',     pattern: /yearly\s*promo/i },
+  { name: 'Q&A',              pattern: /q\s*&\s*a/i },
+  // Also in the upload sheets; remove the // to include them:
+  // { name: 'TFP',           pattern: /\btfp\b/i },
+  // { name: 'Faceless',      pattern: /faceless/i },
+  // { name: 'Flexi Agentic', pattern: /flexi\s*agentic/i },
+];
 
 // Tab type by keyword. First match wins, so Non-pitch must come before Pitch.
+// Tabs with none of these (attendee lists, buyers ...) are skipped.
 const TYPES = [
   { type: 'Non-pitch', pattern: /non[\s\-_]*pitch/i },
   { type: 'Pitch',     pattern: /pitch/i },
   { type: 'Missed',    pattern: /missed/i },
 ];
+
+// Columns copied from each source tab, found by header name (any of the
+// listed spellings, case-insensitive). If a tab has no recognisable headers,
+// columns A-D are used in this order.
+const COLUMNS = [
+  { name: 'Name',  headers: ['name', 'full name', 'first_name', 'first name'] },
+  { name: 'Email', headers: ['email', 'email id', 'email address', 'e-mail'] },
+  { name: 'Phone', headers: ['phone', 'phonw', 'phone number', 'mobile', 'whatsapp', 'contact'] },
+  { name: 'Time',  headers: ['time', 'duration', 'minutes', 'time (min)'] },
+];
+const EXTRA_COLUMNS = ['Campaign', 'Session date', 'Session tab'];
 
 // Row in each source tab that holds the column headers (data starts below it).
 const SOURCE_HEADER_ROW = 1;
@@ -76,7 +95,6 @@ const SOURCE_HEADER_ROW = 1;
 const MONTH_FORMAT = 'MMMM';
 const TIMEZONE = 'Asia/Kolkata';
 
-const META_HEADERS = ['Session tab', 'Synced at'];
 const LOG_SHEET = 'Sync log';
 
 /** Main entry point: called by both triggers. Safe to run any time. */
@@ -126,8 +144,8 @@ function syncSource_(master, spreadsheetId, state, log) {
 
   ss.getSheets().forEach(function (sheet) {
     const name = sheet.getName();
-    const type = tabType_(name);
-    if (!type) return;
+    const match = matchTab_(name);
+    if (!match) return;
     if (!triggerChecked) {
       ensureChangeTrigger_(spreadsheetId);
       triggerChecked = true;
@@ -135,9 +153,9 @@ function syncSource_(master, spreadsheetId, state, log) {
 
     const key = spreadsheetId + ':' + sheet.getSheetId();
     const tabState = state[key] || { copied: 0, month: null };
+    const sessionDate = dateFromTabName_(name, now);
     if (!tabState.month) {
-      const d = dateFromTabName_(name, now) || now;
-      tabState.month = Utilities.formatDate(d, TIMEZONE, 'yyyy-MM');
+      tabState.month = Utilities.formatDate(sessionDate || now, TIMEZONE, 'yyyy-MM');
     }
 
     const lastRow = sheet.getLastRow();
@@ -148,21 +166,25 @@ function syncSource_(master, spreadsheetId, state, log) {
     }
 
     const values = sheet.getRange(SOURCE_HEADER_ROW, 1, lastRow - SOURCE_HEADER_ROW + 1, lastCol).getValues();
-    const headers = values[0].map(function (h) { return String(h).trim(); });
+    const cols = columnPositions_(values[0]);
     const dataRows = values.slice(1);
 
     // If rows were deleted from the source, don't re-copy; just catch up.
     if (tabState.copied > dataRows.length) tabState.copied = dataRows.length;
 
-    const fresh = dataRows.slice(tabState.copied).filter(function (r) {
-      return r.some(function (c) { return c !== '' && c !== null; });
+    const dateText = sessionDate ? Utilities.formatDate(sessionDate, TIMEZONE, 'dd MMM yyyy') : '';
+    const fresh = [];
+    dataRows.slice(tabState.copied).forEach(function (r) {
+      const out = cols.map(function (c) { return c === -1 ? '' : r[c]; });
+      if (out.every(function (v) { return v === '' || v === null; })) return;
+      fresh.push(out.concat([match.campaign, dateText, name]));
     });
 
     if (fresh.length) {
       const monthDate = Utilities.parseDate(tabState.month + '-01', TIMEZONE, 'yyyy-MM-dd');
-      const tabName = Utilities.formatDate(monthDate, TIMEZONE, MONTH_FORMAT) + ' ' + type;
-      appendRows_(master, tabName, name, headers, fresh, now);
-      log.push([now, type, name, fresh.length, 'Appended to "' + tabName + '"']);
+      const tabName = Utilities.formatDate(monthDate, TIMEZONE, MONTH_FORMAT) + ' ' + match.type;
+      appendRows_(master, tabName, fresh);
+      log.push([now, match.campaign + ' / ' + match.type, name, fresh.length, 'Appended to "' + tabName + '"']);
     }
 
     tabState.copied = dataRows.length;
@@ -170,63 +192,43 @@ function syncSource_(master, spreadsheetId, state, log) {
   });
 }
 
-/** Returns "Pitch", "Non-pitch", "Missed", or null if the tab isn't pulled. */
-function tabType_(name) {
-  if (!CAMPAIGN_TAB_PATTERN.test(name)) return null;
-  for (let i = 0; i < TYPES.length; i++) {
-    if (TYPES[i].pattern.test(name)) return TYPES[i].type;
+/** Returns {campaign, type} for a tab to pull, or null to skip it. */
+function matchTab_(name) {
+  let campaign = null;
+  for (let i = 0; i < CAMPAIGNS.length && !campaign; i++) {
+    if (CAMPAIGNS[i].pattern.test(name)) campaign = CAMPAIGNS[i].name;
+  }
+  if (!campaign) return null;
+  for (let j = 0; j < TYPES.length; j++) {
+    if (TYPES[j].pattern.test(name)) return { campaign: campaign, type: TYPES[j].type };
   }
   return null;
 }
 
-/** Appends rows to the month tab, creating it and any missing columns. */
-function appendRows_(master, tabName, sourceTab, sourceHeaders, rows, now) {
+/** Index of each COLUMNS entry in a header row (-1 if missing). */
+function columnPositions_(headerRow) {
+  const h = headerRow.map(function (x) { return String(x).trim().toLowerCase(); });
+  const pos = COLUMNS.map(function (c) {
+    for (let i = 0; i < h.length; i++) if (c.headers.indexOf(h[i]) !== -1) return i;
+    return -1;
+  });
+  // No recognisable headers at all: fall back to columns A-D.
+  if (pos.every(function (p) { return p === -1; })) {
+    return COLUMNS.map(function (c, i) { return i < headerRow.length ? i : -1; });
+  }
+  return pos;
+}
+
+/** Appends rows to a month tab, creating it with the header row if needed. */
+function appendRows_(master, tabName, rows) {
+  const headers = COLUMNS.map(function (c) { return c.name; }).concat(EXTRA_COLUMNS);
   let sheet = master.getSheetByName(tabName);
   if (!sheet) {
     sheet = master.insertSheet(tabName);
-    sheet.getRange(1, 1, 1, META_HEADERS.length).setValues([META_HEADERS]);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     sheet.setFrozenRows(1);
   }
-
-  const lastCol = Math.max(sheet.getLastColumn(), META_HEADERS.length);
-  const masterHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
-
-  // Unnamed source columns are kept under "Column <letter>".
-  const names = sourceHeaders.map(function (h, i) { return h || ('Column ' + columnLetter_(i + 1)); });
-
-  // Add any source header the master tab doesn't have yet.
-  const added = [];
-  names.forEach(function (h) {
-    if (masterHeaders.indexOf(h) === -1 && added.indexOf(h) === -1) added.push(h);
-  });
-  if (added.length) {
-    sheet.getRange(1, masterHeaders.length + 1, 1, added.length).setValues([added]);
-    added.forEach(function (h) { masterHeaders.push(h); });
-  }
-  sheet.getRange(1, 1, 1, masterHeaders.length).setFontWeight('bold');
-
-  const colIndex = {};
-  masterHeaders.forEach(function (h, i) { colIndex[h] = i; });
-
-  const out = rows.map(function (r) {
-    const row = new Array(masterHeaders.length).fill('');
-    row[0] = sourceTab;
-    row[1] = now;
-    names.forEach(function (h, i) { row[colIndex[h]] = r[i]; });
-    return row;
-  });
-
-  sheet.getRange(sheet.getLastRow() + 1, 1, out.length, masterHeaders.length).setValues(out);
-}
-
-function columnLetter_(n) {
-  let s = '';
-  while (n > 0) {
-    const m = (n - 1) % 26;
-    s = String.fromCharCode(65 + m) + s;
-    n = Math.floor((n - 1) / 26);
-  }
-  return s;
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
 }
 
 const MONTHS_ = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -342,10 +344,10 @@ function previewMatches() {
     Logger.log('== %s', ss.getName());
     ss.getSheets().forEach(function (sheet) {
       const name = sheet.getName();
-      const type = tabType_(name);
-      const d = type ? dateFromTabName_(name, now) : null;
-      Logger.log('%s  ->  %s', name, !type ? 'skipped'
-        : (d ? Utilities.formatDate(d, TIMEZONE, MONTH_FORMAT) : '(no date: month first synced)') + ' ' + type);
+      const m = matchTab_(name);
+      const d = m ? dateFromTabName_(name, now) : null;
+      Logger.log('%s  ->  %s', name, !m ? 'skipped'
+        : (d ? Utilities.formatDate(d, TIMEZONE, MONTH_FORMAT) : '(no date: month first synced)') + ' ' + m.type + '  [' + m.campaign + ']');
     });
   });
 }
