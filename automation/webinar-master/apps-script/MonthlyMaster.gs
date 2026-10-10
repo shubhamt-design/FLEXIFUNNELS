@@ -1,52 +1,71 @@
 /**
- * Webinar campaign master sheet: merge the Pitch / Non-pitch / Missed
- * sheets into one spreadsheet with one tab per type per month.
+ * 10 Mins Business Launch Workshop: monthly master sheet.
+ *
+ * Collects every session's Pitch / Non-pitch / Missed tab into one master
+ * spreadsheet with three tabs per month:
  *
  *   October Pitch       October Non-pitch       October Missed
  *   November Pitch      November Non-pitch      November Missed
- *   ...
  *
- * How it works:
- *   - SOURCES (below) lists the three source spreadsheets and, for each, the
- *     keyword(s) a tab name must contain to be pulled (e.g. "pitch").
- *     Only tabs whose name contains a keyword are read; every other tab in
- *     that spreadsheet is ignored.
- *   - The first run pulls ALL existing rows from every matching tab.
+ * Where the data comes from:
+ *   Active Campaign List Upload 9, 10 and 11 (EXTRA_SOURCE_IDS), plus any
+ *   newer file whose name contains "Active Campaign List Upload", so 12,
+ *   13 ... are picked up on their own.
+ *   Inside those, only tabs whose name contains "10 Mins Workshop" are read,
+ *   and each one is sorted by keyword:
+ *     "... non-pitch" -> Non-pitch     (checked first)
+ *     "... pitch"     -> Pitch
+ *     "... missed"    -> Missed
+ *   e.g. "08 OCT 2026 10 Mins Workshop pitch" -> "October Pitch".
+ *   Anything else (attendee tabs, Faceless workshop tabs, Sheet62 ...) is
+ *   ignored.
+ *
+ * How it syncs:
+ *   - The first run pulls ALL rows from every matching tab.
  *   - After that, each run appends only what is new: rows added to a tab
  *     since the last run, and every row of a tab created since the last run
- *     (e.g. the tab for the 6 Oct session).
- *   - Each matching tab goes into the month taken from the date in its name
- *     ("2 Oct", "Oct 6", "06/10", "2026-10-06" ...). If the name has no date,
- *     it goes into the month in which the script first saw it, and stays
- *     there.
- *   - Columns are matched by header name, so the column order in the source
- *     tabs does not matter. A new header becomes a new column on the right.
+ *     (e.g. the next session's tabs).
+ *   - The month comes from the date in the tab name ("08 OCT 2026",
+ *     "30 Sep2026"). If a name has no date, the tab goes into the month the
+ *     script first saw it.
+ *   - Columns are matched by header name; a new header becomes a new column.
  *   - Two columns are added in front: "Session tab" (the source tab name) and
  *     "Synced at".
  *
- * Triggers (installTriggers): an on-change trigger on each source
- * spreadsheet, so edits and new tabs sync within seconds, plus a 15-minute
- * timer as a safety net for rows written by forms, Zapier or other scripts
- * (those do not fire on-change triggers).
+ * Triggers (installTriggers): a 15-minute timer, plus an on-change trigger on
+ * each source spreadsheet that has workshop tabs, so edits there sync within
+ * seconds. A new upload file gets its on-change trigger the first time the
+ * timer finds a workshop tab in it.
  *
- * One-time setup: fill in MASTER_SPREADSHEET_ID (or bind the script to the
- * master spreadsheet) and SOURCES, then run installTriggers() once from the
- * editor and approve the permissions prompt. That first run also does the
- * full backfill.
+ * One-time setup: create the master spreadsheet, open Extensions > Apps
+ * Script inside it, paste this file, run installTriggers() once and approve
+ * the permissions prompt. That first run also does the full backfill.
  */
 
 // The master spreadsheet. Leave blank if this script is bound to it
 // (opened via Extensions > Apps Script inside the master spreadsheet).
 const MASTER_SPREADSHEET_ID = '';
 
-// One entry per type. `type` becomes the tab suffix ("October Pitch").
-// `keywords`: a source tab is pulled if its name contains ANY of these
-// (case-insensitive). `exclude`: skip a tab whose name contains any of these.
-// Leave `keywords` empty to pull every tab of that spreadsheet.
-const SOURCES = [
-  { type: 'Pitch',     spreadsheetId: 'PASTE_PITCH_SHEET_ID',     keywords: ['pitch'],     exclude: ['non'] },
-  { type: 'Non-pitch', spreadsheetId: 'PASTE_NON_PITCH_SHEET_ID', keywords: ['non pitch', 'non-pitch', 'nonpitch'], exclude: [] },
-  { type: 'Missed',    spreadsheetId: 'PASTE_MISSED_SHEET_ID',    keywords: ['missed'],    exclude: [] },
+// Source spreadsheets, always read:
+const EXTRA_SOURCE_IDS = [
+  '18C_t6zeLlL34uXq1HFEw9SsVM8STcwjyVCkrsg0PCJc', // Active Campaign List Upload 9 - 2026
+  '1T-seqAy2j6WrU-c2zv6GZHKSwaf9YVtHsNcNpckjXR4', // Active Campaign List Upload 10 - 2026
+  '1xQEivSCmMv4WBpN8fqlLrisj8EXJBy0YLXzWAX58NhI', // Active Campaign List Upload 11 - 2026
+];
+// Plus any newer file whose name contains this text (Upload 12, 13 ...)...
+const SOURCE_FILE_NAME = 'Active Campaign List Upload';
+// ...created on or after this date.
+const SOURCE_FILES_SINCE = '2026-09-01';
+
+// A tab is pulled only if its name matches this (case-insensitive).
+// Matches "10 Mins Workshop", "10 Min Workshop", "10Mins Workshop".
+const CAMPAIGN_TAB_PATTERN = /10\s*mins?\s*workshop/i;
+
+// Tab type by keyword. First match wins, so Non-pitch must come before Pitch.
+const TYPES = [
+  { type: 'Non-pitch', pattern: /non[\s\-_]*pitch/i },
+  { type: 'Pitch',     pattern: /pitch/i },
+  { type: 'Missed',    pattern: /missed/i },
 ];
 
 // Row in each source tab that holds the column headers (data starts below it).
@@ -69,11 +88,12 @@ function syncAll() {
     const state = loadState_();
     const log = [];
 
-    SOURCES.forEach(function (src) {
+    sourceIds_().forEach(function (id) {
+      if (id === master.getId()) return;
       try {
-        syncSource_(master, src, state, log);
+        syncSource_(master, id, state, log);
       } catch (e) {
-        log.push([new Date(), src.type, '', 0, 'ERROR: ' + e.message]);
+        log.push([new Date(), '', id, 0, 'ERROR: ' + e.message]);
       }
     });
 
@@ -84,15 +104,36 @@ function syncAll() {
   }
 }
 
-function syncSource_(master, src, state, log) {
-  const ss = SpreadsheetApp.openById(src.spreadsheetId);
+/** Ids of all source spreadsheets: matching file names plus EXTRA_SOURCE_IDS. */
+function sourceIds_() {
+  const ids = EXTRA_SOURCE_IDS.slice();
+  const q = 'title contains "' + SOURCE_FILE_NAME.replace(/"/g, '\\"') + '"' +
+    ' and mimeType = "application/vnd.google-apps.spreadsheet"' +
+    ' and createdDate >= "' + SOURCE_FILES_SINCE + 'T00:00:00"' +
+    ' and trashed = false';
+  const it = DriveApp.searchFiles(q);
+  while (it.hasNext()) {
+    const id = it.next().getId();
+    if (ids.indexOf(id) === -1) ids.push(id);
+  }
+  return ids;
+}
+
+function syncSource_(master, spreadsheetId, state, log) {
+  const ss = SpreadsheetApp.openById(spreadsheetId);
   const now = new Date();
+  let triggerChecked = false;
 
   ss.getSheets().forEach(function (sheet) {
     const name = sheet.getName();
-    if (!tabMatches_(name, src)) return;
+    const type = tabType_(name);
+    if (!type) return;
+    if (!triggerChecked) {
+      ensureChangeTrigger_(spreadsheetId);
+      triggerChecked = true;
+    }
 
-    const key = src.spreadsheetId + ':' + sheet.getSheetId();
+    const key = spreadsheetId + ':' + sheet.getSheetId();
     const tabState = state[key] || { copied: 0, month: null };
     if (!tabState.month) {
       const d = dateFromTabName_(name, now) || now;
@@ -119,9 +160,9 @@ function syncSource_(master, src, state, log) {
 
     if (fresh.length) {
       const monthDate = Utilities.parseDate(tabState.month + '-01', TIMEZONE, 'yyyy-MM-dd');
-      const tabName = Utilities.formatDate(monthDate, TIMEZONE, MONTH_FORMAT) + ' ' + src.type;
+      const tabName = Utilities.formatDate(monthDate, TIMEZONE, MONTH_FORMAT) + ' ' + type;
       appendRows_(master, tabName, name, headers, fresh, now);
-      log.push([now, src.type, name, fresh.length, 'Appended to "' + tabName + '"']);
+      log.push([now, type, name, fresh.length, 'Appended to "' + tabName + '"']);
     }
 
     tabState.copied = dataRows.length;
@@ -129,17 +170,13 @@ function syncSource_(master, src, state, log) {
   });
 }
 
-function tabMatches_(name, src) {
-  const n = normalise_(name);
-  const exclude = src.exclude || [];
-  const keywords = src.keywords || [];
-  if (exclude.some(function (k) { return n.indexOf(normalise_(k)) !== -1; })) return false;
-  if (!keywords.length) return true;
-  return keywords.some(function (k) { return n.indexOf(normalise_(k)) !== -1; });
-}
-
-function normalise_(s) {
-  return String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+/** Returns "Pitch", "Non-pitch", "Missed", or null if the tab isn't pulled. */
+function tabType_(name) {
+  if (!CAMPAIGN_TAB_PATTERN.test(name)) return null;
+  for (let i = 0; i < TYPES.length; i++) {
+    if (TYPES[i].pattern.test(name)) return TYPES[i].type;
+  }
+  return null;
 }
 
 /** Appends rows to the month tab, creating it and any missing columns. */
@@ -207,20 +244,17 @@ function dateFromTabName_(name, now) {
   if ((m = s.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) {
     return makeDate_(+m[1], +m[2], +m[3]);
   }
-  // "2 Oct", "2nd October 2026"
-  const dayMonth = /(?<!\d)(\d{1,2})(?:st|nd|rd|th)?[\s\-_.]*([a-z]{3,9})(?![a-z])\.?(?:[\s\-_,.]*(\d{4}))?/g;
-  while ((m = dayMonth.exec(s))) {
-    const mon = monthIndex_(m[2]);
-    if (mon) return withYear_(+m[1], mon, m[3] ? +m[3] : null, now);
+  const MON = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  // "2 Oct", "08 OCT 2026", "30 Sep2026", "4octtotalreg", "2nd October"
+  if ((m = s.match(new RegExp('(?<!\\d)(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-_.]*' + MON + '\\.?(?:[\\s\\-_,.]*(\\d{4}))?')))) {
+    return withYear_(+m[1], monthIndex_(m[2]), m[3] ? +m[3] : null, now);
   }
   // "Oct 2", "October 2nd, 2026"
-  const monthDay = /(?<![a-z])([a-z]{3,9})\.?[\s\-_]*(\d{1,2})(?:st|nd|rd|th)?(?![\d\/])(?:[\s\-_,.]*(\d{4}))?/g;
-  while ((m = monthDay.exec(s))) {
-    const mon = monthIndex_(m[1]);
-    if (mon) return withYear_(+m[2], mon, m[3] ? +m[3] : null, now);
+  if ((m = s.match(new RegExp('(?<![a-z])' + MON + '\\.?[\\s\\-_]*(\\d{1,2})(?:st|nd|rd|th)?(?![\\d\\/:])(?:[\\s\\-_,.]*(\\d{4}))?')))) {
+    return withYear_(+m[2], monthIndex_(m[1]), m[3] ? +m[3] : null, now);
   }
   // "02/10", "02-10-2026" (day first)
-  if ((m = s.match(/(?<!\d)(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{2,4}))?(?!\d)/))) {
+  if ((m = s.match(/(?<![\d:])(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{2,4}))?(?![\d:])/))) {
     let y = m[3] ? +m[3] : null;
     if (y !== null && y < 100) y += 2000;
     return withYear_(+m[1], +m[2], y, now);
@@ -229,13 +263,7 @@ function dateFromTabName_(name, now) {
 }
 
 function monthIndex_(word) {
-  const i = MONTHS_.indexOf(word.slice(0, 3));
-  if (i === -1) return 0;
-  // Reject words that only start like a month ("marketing", "decision").
-  const full = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
-    'august', 'september', 'october', 'november', 'december'][i];
-  if (word.length > 3 && full.indexOf(word) !== 0 && !(i === 8 && word === 'sept')) return 0;
-  return i + 1;
+  return MONTHS_.indexOf(word.slice(0, 3)) + 1;
 }
 
 function withYear_(day, month, year, now) {
@@ -294,23 +322,30 @@ function installTriggers() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'syncAll') ScriptApp.deleteTrigger(t);
   });
-  SOURCES.forEach(function (src) {
-    ScriptApp.newTrigger('syncAll').forSpreadsheet(src.spreadsheetId).onChange().create();
-  });
   ScriptApp.newTrigger('syncAll').timeBased().everyMinutes(15).create();
   syncAll();
 }
 
-/** Shows which tabs would be pulled, and into which month, without copying. */
+/** Adds an on-change trigger for a source spreadsheet, once. */
+function ensureChangeTrigger_(spreadsheetId) {
+  const has = ScriptApp.getProjectTriggers().some(function (t) {
+    return t.getHandlerFunction() === 'syncAll' && t.getTriggerSourceId() === spreadsheetId;
+  });
+  if (!has) ScriptApp.newTrigger('syncAll').forSpreadsheet(spreadsheetId).onChange().create();
+}
+
+/** Shows which tabs would be pulled, and into which master tab, without copying. */
 function previewMatches() {
   const now = new Date();
-  SOURCES.forEach(function (src) {
-    SpreadsheetApp.openById(src.spreadsheetId).getSheets().forEach(function (sheet) {
+  sourceIds_().forEach(function (id) {
+    const ss = SpreadsheetApp.openById(id);
+    Logger.log('== %s', ss.getName());
+    ss.getSheets().forEach(function (sheet) {
       const name = sheet.getName();
-      const hit = tabMatches_(name, src);
-      const d = hit ? dateFromTabName_(name, now) : null;
-      Logger.log('[%s] %s  ->  %s', src.type, name,
-        !hit ? 'skipped' : (d ? Utilities.formatDate(d, TIMEZONE, MONTH_FORMAT) : 'no date in name: month it is first synced'));
+      const type = tabType_(name);
+      const d = type ? dateFromTabName_(name, now) : null;
+      Logger.log('%s  ->  %s', name, !type ? 'skipped'
+        : (d ? Utilities.formatDate(d, TIMEZONE, MONTH_FORMAT) : '(no date: month first synced)') + ' ' + type);
     });
   });
 }

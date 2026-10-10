@@ -1,63 +1,81 @@
-# Webinar campaign master sheet
+# 10 Mins Business Launch Workshop: monthly master sheet
 
-This script keeps one master spreadsheet for a campaign. It has three tabs per
-month:
+This script collects each workshop session's Pitch, Non-pitch and Missed lists
+into one master spreadsheet. The master has three tabs per month:
 
 | Month | Tabs |
 |---|---|
+| September | `September Pitch`, `September Non-pitch`, `September Missed` |
 | October | `October Pitch`, `October Non-pitch`, `October Missed` |
-| November | `November Pitch`, `November Non-pitch`, `November Missed` |
 
 The script is `apps-script/MonthlyMaster.gs`.
 
-## What it does
+## Where it reads from
 
-1. It reads the three source spreadsheets (Pitch, Non-pitch, Missed). In each
-   one it only pulls tabs whose **name contains your keyword**. Other tabs are
-   ignored.
-2. **First run:** it pulls every row from every matching tab.
-3. **After that:** it only appends what's new. On 2 Oct you fill in that
-   session's tab and its rows go to `October Pitch`. On 6 Oct you add the next
-   session's tab, and its rows go to the bottom of the same `October Pitch`
-   tab. Rows added later to an older tab are appended as well. Nothing is
-   copied twice.
-4. **Month:** it reads the date from the tab name. These formats all work:
-   `2 Oct`, `6th October`, `Oct 6`, `06/10` (day first), `2026-10-06`. If a tab
-   name has no date, the tab goes into the month the script first saw it.
-5. **Columns** are matched by header name, so the column order in the source
-   tabs doesn't matter. If a header is new, it's added as a new column.
-6. Two columns are added at the front of each row: `Session tab` (which tab the
-   row came from) and `Synced at`. Each run is also recorded in a `Sync log`
-   tab.
+It reads these files:
 
-**When it runs:** right after any edit or new tab in a source spreadsheet. A
-15-minute timer also runs, to catch rows that forms or Zapier write, since
-those don't fire the edit trigger.
+- [Active Campaign List Upload 9 - 2026](https://docs.google.com/spreadsheets/d/18C_t6zeLlL34uXq1HFEw9SsVM8STcwjyVCkrsg0PCJc/edit)
+- [Active Campaign List Upload 10 - 2026](https://docs.google.com/spreadsheets/d/1T-seqAy2j6WrU-c2zv6GZHKSwaf9YVtHsNcNpckjXR4/edit)
+- [Active Campaign List Upload 11 - 2026](https://docs.google.com/spreadsheets/d/1xQEivSCmMv4WBpN8fqlLrisj8EXJBy0YLXzWAX58NhI/edit)
+- any newer file named "Active Campaign List Upload ..." (12, 13 ...), picked
+  up automatically
 
-## One-time setup
+Inside those files, it only pulls tabs whose name contains **"10 Mins
+Workshop"**. It sorts each tab by the keyword in its name:
 
-1. Create the master spreadsheet. Open **Extensions → Apps Script** and paste
-   in `MonthlyMaster.gs`.
-2. At the top of the file, fill in `SOURCES`:
-   - `spreadsheetId`: the long id in each source sheet's URL
-     (`docs.google.com/spreadsheets/d/<THIS PART>/edit`).
-   - `keywords`: a tab is pulled if its name contains any of these. Case
-     doesn't matter.
-   - `exclude`: skip tabs whose names contain these words. For example,
-     `non` stops "Non pitch" tabs from being pulled as Pitch.
-3. Optional: run `previewMatches` and check **Execution log**. It lists every
-   tab, whether it would be pulled, and which month it would go into. Nothing
-   is copied.
-4. Run `installTriggers` once and approve the permissions. This sets up the
-   triggers and runs the first full pull.
+| Tab name (example) | Goes to |
+|---|---|
+| `08 OCT 2026 10 Mins Workshop pitch` | October Pitch |
+| `08 OCT 2026 10 Mins Workshop non-pitch` | October Non-pitch |
+| `08 OCT 2026 10 Mins Workshop missed` | October Missed |
+| `04 OCT 2026 7:30 10 Mins Workshop pitch` | October Pitch |
+| `04 OCT 2026 10 Mins Workshop pitch1` | October Pitch |
+| `30 Sep2026 10 Mins Workshop pitch` | September Pitch |
+| `08 OCT 2026 10 Mins Workshop attendee (w/o buyers)` | skipped |
+| `28 SEP 2026 Faceless enc Workshop pitch` | skipped (different workshop) |
+| `9 SEP TFP pitch`, `16 AUG Flexi Agentic pitch` | skipped (different workshop) |
+| `Sheet62`, `replay aud` | skipped |
+
+The month comes from the date in the tab name. Keep naming tabs the way you
+do now: date first, then "10 Mins Workshop", then pitch / non-pitch / missed.
+
+## How it syncs
+
+- **First run:** it pulls every row from every matching tab.
+- **After that:** it only adds what's new, to the bottom of that month's tab.
+  That covers new session tabs (for example the 12 Oct pitch tab) and rows
+  added later to an existing tab. Nothing is copied twice.
+- Each row gets two extra columns at the front: **Session tab**, the tab it
+  came from, so you can tell sessions apart, and **Synced at**. Columns are
+  matched by header name (Name, Email, Phone, Time ...). Every run is
+  recorded in a **Sync log** tab.
+- **When it runs:** right after any edit or new tab in an upload file that
+  has workshop tabs, and every 15 minutes as a safety net. The 15-minute run
+  is also how a brand-new upload file gets found.
+
+## One-time setup (about 5 minutes)
+
+1. Create a new Google Sheet, for example "10 Mins Workshop – Monthly Master".
+2. In it, open **Extensions → Apps Script**. Delete the sample code, paste in
+   all of `MonthlyMaster.gs`, and click **Save**.
+3. Optional check: pick **previewMatches** in the function dropdown, click
+   **Run**, and open the **Execution log**. It lists every tab and where it
+   would go. Nothing is copied.
+4. Pick **installTriggers**, click **Run**, and approve the permissions. Google
+   will say the app is unverified; click **Advanced → Go to project**. This
+   step sets up the triggers and copies everything so far.
+
+The Google account that does this needs edit access to the upload files.
 
 ## Notes
 
-- Add rows to the **bottom** of a source tab. The script remembers how many
-  rows it has copied from each tab. If you insert a row in the middle, the
-  last row gets copied instead, not the inserted one. Edits to rows that were
-  already copied are not synced.
+- Add new rows at the **bottom** of a tab. The script remembers how many rows
+  it has copied from each tab. If you insert a row in the middle, the last row
+  gets copied instead. Edits to rows that were already copied are not synced.
 - To rebuild from scratch: delete the month tabs, run `resetSyncState`, then
   run `syncAll`.
 - If you keep more than one year in the same master, set
   `MONTH_FORMAT = 'MMMM yyyy'` to get tab names like "October 2026 Pitch".
+- To change which files or tabs are read, edit `EXTRA_SOURCE_IDS`,
+  `SOURCE_FILE_NAME`, `SOURCE_FILES_SINCE` or `CAMPAIGN_TAB_PATTERN` at the
+  top of the script.
