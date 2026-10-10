@@ -141,17 +141,21 @@ function syncAll() {
   }
 }
 
-/** Ids of all source spreadsheets: matching file names plus EXTRA_SOURCE_IDS. */
+/** Ids of all source spreadsheets: EXTRA_SOURCE_IDS plus newer upload files. */
 function sourceIds_() {
   const ids = EXTRA_SOURCE_IDS.slice();
-  const q = 'title contains "' + SOURCE_FILE_NAME.replace(/"/g, '\\"') + '"' +
-    ' and mimeType = "application/vnd.google-apps.spreadsheet"' +
-    ' and createdDate >= "' + SOURCE_FILES_SINCE + 'T00:00:00"' +
-    ' and trashed = false';
-  const it = DriveApp.searchFiles(q);
-  while (it.hasNext()) {
-    const id = it.next().getId();
-    if (ids.indexOf(id) === -1) ids.push(id);
+  const since = new Date(SOURCE_FILES_SINCE + 'T00:00:00');
+  try {
+    const q = "title contains '" + SOURCE_FILE_NAME.replace(/'/g, "\\'") + "'" +
+      " and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
+    const it = DriveApp.searchFiles(q);
+    while (it.hasNext()) {
+      const f = it.next();
+      if (f.getDateCreated() >= since && ids.indexOf(f.getId()) === -1) ids.push(f.getId());
+    }
+  } catch (e) {
+    // Searching failed: still sync the files listed in EXTRA_SOURCE_IDS.
+    Logger.log('File search failed: %s', e.message);
   }
   return ids;
 }
