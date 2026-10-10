@@ -141,6 +141,11 @@ input[type=text]:focus, select:focus, .ms-btn:focus { outline: 2px solid var(--a
 .ms-item .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-item .ct { color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 12px; }
 .ms-foot { display: flex; justify-content: space-between; padding: 6px 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); align-items: center; }
+.opt { font-weight: 400; color: var(--text-3); }
+.merge-note { font-size: 12px; color: var(--text-2); margin-top: 6px; min-height: 0; }
+.result .line.plus .l { color: var(--text); }
+.result .line.sub { background: var(--surface-2); margin: 0 -14px; padding: 7px 14px; border-bottom: 0; }
+.result .line.sub .l { color: var(--text); font-weight: 600; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12px; }
 .chip .ct { color: var(--text-2); }
@@ -272,23 +277,34 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <!-- STEP 1: BUILD LIST -->
       <div class="card">
         <h2><span class="step">1</span> Build a broadcast list</h2>
-        <p class="hint">Pick an audience, subtract the audiences you've already messaged. Buyers are always removed.</p>
+        <p class="hint">Pick one audience or merge several, subtract the audiences you've already messaged. Overlaps and buyers are always removed.</p>
 
-        <label class="f" for="baseSel">Audience to send to</label>
-        <select id="baseSel"></select>
-
-        <label class="f">Subtract these audiences</label>
-        <div class="ms" id="ms">
-          <button type="button" class="ms-btn" id="msBtn"><span class="ph">Choose audiences to remove…</span></button>
+        <label class="f">Audiences to send to <span class="opt">— pick one, or several to merge</span></label>
+        <div class="ms" id="msSend">
+          <button type="button" class="ms-btn"><span class="ph">Choose audience(s) to message…</span></button>
           <div class="ms-panel">
-            <div class="search"><input type="text" id="msSearch" placeholder="Search audiences"></div>
-            <div class="ms-list" id="msList"></div>
-            <div class="ms-foot"><span id="msCount">0 selected</span><span>
-              <button type="button" class="btn small ghost" id="msAll">Select all</button>
-              <button type="button" class="btn small ghost" id="msClear">Clear</button></span></div>
+            <div class="search"><input type="text" placeholder="Search audiences"></div>
+            <div class="ms-list"></div>
+            <div class="ms-foot"><span class="ms-count">0 selected</span><span>
+              <button type="button" class="btn small ghost" data-act="all">Select all</button>
+              <button type="button" class="btn small ghost" data-act="clear">Clear</button></span></div>
           </div>
         </div>
-        <div class="chips" id="chips"></div>
+        <div class="chips"></div>
+        <div class="merge-note" id="mergeNote"></div>
+
+        <label class="f">Subtract these audiences <span class="opt">— optional</span></label>
+        <div class="ms" id="msSub">
+          <button type="button" class="ms-btn"><span class="ph">Choose audiences to remove…</span></button>
+          <div class="ms-panel">
+            <div class="search"><input type="text" placeholder="Search audiences"></div>
+            <div class="ms-list"></div>
+            <div class="ms-foot"><span class="ms-count">0 selected</span><span>
+              <button type="button" class="btn small ghost" data-act="all">Select all</button>
+              <button type="button" class="btn small ghost" data-act="clear">Clear</button></span></div>
+          </div>
+        </div>
+        <div class="chips"></div>
 
         <label class="check"><input type="checkbox" id="phoneOnly" checked>
           <span>Only contacts with a phone number<small>Needed for WhatsApp broadcast</small></span></label>
@@ -379,7 +395,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   'use strict';
   var CHUNK = 4000;
   var SERIES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7'];
-  var S = { audiences: [], selected: new Set(), parsed: null, lastBuild: null };
+  var S = { audiences: [], parsed: null, lastBuild: null };
 
   /* ---------- helpers ---------- */
   function $(id) { return document.getElementById(id); }
@@ -434,8 +450,6 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     return call('getState').then(function (st) {
       S.audiences = st.audiences;
       S.state = st;
-      // drop selections for audiences that no longer exist
-      S.selected.forEach(function (n) { if (!st.audiences.some(function (a) { return a.name === n; })) S.selected.delete(n); });
       render();
       $('loadingPage').classList.add('hidden'); $('app').classList.remove('hidden');
     }).catch(function (e) {
@@ -457,80 +471,92 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     $('statContactsMeta').textContent = fmt(phones) + ' with phone number';
     $('statBuyers').textContent = fmt(st.buyers.count);
     $('statSync').textContent = 'Synced ' + ago(st.buyers.lastSync);
-    renderBaseSelect(); renderMs(); renderChart(); renderTable(); renderLog();
+    renderPickers(); renderChart(); renderTable(); renderLog();
   }
 
-  function renderBaseSelect() {
-    var sel = $('baseSel'), cur = sel.value;
-    if (!S.audiences.length) { sel.innerHTML = '<option value="">Upload an audience first</option>'; sel.disabled = true; return; }
-    sel.disabled = false;
-    sel.innerHTML = '<option value="">Choose an audience…</option>' + newestFirst().map(function (a) {
-      return '<option value="' + esc(a.name) + '">' + esc(a.name) + ' (' + fmt(a.contacts) + ')</option>';
-    }).join('');
-    if (S.audiences.some(function (a) { return a.name === cur; })) sel.value = cur;
-  }
   function newestFirst() { return S.audiences.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; }); }
-
-  /* ---------- subtract multi-select ---------- */
-  function renderMs() {
-    var base = $('baseSel').value, q = $('msSearch').value.trim().toLowerCase();
-    S.selected.delete(base);
-    var list = newestFirst().filter(function (a) { return a.name !== base && (!q || a.name.toLowerCase().indexOf(q) >= 0); });
-    $('msList').innerHTML = list.length ? list.map(function (a) {
-      return '<label class="ms-item"><input type="checkbox" value="' + esc(a.name) + '"' + (S.selected.has(a.name) ? ' checked' : '') + '>' +
-        '<span class="nm">' + esc(a.name) + '</span><span class="ct">' + fmt(a.contacts) + '</span></label>';
-    }).join('') : '<div class="empty">' + (q ? 'No match' : 'No other audiences yet') + '</div>';
-    var n = S.selected.size;
-    $('msCount').textContent = n + ' selected';
-    var sum = 0; S.selected.forEach(function (nm) { var a = find(nm); if (a) sum += a.contacts; });
-    $('msBtn').innerHTML = n ? '<span>' + n + ' audience' + (n > 1 ? 's' : '') + ' selected · ' + fmt(sum) + ' contacts</span>'
-      : '<span class="ph">Choose audiences to remove…</span>';
-    var chips = [];
-    S.selected.forEach(function (nm) {
-      var a = find(nm);
-      chips.push('<span class="chip">' + esc(nm) + ' <span class="ct">' + fmt(a ? a.contacts : 0) + '</span><button type="button" data-rm="' + esc(nm) + '" aria-label="Remove ' + esc(nm) + '">×</button></span>');
-    });
-    $('chips').innerHTML = chips.join('');
-  }
   function find(name) { for (var i = 0; i < S.audiences.length; i++) if (S.audiences[i].name === name) return S.audiences[i]; return null; }
 
-  $('msBtn').addEventListener('click', function () { $('ms').classList.toggle('open'); if ($('ms').classList.contains('open')) $('msSearch').focus(); });
-  document.addEventListener('click', function (e) { if (!$('ms').contains(e.target)) $('ms').classList.remove('open'); });
-  $('msList').addEventListener('change', function (e) {
-    if (e.target.type !== 'checkbox') return;
-    if (e.target.checked) S.selected.add(e.target.value); else S.selected.delete(e.target.value);
-    clearBuild(); renderMs();
-  });
-  $('msSearch').addEventListener('input', renderMs);
-  $('msAll').addEventListener('click', function () {
-    var base = $('baseSel').value, q = $('msSearch').value.trim().toLowerCase();
-    S.audiences.forEach(function (a) { if (a.name !== base && (!q || a.name.toLowerCase().indexOf(q) >= 0)) S.selected.add(a.name); });
-    clearBuild(); renderMs();
-  });
-  $('msClear').addEventListener('click', function () { S.selected.clear(); clearBuild(); renderMs(); });
-  $('chips').addEventListener('click', function (e) { var n = e.target.getAttribute('data-rm'); if (n) { S.selected.delete(n); clearBuild(); renderMs(); } });
-  $('baseSel').addEventListener('change', function () { clearBuild(); renderMs(); });
+  /* ---------- audience multi-select (used twice) ---------- */
+  function makePicker(id, placeholder, other) {
+    var root = $(id), btn = root.querySelector('.ms-btn'), search = root.querySelector('.search input'),
+      list = root.querySelector('.ms-list'), count = root.querySelector('.ms-count'), chips = root.nextElementSibling;
+    var p = { selected: new Set() };
+    function blocked() { return other ? other().selected : new Set(); } // picked in the other box
+    function visible() {
+      var q = search.value.trim().toLowerCase(), block = blocked();
+      return newestFirst().filter(function (a) { return !block.has(a.name) && (!q || a.name.toLowerCase().indexOf(q) >= 0); });
+    }
+    p.render = function () {
+      var q = search.value.trim();
+      var vis = visible();
+      list.innerHTML = vis.length ? vis.map(function (a) {
+        return '<label class="ms-item"><input type="checkbox" value="' + esc(a.name) + '"' + (p.selected.has(a.name) ? ' checked' : '') + '>' +
+          '<span class="nm">' + esc(a.name) + '</span><span class="ct">' + fmt(a.contacts) + '</span></label>';
+      }).join('') : '<div class="empty">' + (q ? 'No match' : (S.audiences.length ? 'No other audiences' : 'Upload an audience first')) + '</div>';
+      var n = p.selected.size;
+      count.textContent = n + ' selected';
+      btn.innerHTML = n ? '<span>' + n + ' audience' + (n > 1 ? 's' : '') + ' · ' + fmt(p.sum()) + ' contacts</span>'
+        : '<span class="ph">' + placeholder + '</span>';
+      var c = [];
+      p.selected.forEach(function (nm) {
+        var a = find(nm);
+        c.push('<span class="chip">' + esc(nm) + ' <span class="ct">' + fmt(a ? a.contacts : 0) + '</span><button type="button" data-rm="' + esc(nm) + '" aria-label="Remove ' + esc(nm) + '">×</button></span>');
+      });
+      chips.innerHTML = c.join('');
+    };
+    p.sum = function () { var t = 0; p.selected.forEach(function (nm) { var a = find(nm); if (a) t += a.contacts; }); return t; };
+    p.prune = function () { p.selected.forEach(function (nm) { if (!find(nm)) p.selected.delete(nm); }); };
+    function changed() { renderPickers(); clearBuild(); }
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.ms.open').forEach(function (x) { if (x !== root) x.classList.remove('open'); });
+      root.classList.toggle('open'); if (root.classList.contains('open')) search.focus();
+    });
+    document.addEventListener('click', function (e) { if (!root.contains(e.target)) root.classList.remove('open'); });
+    search.addEventListener('input', p.render);
+    list.addEventListener('change', function (e) {
+      if (e.target.type !== 'checkbox') return;
+      if (e.target.checked) p.selected.add(e.target.value); else p.selected.delete(e.target.value);
+      changed();
+    });
+    root.querySelector('[data-act=all]').addEventListener('click', function () { visible().forEach(function (a) { p.selected.add(a.name); }); changed(); });
+    root.querySelector('[data-act=clear]').addEventListener('click', function () { p.selected.clear(); changed(); });
+    chips.addEventListener('click', function (e) { var n = e.target.getAttribute('data-rm'); if (n) { p.selected.delete(n); changed(); } });
+    return p;
+  }
+  var sendPicker = makePicker('msSend', 'Choose audience(s) to message…', function () { return subPicker; });
+  var subPicker = makePicker('msSub', 'Choose audiences to remove…', function () { return sendPicker; });
+  function renderPickers() {
+    sendPicker.prune(); subPicker.prune();
+    sendPicker.render(); subPicker.render();
+    var n = sendPicker.selected.size;
+    $('mergeNote').textContent = n > 1 ? 'These ' + n + ' audiences will be merged into one list (' + fmt(sendPicker.sum()) +
+      ' contacts before removing overlaps). Click Build list to see the final count.' : '';
+  }
+
   $('phoneOnly').addEventListener('change', clearBuild);
   function clearBuild() { S.lastBuild = null; $('buildResult').innerHTML = ''; }
 
   /* ---------- build list ---------- */
   $('buildBtn').addEventListener('click', function () {
-    var base = $('baseSel').value;
-    if (!base) return toast('Choose the audience to send to first.', true);
+    var bases = Array.from(sendPicker.selected);
+    if (!bases.length) return toast('Choose the audience(s) to send to first.', true);
     var btn = this; busy(btn, true, 'Building…');
-    var subtract = Array.from(S.selected), phoneOnly = $('phoneOnly').checked;
-    call('buildList', base, subtract, phoneOnly).then(function (res) {
+    var subtract = Array.from(subPicker.selected), phoneOnly = $('phoneOnly').checked;
+    call('buildList', bases, subtract, phoneOnly).then(function (res) {
       S.lastBuild = res;
-      var lines = res.steps.map(function (s, i) {
-        var minus = i > 0;
-        return '<div class="line' + (minus ? ' minus' : '') + '"><span class="l">' + (minus ? '− ' : '') + esc(s.label) + '</span><span class="n">' +
-          (minus ? '−' + fmt(-s.count) : fmt(s.count)) + '</span></div>';
-      }).join('');
-      var def = base + ' – broadcast ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      var lines = res.steps.map(function (s) {
+        if (s.add) return '<div class="line plus"><span class="l">' + (res.bases.length > 1 ? '+ ' : '') + esc(s.label) + '</span><span class="n">' + fmt(s.count) + '</span></div>';
+        return '<div class="line minus"><span class="l">− ' + esc(s.label) + '</span><span class="n">−' + fmt(-s.count) + '</span></div>';
+      });
+      if (res.bases.length > 1) lines.splice(res.bases.length, 0,
+        '<div class="line sub"><span class="l">Merged total</span><span class="n">' + fmt(res.mergedTotal) + '</span></div>');
+      var label = res.bases.length > 1 ? res.bases.length + ' audiences merged' : res.bases[0];
+      var def = label + ' – broadcast ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
       $('buildResult').innerHTML =
-        '<div class="result"><div class="lines">' + lines + '</div>' +
-        '<div class="total"><div><div class="cap">Unique contacts ready to message</div><div class="big">' + fmt(res.final) + '</div></div>' +
-        '<button class="btn primary" id="dlBuild"' + (res.final ? '' : ' disabled') + '>⬇ Download CSV</button></div>' +
+        '<div class="result"><div class="lines">' + lines.join('') + '</div>' +
+        '<div class="total"><div><div class="cap">Final unique contacts — ready to message</div><div class="big">' + fmt(res.final) + '</div></div>' +
+        '<button class="btn primary" id="dlBuild"' + (res.final ? '' : ' disabled') + '>⬇ Download ' + fmt(res.final) + ' contacts</button></div>' +
         '<div class="save"><label class="f" style="margin-top:0" for="saveName">Optional: save this list as a new audience (so you can subtract it next time)</label>' +
         '<div class="row"><input type="text" class="grow" id="saveName" maxlength="90" value="' + esc(def) + '"><button class="btn" id="saveBuild"' + (res.final ? '' : ' disabled') + '>Save as audience</button></div></div></div>';
     }).catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
@@ -538,12 +564,13 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   $('buildResult').addEventListener('click', function (e) {
     var b = S.lastBuild; if (!b) return;
     if (e.target.id === 'dlBuild') {
-      downloadCsv(b.base + (b.subtract.length ? ' minus ' + b.subtract.length + ' audiences' : '') + ' ' + new Date().toISOString().slice(0, 10), b.rows);
+      var nm = b.bases.length > 1 ? b.bases.length + ' audiences merged' : b.bases[0];
+      downloadCsv(nm + (b.subtract.length ? ' minus ' + b.subtract.length : '') + ' – ' + b.final + ' contacts ' + new Date().toISOString().slice(0, 10), b.rows);
     }
     if (e.target.id === 'saveBuild') {
       var btn = e.target, name = $('saveName').value;
       busy(btn, true, 'Saving…');
-      call('saveListAsAudience', name, b.base, b.subtract, b.phoneOnly).then(function (r) {
+      call('saveListAsAudience', name, b.bases, b.subtract, b.phoneOnly).then(function (r) {
         toast('Saved "' + r.name + '" with ' + fmt(r.saved) + ' contacts.');
         busy(btn, false); btn.textContent = 'Saved ✓'; btn.disabled = true;
         return load();

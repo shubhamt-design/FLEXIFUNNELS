@@ -47,6 +47,13 @@ const after = L.removeMatching(r.rows, buyers);
 assert.strictEqual(after.removed, 2);
 assert.deepStrictEqual(after.rows.map(x => x[0]), ['E', 'E2']);
 
+// merge: re-cleaning already-saved audiences keeps values and drops cross-audience overlaps
+const audA = [['A', 'a@x.com', '919840402282'], ['B', 'b@x.com', '']];
+const audB = [['A again', '', '919840402282'], ['C', 'c@x.com', '14155551234']];
+const merged = L.cleanAndDedupe(audA.concat(audB));
+assert.deepStrictEqual(merged.rows, [['A', 'a@x.com', '919840402282'], ['B', 'b@x.com', ''], ['C', 'c@x.com', '14155551234']]);
+assert.strictEqual(merged.duplicates, 1);
+
 // 50k performance
 const big = Array.from({ length: 50000 }, (_, i) => ['n' + i, `u${i % 45000}@x.com`, String(9000000000 + (i % 48000))]);
 let t = Date.now(); const c = L.cleanAndDedupe(big); const ms = Date.now() - t;

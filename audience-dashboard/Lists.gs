@@ -4,47 +4,68 @@
  */
 
 /* ------------------------------------------------------------------ */
-/* Build a broadcast list: main audience − selected audiences − buyers */
+/* Build a broadcast list:                                             */
+/*   merge selected audiences − overlaps − subtracted audiences − buyers */
 /* ------------------------------------------------------------------ */
 
-function buildList(base, subtract, phoneOnly) {
+function buildList(bases, subtract, phoneOnly) {
   guard_();
-  return buildList_(base, subtract, phoneOnly);
+  return buildList_(bases, subtract, phoneOnly);
 }
 
-function buildList_(base, subtract, phoneOnly) {
-  var rows = readAudience_(base);
-  var steps = [{ label: base, count: rows.length }];
-  var exclude = new Set();
-  (subtract || []).forEach(function (n) {
-    if (n !== base) keySetOf(readAudience_(n), exclude);
+function buildList_(bases, subtract, phoneOnly) {
+  bases = [].concat(bases || []).filter(String);
+  if (!bases.length) throw new Error('Choose at least one audience to send to.');
+  subtract = (subtract || []).filter(function (n) { return bases.indexOf(n) < 0; });
+
+  // 1. Merge: every row from every chosen audience.
+  var steps = [], merged = [];
+  bases.forEach(function (n) {
+    var rows = readAudience_(n);
+    steps.push({ label: n, count: rows.length, add: true });
+    merged = merged.concat(rows);
   });
-  var afterSub = removeMatching(rows, exclude);
-  if ((subtract || []).length) steps.push({ label: 'Already in selected audiences', count: -afterSub.removed });
-  var afterBuyers = removeMatching(afterSub.rows, readBuyerKeys_());
-  steps.push({ label: 'Buyers', count: -afterBuyers.removed });
-  var result = afterBuyers.rows;
-  if (phoneOnly) {
-    var withPhone = result.filter(function (r) { return r[2]; });
-    steps.push({ label: 'No phone number', count: -(result.length - withPhone.length) });
-    result = withPhone;
+  // 2. Same person in two merged audiences (email OR phone) -> keep once.
+  var rows = merged;
+  if (bases.length > 1) {
+    rows = cleanAndDedupe(merged, CONFIG.COUNTRY_CODE).rows;
+    steps.push({ label: 'In more than one of these audiences', count: -(merged.length - rows.length) });
   }
-  return { base: base, subtract: subtract || [], phoneOnly: !!phoneOnly, steps: steps,
-    final: result.length, rows: result };
+  // 3. Subtract the chosen old audiences.
+  if (subtract.length) {
+    var exclude = new Set();
+    subtract.forEach(function (n) { keySetOf(readAudience_(n), exclude); });
+    var afterSub = removeMatching(rows, exclude);
+    steps.push({ label: 'Already in subtracted audiences', count: -afterSub.removed });
+    rows = afterSub.rows;
+  }
+  // 4. Buyers (read live).
+  var afterBuyers = removeMatching(rows, readBuyerKeys_());
+  steps.push({ label: 'Buyers', count: -afterBuyers.removed });
+  rows = afterBuyers.rows;
+  // 5. WhatsApp needs a phone.
+  if (phoneOnly) {
+    var withPhone = rows.filter(function (r) { return r[2]; });
+    steps.push({ label: 'No phone number', count: -(rows.length - withPhone.length) });
+    rows = withPhone;
+  }
+  return { bases: bases, subtract: subtract, phoneOnly: !!phoneOnly, steps: steps,
+    mergedTotal: merged.length, final: rows.length, rows: rows };
 }
 
 /** Save a built list as a new audience so it can be subtracted later. */
-function saveListAsAudience(newName, base, subtract, phoneOnly) {
+function saveListAsAudience(newName, bases, subtract, phoneOnly) {
   var user = guard_();
   var lock = LockService.getScriptLock();
   lock.waitLock(60000);
   try {
     newName = checkNewName_(newName);
-    var built = buildList_(base, subtract, phoneOnly);
+    var built = buildList_(bases, subtract, phoneOnly);
     writeAudienceTab_(newName, built.rows);
-    var source = 'Built from ' + base + (built.subtract.length ? ' minus ' + built.subtract.join(', ') : '');
+    var source = 'Built from ' + built.bases.join(' + ') +
+      (built.subtract.length ? ' minus ' + built.subtract.join(', ') : '');
     db_().getSheetByName(META_TAB).appendRow([newName, built.rows.length, countPhones_(built.rows),
-      built.steps[0].count, 0, 0, 0, source, new Date(), user]);
+      built.mergedTotal, 0, 0, 0, source, new Date(), user]);
     log_(user, 'Saved list as audience', newName + ' (' + built.rows.length + ') — ' + source);
     return { name: newName, saved: built.rows.length };
   } finally {

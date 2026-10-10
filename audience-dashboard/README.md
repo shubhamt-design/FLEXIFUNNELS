@@ -3,7 +3,7 @@
 A Google Sheets–backed dashboard for webinar audiences:
 
 - **Upload** a list (CSV / Excel / Google Drive link) under a fixed name. Duplicates and buyers are removed automatically.
-- **Build a broadcast list**: pick an audience, pick old audiences to subtract from a dropdown (with counts), download a clean CSV for the WhatsApp tool.
+- **Build a broadcast list**: pick one audience — or several to **merge** — pick old audiences to subtract, see the final unique count, then download a clean CSV for the WhatsApp tool.
 - **Buyers stay current**: every hour the buyers sheet is re-read and new buyers are removed from *every* saved audience.
 - **Pie chart** of contacts per audience, a table of all audiences and an activity log.
 - Only `@flexifunnels.com` accounts can open it.
@@ -17,6 +17,7 @@ A Google Sheets–backed dashboard for webinar audiences:
 | Invalid rows | Rows with neither a valid email nor a valid phone are dropped |
 | Duplicates in a file | First row kept; if a duplicate has the phone/email the kept row was missing, it is filled in |
 | Buyers | Removed at upload, when building a list, and hourly from every saved audience |
+| Merge | Picking several "send to" audiences combines them; a person in more than one is kept once |
 | Subtract | Nothing is pre-selected — you choose which old audiences to remove |
 
 ## Setup (about 5 minutes, once)
