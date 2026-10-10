@@ -14,6 +14,10 @@ Each lead goes to one tab, based on their profession:
 | **Job Professional Profession** | Job Professional, Doctor |
 | **Other Profession** | Student, No Job or Business (Fresher), Other, blank (set `OTHER_TAB = ''` to drop them) |
 
+It also makes one tab per profession answer ("Business Owner", "Agency
+Owner", "Job Professional", "Student", ... and "Not Specified" for blanks).
+Set `TAB_PER_PROFESSION = false` to keep only the three group tabs.
+
 Answers not in that list go by keyword (`OTHER_KEYWORDS`, then
 `BUSINESS_KEYWORDS`, then `JOB_KEYWORDS`).
 
@@ -43,15 +47,14 @@ output on their own.
 - Columns are matched by header name (`first_name`/`name`, `email`,
   `phone`/`mobile`, `profession`/`occupation`, `utm_source`). Column order
   doesn't matter. Tabs without an email or phone column are skipped.
-- Each lead is added once. A lead counts as a duplicate when the email
+- Every run rebuilds all output tabs from scratch, so don't edit them by
+  hand. The Execution log shows the output link and the lead count per tab.
+- Each lead appears once. A lead counts as a duplicate when the email
   matches, or the phone number matches if there's no email. This applies
-  across all source tabs. The script never edits or removes rows already in
-  the output.
+  across all source tabs.
 - Test leads with a `@flexifunnels.com` email are skipped
   (`SKIP_EMAIL_DOMAINS`).
 - If someone registers twice with different answers, their first answer
   decides the tab.
-- To change which tab an answer goes to, edit `PROFESSION_MAP`. Changed keywords apply only to
-  new leads. To re-sort everyone, delete the data rows in the three tabs and
-  run `splitLeadsByProfession` once.
+- To change which tab an answer goes to, edit `PROFESSION_MAP`. The next run re-sorts everyone.
 - `SKIP_SOURCE_TABS` lists source tabs to ignore, such as a summary tab.
