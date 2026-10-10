@@ -8,8 +8,8 @@
  *   08 OCT 2026 10 Mins Workshop non-pitch               -> October Non-pitch
  *   08 OCT 2026 10 Mins Workshop missed                  -> October Missed
  *
- * This script copies the pitch / non-pitch / missed tabs of the campaigns in
- * CAMPAIGNS (10 Mins Workshop, Flexi Genie, Yearly Promo, Q&A ...) into one
+ * This script copies every dated pitch / non-pitch / missed tab (all
+ * campaigns: 10 Mins Workshop, Flexi Genie, Yearly Promo, Q&A ...) into one
  * master spreadsheet with three tabs per month:
  *
  *   October Pitch       October Non-pitch       October Missed
@@ -22,8 +22,9 @@
  *   - After that, each run appends only what is new: rows added to a tab
  *     since the last run, and every row of a tab created since the last run.
  *   - The month comes from the date in the tab name ("08 OCT 2026",
- *     "30 Sep2026", "20 AUG"). If a name has no date, the tab goes into the
- *     month the script first saw it.
+ *     "30 Sep2026", "20 AUG", "13sep"). Tabs with no date in the name are
+ *     skipped; a name with only a day ("25 Encore ...") takes the month of
+ *     the tab next to it.
  *
  * Source spreadsheets: EXTRA_SOURCE_IDS (Upload 9, 10, 11), plus any newer
  * spreadsheet whose name contains SOURCE_FILE_NAME, so Upload 12, 13 ... are
@@ -53,28 +54,46 @@ const SOURCE_FILE_NAME = 'Active Campaign List Upload';
 // ...created on or after this date.
 const SOURCE_FILES_SINCE = '2026-09-01';
 
-// Campaigns to pull. A tab is pulled only if its name matches one of these
-// (case-insensitive). First match wins, so put the more specific name first
-// ("Flexi Genie Q&A" before "Flexi Genie"). `name` goes in the Campaign column.
+// Which tabs are pulled: every tab whose name says pitch / non-pitch / missed
+// AND has a session date in it. Attendee and buyer tabs never say any of
+// these, so they're skipped. The Campaign column is filled in from CAMPAIGNS.
+
+// Tab type by keyword. First match wins, so Non-pitch must come before Pitch.
+// Covers "non-pitch", "Non Pitch", "No Pitch", "nopitch", "NO-PITCH".
+const TYPES = [
+  { type: 'Non-pitch', pattern: /\bno(?:n)?[\s\-_]*pitch/i },
+  { type: 'Pitch',     pattern: /pitch/i },
+  { type: 'Missed',    pattern: /missed/i },
+];
+
+// Tabs to skip even though they say pitch / missed (copies and subsets that
+// would count the same people twice).
+const SKIP_TABS = [
+  /^copy of/i,
+  /\b90\s*min/i,       // "pitch above 90 Min", "pitch (90 min)"
+];
+
+// Campaign column, from the tab name. First match wins, so put the more
+// specific name first. Tabs that name no campaign (e.g. "13 sep pitch",
+// older tabs) get "Other".
 const CAMPAIGNS = [
   { name: '10 Mins Workshop', pattern: /10\s*mins?\b/i },
   { name: 'Flexi Genie Q&A',  pattern: /flexi\s*genie.*q\s*&\s*a/i },
   { name: 'Flexi Genie',      pattern: /flexi\s*genie/i },
   { name: 'Yearly Promo',     pattern: /yearly\s*promo/i },
+  { name: 'Monthly Promo',    pattern: /monthly\s*promo/i },
   { name: 'Q&A',              pattern: /q\s*&\s*a/i },
-  // Also in the upload sheets; remove the // to include them:
-  // { name: 'TFP',           pattern: /\btfp\b/i },
-  // { name: 'Faceless',      pattern: /faceless/i },
-  // { name: 'Flexi Agentic', pattern: /flexi\s*agentic/i },
+  { name: 'Flexi Agentic',    pattern: /flexi\s*agent/i },
+  { name: 'Faceless',         pattern: /faces?l?ess|facelss/i },
+  { name: 'TFP',              pattern: /\btfp\b/i },
+  { name: 'PSP',              pattern: /\bpsp\b/i },
+  { name: 'MCP Implement',    pattern: /\bmcp\b/i },
+  { name: '2 Day AI',         pattern: /2\s*day\s*ai/i },
 ];
+const OTHER_CAMPAIGN = 'Other';
 
-// Tab type by keyword. First match wins, so Non-pitch must come before Pitch.
-// Tabs with none of these (attendee lists, buyers ...) are skipped.
-const TYPES = [
-  { type: 'Non-pitch', pattern: /non[\s\-_]*pitch/i },
-  { type: 'Pitch',     pattern: /pitch/i },
-  { type: 'Missed',    pattern: /missed/i },
-];
+// Campaigns to leave out of the master entirely, e.g. ['TFP', 'PSP'].
+const SKIP_CAMPAIGNS = [];
 
 // Columns copied from each source tab, found by header name (any of the
 // listed spellings, case-insensitive). If a tab has no recognisable headers,
@@ -141,11 +160,14 @@ function syncSource_(master, spreadsheetId, state, log) {
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const now = new Date();
   let triggerChecked = false;
+  const sheets = ss.getSheets();
+  const dates = tabDates_(sheets.map(function (sh) { return sh.getName(); }), now);
 
-  ss.getSheets().forEach(function (sheet) {
+  sheets.forEach(function (sheet, idx) {
     const name = sheet.getName();
     const match = matchTab_(name);
-    if (!match) return;
+    const sessionDate = dates[idx];
+    if (!match || !sessionDate) return;
     if (!triggerChecked) {
       ensureChangeTrigger_(spreadsheetId);
       triggerChecked = true;
@@ -153,10 +175,7 @@ function syncSource_(master, spreadsheetId, state, log) {
 
     const key = spreadsheetId + ':' + sheet.getSheetId();
     const tabState = state[key] || { copied: 0, month: null };
-    const sessionDate = dateFromTabName_(name, now);
-    if (!tabState.month) {
-      tabState.month = Utilities.formatDate(sessionDate || now, TIMEZONE, 'yyyy-MM');
-    }
+    if (!tabState.month) tabState.month = Utilities.formatDate(sessionDate, TIMEZONE, 'yyyy-MM');
 
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
@@ -172,7 +191,7 @@ function syncSource_(master, spreadsheetId, state, log) {
     // If rows were deleted from the source, don't re-copy; just catch up.
     if (tabState.copied > dataRows.length) tabState.copied = dataRows.length;
 
-    const dateText = sessionDate ? Utilities.formatDate(sessionDate, TIMEZONE, 'dd MMM yyyy') : '';
+    const dateText = Utilities.formatDate(sessionDate, TIMEZONE, 'dd MMM yyyy');
     const fresh = [];
     dataRows.slice(tabState.copied).forEach(function (r) {
       const out = cols.map(function (c) { return c === -1 ? '' : r[c]; });
@@ -194,29 +213,57 @@ function syncSource_(master, spreadsheetId, state, log) {
 
 /** Returns {campaign, type} for a tab to pull, or null to skip it. */
 function matchTab_(name) {
-  let campaign = null;
-  for (let i = 0; i < CAMPAIGNS.length && !campaign; i++) {
-    if (CAMPAIGNS[i].pattern.test(name)) campaign = CAMPAIGNS[i].name;
+  if (SKIP_TABS.some(function (re) { return re.test(name); })) return null;
+  let type = null;
+  for (let j = 0; j < TYPES.length && !type; j++) {
+    if (TYPES[j].pattern.test(name)) type = TYPES[j].type;
   }
-  if (!campaign) return null;
-  for (let j = 0; j < TYPES.length; j++) {
-    if (TYPES[j].pattern.test(name)) return { campaign: campaign, type: TYPES[j].type };
+  if (!type) return null;
+  let campaign = OTHER_CAMPAIGN;
+  for (let i = 0; i < CAMPAIGNS.length; i++) {
+    if (CAMPAIGNS[i].pattern.test(name)) { campaign = CAMPAIGNS[i].name; break; }
   }
-  return null;
+  if (SKIP_CAMPAIGNS.indexOf(campaign) !== -1) return null;
+  return { campaign: campaign, type: type };
 }
 
-/** Index of each COLUMNS entry in a header row (-1 if missing). */
+/**
+ * Session date of each tab (null if none). A name with only a day number,
+ * like "25 Encore flexigenie(Pitch)", takes its month from the nearest tab
+ * that has a full date.
+ */
+function tabDates_(names, now) {
+  const full = names.map(function (n) { return dateFromTabName_(n, now); });
+  return names.map(function (n, i) {
+    if (full[i]) return full[i];
+    const m = String(n).match(/^\s*(\d{1,2})(?!\d)(?:st|nd|rd|th)?\b/i);
+    if (!m) return null;
+    for (let d = 1; d < names.length; d++) {
+      const near = full[i - d] || full[i + d];
+      if (near) return makeDate_(near.getFullYear(), near.getMonth() + 1, +m[1]);
+    }
+    return null;
+  });
+}
+
+/**
+ * Index of each COLUMNS entry in a header row. A column whose header isn't
+ * found falls back to its usual position (A Name, B Email, C Phone, D Time)
+ * if no other column took that position, e.g. a blank Time header, or an
+ * Email column mistakenly headed "Name".
+ */
 function columnPositions_(headerRow) {
   const h = headerRow.map(function (x) { return String(x).trim().toLowerCase(); });
   const pos = COLUMNS.map(function (c) {
     for (let i = 0; i < h.length; i++) if (c.headers.indexOf(h[i]) !== -1) return i;
     return -1;
   });
-  // No recognisable headers at all: fall back to columns A-D.
-  if (pos.every(function (p) { return p === -1; })) {
-    return COLUMNS.map(function (c, i) { return i < headerRow.length ? i : -1; });
-  }
-  return pos;
+  const known = [].concat.apply([], COLUMNS.map(function (c) { return c.headers; }));
+  return pos.map(function (p, i) {
+    if (p !== -1 || i >= h.length || pos.indexOf(i) !== -1) return p;
+    // Only borrow a blank header, or one that belongs to another column.
+    return h[i] === '' || known.indexOf(h[i]) !== -1 ? i : -1;
+  });
 }
 
 /** Appends rows to a month tab, creating it with the header row if needed. */
@@ -342,12 +389,12 @@ function previewMatches() {
   sourceIds_().forEach(function (id) {
     const ss = SpreadsheetApp.openById(id);
     Logger.log('== %s', ss.getName());
-    ss.getSheets().forEach(function (sheet) {
-      const name = sheet.getName();
+    const names = ss.getSheets().map(function (sh) { return sh.getName(); });
+    const dates = tabDates_(names, now);
+    names.forEach(function (name, i) {
       const m = matchTab_(name);
-      const d = m ? dateFromTabName_(name, now) : null;
-      Logger.log('%s  ->  %s', name, !m ? 'skipped'
-        : (d ? Utilities.formatDate(d, TIMEZONE, MONTH_FORMAT) : '(no date: month first synced)') + ' ' + m.type + '  [' + m.campaign + ']');
+      Logger.log('%s  ->  %s', name, !m ? 'skipped' : !dates[i] ? 'skipped (no date in name)'
+        : Utilities.formatDate(dates[i], TIMEZONE, MONTH_FORMAT) + ' ' + m.type + '  [' + m.campaign + ']');
     });
   });
 }

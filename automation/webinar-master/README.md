@@ -20,25 +20,49 @@ Each row in the master has these columns:
 |---|---|---|---|---|---|---|
 
 Name, Email, Phone and Time are found by header name, so column order doesn't
-matter. `first_name`, `Phonw` and similar spellings work. If a tab has no Time
+matter. `first_name`, `Phonw` and similar spellings work. If a header is blank
+or misnamed (for example the Email column headed "Name"), the usual position
+is used instead: A Name, B Email, C Phone, D Time. If a tab has no Time
 column, Time is left blank.
 
-## Which campaigns
+## Which tabs
 
-A tab is pulled only if its name contains one of these:
+Older tabs weren't named consistently, so the script doesn't need an exact
+format. It pulls **every tab whose name says pitch, non-pitch or missed and
+has a date**:
 
-| Keyword in tab name | Campaign column |
+| Older / newer spellings | Counted as |
+|---|---|
+| `pitch`, `Pitch`, `(pitch)`, `PITCH`, `pitch1` | Pitch |
+| `non-pitch`, `Non Pitch`, `No Pitch`, `nopitch`, `NO-PITCH`, `(no pitch)` | Non-pitch |
+| `missed`, `Missed`, `MISSED`, `missed1` | Missed |
+
+It skips:
+- Attendee and buyer tabs.
+- Tabs with no date in the name (`Missed`, `non pitch`, `Closing Audience + Pitch`).
+- `Copy of ...` tabs.
+- The `pitch above 90 Min` / `pitch (90 min)` subsets, which would count the same people twice.
+
+A name with only a day (`25 Encore flexigenie(Pitch)`) takes its month from the
+tab next to it, so that one goes to **25 Aug**.
+
+The **Campaign** column comes from the tab name:
+
+| In the tab name | Campaign |
 |---|---|
 | `10 Mins` | 10 Mins Workshop |
-| `Flexi Genie` + `Q&A` | Flexi Genie Q&A |
-| `Flexi Genie` | Flexi Genie |
+| `Flexi Genie` / `flexigenie` + `Q&A` | Flexi Genie Q&A |
+| `Flexi Genie` / `flexigenie` | Flexi Genie |
 | `Yearly Promo` | Yearly Promo |
+| `Monthly Promo` | Monthly Promo |
 | `Q&A` | Q&A |
+| `Flexi Agent` | Flexi Agentic |
+| `Faceless` | Faceless |
+| `TFP`, `PSP`, `MCP`, `2 Day AI` | TFP, PSP, MCP Implement, 2 Day AI |
+| none of these (e.g. `13 sep pitch`, `8 Sep Encore Pitch`) | Other |
 
-The upload sheets also have **TFP**, **Faceless** and **Flexi Agentic** tabs.
-These are set up in the script but switched off. To include one, remove the
-`//` in front of its line in `CAMPAIGNS`. To add a new campaign, copy a line
-and change the name and keyword.
+To leave a campaign out of the master, add its name to `SKIP_CAMPAIGNS` at the
+top of the script, for example `['TFP', 'PSP']`.
 
 ## Where it reads from
 
@@ -53,7 +77,7 @@ automatically.
   tab. That covers new session tabs and rows added later to an existing tab.
   Nothing is copied twice.
 - **Month:** taken from the date in the tab name (`08 OCT 2026`,
-  `30 Sep2026`, `20 AUG`).
+  `30 Sep2026`, `20 AUG`, `13sep`, `faceless26july`).
 - **When it runs:** right after any edit in an upload sheet, and every 15
   minutes as a safety net. Each run is recorded in a **Sync log** tab.
 
@@ -74,7 +98,8 @@ The Google account that does this needs edit access to the upload sheets.
 ## Notes
 
 - Keep naming tabs the way you do now: date, then campaign, then pitch /
-  non-pitch / missed.
+  non-pitch / missed. Then the Campaign column is filled in correctly, not
+  "Other".
 - Add new rows at the **bottom** of a tab. The script remembers how many rows
   it has copied from each tab. If you insert a row in the middle, the last row
   gets copied instead. Edits to rows that were already copied are not synced.
