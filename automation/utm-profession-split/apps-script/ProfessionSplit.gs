@@ -13,7 +13,9 @@
  *                                  OTHER_TAB to '' to skip these leads.
  *
  * Columns are found by their header text, not by position, so it works on
- * every UTM tab even if their column order differs.
+ * every UTM tab even if their column order differs. Tabs without a
+ * utm_source column (e.g. the Reg team tabs) get the UTM source from the
+ * ?utm_source= part of their source_url column.
  *
  * It only appends: a lead already in the output (same email, or same phone
  * when there is no email) is not copied again, and rows you edit or
@@ -27,7 +29,7 @@
 
 // The UTM lead spreadsheet (source). Leave blank if this script is bound
 // to it (opened via Extensions > Apps Script in that spreadsheet).
-const SOURCE_SPREADSHEET_ID = '';
+const SOURCE_SPREADSHEET_ID = '1M-1GJ_W6xyTehUH_o_uikYy49rp-SP_WUsxmBNNR_Wo'; // August 2026 UTM
 
 // The new spreadsheet the sorted leads go into. Leave blank and the first
 // run creates one called "UTM Leads by Profession"; its link is written to
@@ -51,12 +53,35 @@ const HEADER_ALIASES = {
   phone: ['phone', 'phonenumber', 'mobile', 'mobilenumber', 'mobileno', 'phoneno',
           'contact', 'contactnumber', 'whatsapp', 'whatsappnumber'],
   profession: ['profession', 'occupation', 'designation', 'iama', 'youare', 'workprofile'],
-  utmSource: ['utmsource', 'source'],
+  utmSource: ['utmsource'],
+  sourceUrl: ['sourceurl', 'pageurl', 'url'],
 };
 
-// Keywords that decide the tab, matched against the profession text in
-// lower case. Business is checked first, so "Self-employed" and
-// "Business professional" land in Business, not Job.
+// Leads with these email domains are internal tests and are skipped.
+const SKIP_EMAIL_DOMAINS = ['flexifunnels.com'];
+
+// Exact form answers (lower case) and the tab they go to. Anything not
+// listed here falls back to the keyword lists below.
+const PROFESSION_MAP = {
+  'business owner': 'business',
+  'local business owner': 'business',
+  'agency owner': 'business',
+  'e-commerce': 'business',
+  'coach or trainer': 'business',
+  'freelancer/service provider': 'business',
+  'consultant': 'business',
+  'job professional': 'job',
+  'doctor': 'job',
+  'student': 'other',
+  'no job or business (fresher)': 'other',
+  'other': 'other',
+};
+
+// Keywords for answers not in PROFESSION_MAP, matched against the
+// profession text in lower case. Other is checked first (so "No job or
+// business" is not Business), then Business (so "Self-employed" and
+// "Business professional" are not Job), then Job.
+const OTHER_KEYWORDS = ['no job', 'fresher', 'student', 'unemployed', 'homemaker', 'housewife', 'retired'];
 const BUSINESS_KEYWORDS = [
   'business', 'owner', 'entrepreneur', 'founder', 'self employed', 'self-employed',
   'selfemployed', 'freelanc', 'agency', 'startup', 'start-up', 'shop', 'store',
@@ -107,8 +132,9 @@ function splitLeadsByProfession() {
           cell_(row, cols.email),
           cell_(row, cols.phone),
           cell_(row, cols.profession),
-          cell_(row, cols.utmSource),
+          cols.utmSource !== -1 ? cell_(row, cols.utmSource) : utmFromUrl_(cell_(row, cols.sourceUrl)),
         ];
+        if (isSkippedEmail_(lead[1])) continue;
         const key = leadKey_(lead[1], lead[2]);
         if (!key || seen[key]) continue;
         seen[key] = true;
@@ -132,6 +158,8 @@ function splitLeadsByProfession() {
 function classify_(profession) {
   const p = String(profession).toLowerCase().trim();
   if (!p) return 'other';
+  if (PROFESSION_MAP[p]) return PROFESSION_MAP[p];
+  if (OTHER_KEYWORDS.some(function (k) { return p.indexOf(k) !== -1; })) return 'other';
   if (BUSINESS_KEYWORDS.some(function (k) { return p.indexOf(k) !== -1; })) return 'business';
   if (JOB_KEYWORDS.some(function (k) { return p.indexOf(k) !== -1; })) return 'job';
   return 'other';
@@ -149,6 +177,21 @@ function findColumns_(headers) {
     }
   });
   return cols;
+}
+
+function utmFromUrl_(url) {
+  const m = String(url).match(/[?&]utm_source=([^&#]*)/i);
+  if (!m) return '';
+  try {
+    return decodeURIComponent(m[1].replace(/\+/g, ' ')).trim();
+  } catch (e) {
+    return m[1];
+  }
+}
+
+function isSkippedEmail_(email) {
+  const domain = String(email).toLowerCase().split('@')[1] || '';
+  return SKIP_EMAIL_DOMAINS.indexOf(domain) !== -1;
 }
 
 function cell_(row, index) {

@@ -8,11 +8,19 @@ It copies five columns from each lead into a separate output spreadsheet:
 
 Each lead goes to one tab, based on their profession:
 
-| Tab | Who goes there |
+| Tab | Form answers |
 |---|---|
-| **Business Profession** | business owner, entrepreneur, founder, self-employed, freelancer, agency, coach, consultant, shop/store, trader... |
-| **Job Professional Profession** | job, working professional, employee, salaried, service, corporate, manager, engineer, teacher... |
-| **Other Profession** | everything else, including students, homemakers and blank answers (set `OTHER_TAB = ''` to drop them) |
+| **Business Profession** | Business Owner, Local Business Owner, Agency Owner, E-Commerce, Coach or Trainer, Freelancer/Service Provider, Consultant |
+| **Job Professional Profession** | Job Professional, Doctor |
+| **Other Profession** | Student, No Job or Business (Fresher), Other, blank (set `OTHER_TAB = ''` to drop them) |
+
+Answers not in that list go by keyword (`OTHER_KEYWORDS`, then
+`BUSINESS_KEYWORDS`, then `JOB_KEYWORDS`).
+
+Source: [August 2026 UTM](https://docs.google.com/spreadsheets/d/1M-1GJ_W6xyTehUH_o_uikYy49rp-SP_WUsxmBNNR_Wo/edit)
+(`SOURCE_SPREADSHEET_ID`). The Reg team tabs have no `utm_source` column, so
+for those tabs the UTM source is read from the `?utm_source=` part of
+`source_url`. If the link has no UTM, the cell is left blank.
 
 A trigger runs it every 10 minutes, so new registrations show up in the
 output on their own.
@@ -21,7 +29,8 @@ output on their own.
 
 1. Open the UTM lead spreadsheet → **Extensions → Apps Script**. Add a new
    file and paste in `apps-script/ProfessionSplit.gs`.
-   - If you put the script anywhere else, set `SOURCE_SPREADSHEET_ID`.
+   - `SOURCE_SPREADSHEET_ID` already points at August 2026 UTM. Change it
+     when you move to a new month's spreadsheet.
    - To use an output spreadsheet you already have, set
      `OUTPUT_SPREADSHEET_ID`. Leave it blank and the first run creates
      "UTM Leads by Profession" in your Drive. The link appears in the
@@ -38,8 +47,11 @@ output on their own.
   matches, or the phone number matches if there's no email. This applies
   across all source tabs. The script never edits or removes rows already in
   the output.
-- To change which words count as business or job, edit `BUSINESS_KEYWORDS` and
-  `JOB_KEYWORDS`. Business is checked first. Changed keywords apply only to
+- Test leads with a `@flexifunnels.com` email are skipped
+  (`SKIP_EMAIL_DOMAINS`).
+- If someone registers twice with different answers, their first answer
+  decides the tab.
+- To change which tab an answer goes to, edit `PROFESSION_MAP`. Changed keywords apply only to
   new leads. To re-sort everyone, delete the data rows in the three tabs and
   run `splitLeadsByProfession` once.
 - `SKIP_SOURCE_TABS` lists source tabs to ignore, such as a summary tab.
