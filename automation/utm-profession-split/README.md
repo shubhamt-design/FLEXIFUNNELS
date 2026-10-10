@@ -35,7 +35,7 @@ output on their own.
      `OUTPUT_SPREADSHEET_ID`. Leave it blank and the first run creates
      "UTM Leads by Profession" in your Drive. The link appears in the
      Execution log.
-2. Select `installTrigger` and click **Run**. Approve the permissions prompt.
+2. Select `installProfessionSplitTrigger` and click **Run**. Approve the permissions prompt.
    It sets up the 10-minute trigger and fills the output straight away.
 
 ## Notes

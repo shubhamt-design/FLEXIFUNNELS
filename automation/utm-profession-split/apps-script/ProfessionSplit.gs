@@ -21,7 +21,7 @@
  * when there is no email) is not copied again, and rows you edit or
  * re-colour in the output are left alone.
  *
- * One-time setup: fill in the two ids below, then run installTrigger() once
+ * One-time setup: fill in the two ids below, then run installProfessionSplitTrigger() once
  * from the editor and approve the permissions prompt. After that it runs
  * every 10 minutes on its own. Run splitLeadsByProfession() by hand any
  * time to update immediately.
@@ -247,7 +247,7 @@ function openOutput_() {
   return created;
 }
 
-function installTrigger() {
+function installProfessionSplitTrigger() {
   ScriptApp.getProjectTriggers()
     .filter(function (t) { return t.getHandlerFunction() === 'splitLeadsByProfession'; })
     .forEach(function (t) { ScriptApp.deleteTrigger(t); });
