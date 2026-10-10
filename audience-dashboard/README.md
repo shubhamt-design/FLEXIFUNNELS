@@ -27,9 +27,11 @@ Do this signed in as the account that should own the dashboard (`arman@flexifunn
 2. **Open the script editor.** In that sheet: **Extensions → Apps Script**.
 3. **Add the files** (delete the sample `Code.gs` content first):
    - `Code.gs` → paste [`Code.gs`](Code.gs)
+   - **+ → Script**, name it `Lists` → paste [`Lists.gs`](Lists.gs)
    - **+ → Script**, name it `Logic` → paste [`Logic.gs`](Logic.gs)
    - **+ → HTML**, name it `Index` → paste [`Index.html`](Index.html)
    - **Project Settings (⚙) → tick "Show appsscript.json"**, then replace its content with [`appsscript.json`](appsscript.json)
+   Tip: on GitHub open each file and use the **Copy raw file** button (⧉ at the top right of the file) so nothing gets cut off. After pasting, the last line of each file should match the end of the file on GitHub. Press **Save (💾)** after each file.
 4. **Check the settings** at the top of `Code.gs` (`CONFIG`): buyers sheet ID, `ALLOWED_DOMAIN`, `COUNTRY_CODE`. They are pre-filled.
 5. **Run setup.** Pick `setup` in the function dropdown → **Run** → approve the permissions (Sheets, Drive, triggers). This creates the `_Audiences` and `_Log` tabs, does the first buyer sync and schedules the hourly sync.
 6. **Deploy.** **Deploy → New deployment → ⚙ Web app**
@@ -52,7 +54,8 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 
 | File | What it is |
 |---|---|
-| `Code.gs` | Server: storage, uploads, build list, hourly buyer sync, access check |
+| `Code.gs` | Server part 1: config, setup, access check, uploads, Drive links |
+| `Lists.gs` | Server part 2: build list, delete, hourly buyer sync, storage helpers |
 | `Logic.gs` | Cleaning / matching rules (no Google services, unit-tested) |
 | `Index.html` | The dashboard UI |
 | `dev/test.js` | `node dev/test.js` — tests for the cleaning rules |
