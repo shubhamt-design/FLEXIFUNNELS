@@ -73,6 +73,8 @@ a:hover { text-decoration: underline; }
 .srcs { list-style: none; margin: 4px 0 2px; padding: 0; font-size: 12px; }
 .srcs li { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
 .srcs li span { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.seg.pages { margin-top: 0; }
+.seg.pages button { padding: 8px 14px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .card h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
@@ -247,6 +249,10 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <h1>Audience Dashboard</h1>
       <div class="sub">Upload webinar audiences, remove buyers & duplicates, build clean WhatsApp lists.</div>
     </div>
+    <nav class="seg pages" id="pages">
+      <button type="button" class="on" data-page="pageAud">Audiences</button>
+      <button type="button" data-page="pageLeads">Lead sheets (UTM)</button>
+    </nav>
     <div class="top-links">
       <span id="userEmail"></span>
       <a id="dbLink" href="#" target="_blank" rel="noopener">Open data sheet ↗</a>
@@ -256,6 +262,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   <div id="loadingPage" class="loading-page"><span class="spin"></span>&nbsp; Loading audiences…</div>
 
   <main id="app" class="hidden">
+   <div id="pageAud">
     <section class="stats">
       <div class="stat">
         <div class="label">Saved audiences</div>
@@ -388,6 +395,8 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       </div>
       <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
     </section>
+   </div>
+   <div id="pageLeads" class="hidden"><?!= include('LeadsUI') ?></div>
   </main>
 </div>
 <div class="tip" id="tip"></div>
@@ -436,10 +445,11 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     var i = S.audiences.findIndex(function (a) { return a.name === name; });
     return i >= 0 && i < SERIES.length ? 'var(' + SERIES[i] + ')' : 'var(--s-other)';
   }
-  function downloadCsv(filename, rows) {
+  function downloadCsv(filename, rows, header) {
     function q(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
-    var lines = ['Name,Email,Phone'];
-    for (var i = 0; i < rows.length; i++) lines.push(q(rows[i][0]) + ',' + q(rows[i][1]) + ',' + q(rows[i][2]));
+    header = header || ['Name', 'Email', 'Phone'];
+    var lines = [header.join(',')];
+    for (var i = 0; i < rows.length; i++) lines.push(header.map(function (_, j) { return q(rows[i][j]); }).join(','));
     var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -820,6 +830,21 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       return load();
     }).catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
   });
+
+  /* ---------- pages ---------- */
+  document.querySelectorAll('#pages button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#pages button').forEach(function (x) {
+        x.classList.toggle('on', x === b);
+        $(x.dataset.page).classList.toggle('hidden', x !== b);
+      });
+      if (b.dataset.page === 'pageLeads' && window.Leads) window.Leads.show();
+    });
+  });
+
+  // shared helpers for LeadsUI.html
+  window.AD = { $: $, fmt: fmt, esc: esc, call: call, toast: toast, errMsg: errMsg, busy: busy, ago: ago,
+    dateShort: dateShort, downloadCsv: downloadCsv, reload: function () { return load(); } };
 
   load();
 })();

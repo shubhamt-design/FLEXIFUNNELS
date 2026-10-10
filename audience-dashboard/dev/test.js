@@ -64,6 +64,17 @@ const merged = L.cleanAndDedupe(audA.concat(audB));
 assert.deepStrictEqual(merged.rows, [['A', 'a@x.com', '919840402282'], ['B', 'b@x.com', ''], ['C', 'c@x.com', '14155551234']]);
 assert.strictEqual(merged.duplicates, 1);
 
+// extra columns (source tab tag) survive cleaning
+assert.deepStrictEqual(L.cleanAndDedupe([['A', 'a@x.com', '9840402282', 'Tab 1'], ['A', 'a@x.com', '', 'Tab 2']]).rows,
+  [['A', 'a@x.com', '919840402282', 'Tab 1']]);
+
+// headerless tab (like "Sheet21"): timestamp, name, email, phone, source, long ad ids
+const headerless = [
+  ['01/03/2026 00:00:30', 'Ankit', 'palankit1437@gmail.com', '+918601474876', 'facebook', '120237758928820510'],
+  ['01/03/2026 00:01:03', 'SHOBHIT', 'bajpaishobhit@gmail.com', '+917080838307', 'facebook', '120237758928820510']];
+assert.deepStrictEqual(L.sniffColumns(headerless), { name: 1, email: 2, phone: 3 });
+assert.strictEqual(L.sniffColumns([['LEAD SUMMARY'], ['Total rows: 5']]), null);
+
 // 50k performance
 const big = Array.from({ length: 50000 }, (_, i) => ['n' + i, `u${i % 45000}@x.com`, String(9000000000 + (i % 48000))]);
 let t = Date.now(); const c = L.cleanAndDedupe(big); const ms = Date.now() - t;

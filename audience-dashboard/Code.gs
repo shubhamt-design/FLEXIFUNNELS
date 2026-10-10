@@ -21,6 +21,8 @@ var CONFIG = {
   ],
   ALLOWED_DOMAIN: 'flexifunnels.com',  // only these emails can use the dashboard
   COUNTRY_CODE: '91',                  // added to 10-digit numbers
+  SOURCE_SEARCH: 'UTM',                // lead sheets: every spreadsheet with this in its name
+  IGNORE_EMAIL_DOMAINS: ['flexifunnels.com'], // test / staff entries skipped when pulling leads
   APP_TITLE: 'Audience Dashboard'
 };
 
@@ -52,6 +54,7 @@ function setup() {
   ScriptApp.newTrigger('syncBuyers').timeBased().everyHours(1).create();
 
   syncBuyers();
+  setupSources_();
   Logger.log('Setup done. Now deploy: Deploy → New deployment → Web app.');
 }
 
@@ -69,6 +72,11 @@ function doGet() {
   return HtmlService.createTemplateFromFile('Index').evaluate()
     .setTitle(CONFIG.APP_TITLE)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** Lets Index.html pull in other HTML files: <?!= include('LeadsUI') ?> */
+function include(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
 function guard_() {

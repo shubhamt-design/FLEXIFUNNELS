@@ -1,0 +1,243 @@
+<!-- Lead sheets (UTM) page. Included into Index.html; uses its styles and window.AD helpers. -->
+<style>
+.leads-grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
+.src-list { list-style: none; margin: 10px -8px 0; padding: 0; max-height: 640px; overflow: auto; }
+.src-list li { padding: 10px 8px; border-radius: 8px; cursor: pointer; display: grid; gap: 2px; }
+.src-list li:hover { background: var(--surface-2); }
+.src-list li.on { background: var(--accent-soft); }
+.src-list .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-list .mt { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tab-list { border: 1px solid var(--border); border-radius: 10px; max-height: 320px; overflow: auto; margin-top: 8px; }
+.tab-row { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+.tab-row:last-child { border-bottom: 0; }
+.tab-row input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.tab-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-row .ct { color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; }
+.tab-row .av { color: var(--good); font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; min-width: 70px; text-align: right; }
+.tab-row.off { cursor: default; color: var(--text-3); }
+.tab-row.off .ct { color: var(--text-3); }
+.pull-form { display: grid; grid-template-columns: 160px 1fr auto; gap: 8px; align-items: end; margin-top: 14px; }
+.pull-form label { font-size: 12px; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 6px; }
+.src-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.tagline { font-size: 12px; color: var(--text-2); margin-top: 6px; }
+@media (max-width: 900px) { .leads-grid { grid-template-columns: 1fr; } .pull-form { grid-template-columns: 1fr; } }
+</style>
+
+<section class="leads-grid">
+  <div class="card">
+    <div class="src-head">
+      <div>
+        <h2>Lead sheets</h2>
+        <p class="hint" style="margin:0">Every Google Sheet with “UTM” in its name. <span id="lsScanned"></span></p>
+      </div>
+      <button class="btn small" id="lsRescan" title="Look for new UTM sheets and recount rows">↻ Rescan Drive</button>
+    </div>
+    <input type="text" id="lsSearch" placeholder="Search sheets" style="margin-top:12px">
+    <ul class="src-list" id="lsList"></ul>
+    <details style="margin-top:10px"><summary class="tagline" style="cursor:pointer">Add a sheet without “UTM” in its name</summary>
+      <div class="row" style="margin-top:8px"><input type="text" class="grow" id="lsAddUrl" placeholder="Paste Google Sheets link"><button class="btn" id="lsAdd">Add</button></div>
+    </details>
+  </div>
+
+  <div class="card" id="lsPanel">
+    <div class="empty" id="lsEmpty">Choose a sheet on the left.</div>
+    <div id="lsBody" class="hidden">
+      <div class="src-head">
+        <div>
+          <h2 id="lsName"></h2>
+          <p class="hint" style="margin:0" id="lsMeta"></p>
+        </div>
+        <a id="lsOpen" href="#" target="_blank" rel="noopener" class="btn small">Open sheet ↗</a>
+      </div>
+
+      <label class="f">Tabs to use <span class="opt">— all ticked tabs are combined; each contact keeps its tab name</span></label>
+      <div class="row" style="justify-content:space-between">
+        <span class="tagline" id="lsTabCount"></span>
+        <span><button class="btn small ghost" id="lsAll">Select all</button><button class="btn small ghost" id="lsNone">Clear</button></span>
+      </div>
+      <div class="tab-list" id="lsTabs"></div>
+
+      <label class="check"><input type="checkbox" id="lsPhoneOnly" checked>
+        <span>Only contacts with a phone number<small>Needed for WhatsApp</small></span></label>
+
+      <div class="actions"><button class="btn" id="lsCheck">Check fresh contacts</button></div>
+      <div id="lsPreview"></div>
+
+      <div class="pull-form">
+        <div><label for="lsCount">How many to pull</label><input type="text" id="lsCount" inputmode="numeric" value="10000"></div>
+        <div><label for="lsBatch">Batch name (what is it for?)</label><input type="text" id="lsBatch" maxlength="90" placeholder="e.g. Flexi Genie webinar – 18 Oct"></div>
+        <button class="btn primary" id="lsPull">Pull &amp; mark as used</button>
+      </div>
+      <div class="tagline">Takes the next contacts in tab order that have never been pulled before. Buyers, opt-outs, reminder-team removals, duplicates and internal test entries are always removed.</div>
+      <div id="lsResult"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="tbl-head">
+    <div>
+      <h2>Pulled batches</h2>
+      <p class="hint">Contacts in these batches are skipped in every future pull. Release a batch if it was never sent, so its contacts can be pulled again. <a id="lsUsedLink" href="#" target="_blank" rel="noopener">Used-leads sheet ↗</a></p>
+    </div>
+  </div>
+  <div class="tbl-wrap"><table class="tbl" id="lsBatches"></table></div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+  var L = { state: null, sel: null, tabs: new Set(), preview: null, loaded: false };
+  function A() { return window.AD; }
+
+  function load() {
+    var a = A();
+    a.$('lsList').innerHTML = '<li class="empty"><span class="spin"></span> Loading sheets…</li>';
+    return a.call('getSourcesState').then(function (st) {
+      L.state = st; L.loaded = true;
+      a.$('lsScanned').textContent = st.scanned ? 'Last scanned ' + a.ago(st.scanned) + '.' : 'Not scanned yet — click Rescan.';
+      a.$('lsUsedLink').href = st.usedUrl || '#';
+      renderList(); renderBatches();
+      if (L.sel) { var again = find(L.sel.id); if (again) select(again.id, true); }
+    }).catch(function (e) { a.$('lsList').innerHTML = '<li class="empty">' + a.esc(a.errMsg(e)) + '</li>'; });
+  }
+  function find(id) { return (L.state.sources || []).filter(function (s) { return s.id === id; })[0]; }
+  function usable(t) { return t.cols && t.rows > 0; }
+
+  function renderList() {
+    var a = A(), q = a.$('lsSearch').value.trim().toLowerCase();
+    var list = (L.state.sources || []).filter(function (s) { return !s.hidden && (!q || s.name.toLowerCase().indexOf(q) >= 0); })
+      .sort(function (x, y) { return x.name.localeCompare(y.name); });
+    a.$('lsList').innerHTML = list.length ? list.map(function (s) {
+      var n = s.tabs.filter(usable).length;
+      return '<li data-id="' + a.esc(s.id) + '"' + (L.sel && L.sel.id === s.id ? ' class="on"' : '') + '><span class="nm">' + a.esc(s.name) +
+        '</span><span class="mt">' + n + ' tab' + (n === 1 ? '' : 's') + ' · ' + a.fmt(s.total) + ' rows</span></li>';
+    }).join('') : '<li class="empty">' + (q ? 'No match' : 'No sheets yet — click Rescan Drive.') + '</li>';
+  }
+
+  function select(id, keepTabs) {
+    var a = A(), s = find(id);
+    if (!s) return;
+    var changed = !L.sel || L.sel.id !== id;
+    L.sel = s;
+    if (changed || !keepTabs) { L.tabs = new Set(s.tabs.filter(usable).map(function (t) { return t.name; })); clearPreview(); a.$('lsResult').innerHTML = ''; }
+    a.$('lsEmpty').classList.add('hidden'); a.$('lsBody').classList.remove('hidden');
+    a.$('lsName').textContent = s.name;
+    a.$('lsMeta').textContent = s.tabs.filter(usable).length + ' tabs with contacts · ' + a.fmt(s.total) + ' rows' + (s.scanned ? ' · counted ' + a.ago(s.scanned) : '');
+    a.$('lsOpen').href = 'https://docs.google.com/spreadsheets/d/' + s.id + '/edit';
+    renderList(); renderTabs();
+  }
+
+  function renderTabs() {
+    var a = A(), s = L.sel, per = L.preview ? L.preview.perTab : null;
+    a.$('lsTabs').innerHTML = s.tabs.map(function (t, i) {
+      if (!usable(t)) return '<div class="tab-row off"><span></span><span class="nm">' + a.esc(t.name) + '</span><span class="ct">' +
+        (t.cols ? 'empty' : 'skipped – no email/phone column') + '</span><span></span></div>';
+      return '<label class="tab-row"><input type="checkbox" data-i="' + i + '"' + (L.tabs.has(t.name) ? ' checked' : '') + '><span class="nm" title="' + a.esc(t.name) + '">' + a.esc(t.name) +
+        '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span><span class="av">' + (per && L.tabs.has(t.name) ? a.fmt(per[t.name] || 0) + ' fresh' : '') + '</span></label>';
+    }).join('');
+    var rows = s.tabs.filter(function (t) { return usable(t) && L.tabs.has(t.name); }).reduce(function (x, t) { return x + t.rows; }, 0);
+    a.$('lsTabCount').textContent = L.tabs.size + ' of ' + s.tabs.filter(usable).length + ' tabs selected · ' + a.fmt(rows) + ' rows';
+  }
+
+  function clearPreview() { L.preview = null; A().$('lsPreview').innerHTML = ''; }
+  function chosen() { return L.sel.tabs.filter(function (t) { return usable(t) && L.tabs.has(t.name); }).map(function (t) { return t.name; }); }
+  function stepsHtml(steps) {
+    var a = A();
+    return steps.map(function (s) {
+      if (s.add) return '<div class="line plus"><span class="l">' + a.esc(s.label) + '</span><span class="n">' + a.fmt(s.count) + '</span></div>';
+      return '<div class="line minus"><span class="l">− ' + a.esc(s.label) + '</span><span class="n">−' + a.fmt(-s.count) + '</span></div>';
+    }).join('');
+  }
+
+  function bind() {
+    var a = A();
+    a.$('lsList').addEventListener('click', function (e) { var li = e.target.closest('li[data-id]'); if (li) select(li.getAttribute('data-id')); });
+    a.$('lsSearch').addEventListener('input', renderList);
+    a.$('lsTabs').addEventListener('change', function (e) {
+      var t = L.sel.tabs[+e.target.getAttribute('data-i')]; if (!t) return;
+      if (e.target.checked) L.tabs.add(t.name); else L.tabs.delete(t.name);
+      clearPreview(); renderTabs();
+    });
+    a.$('lsAll').addEventListener('click', function () { L.sel.tabs.filter(usable).forEach(function (t) { L.tabs.add(t.name); }); clearPreview(); renderTabs(); });
+    a.$('lsNone').addEventListener('click', function () { L.tabs.clear(); clearPreview(); renderTabs(); });
+    a.$('lsPhoneOnly').addEventListener('change', clearPreview);
+
+    a.$('lsCheck').addEventListener('click', function () {
+      var tabs = chosen(); if (!tabs.length) return a.toast('Tick at least one tab.', true);
+      var btn = this; a.busy(btn, true, 'Counting…');
+      a.call('previewPool', L.sel.id, tabs, a.$('lsPhoneOnly').checked).then(function (p) {
+        L.preview = p;
+        a.$('lsPreview').innerHTML = '<div class="result"><div class="lines">' + stepsHtml(p.steps) + '</div><div class="total"><div><div class="cap">Fresh contacts available to pull</div><div class="big">' +
+          a.fmt(p.available) + '</div></div></div></div>';
+        if (+a.$('lsCount').value > p.available) a.$('lsCount').value = p.available;
+        renderTabs();
+      }).catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
+
+    a.$('lsPull').addEventListener('click', function () {
+      var tabs = chosen(), n = parseInt(String(a.$('lsCount').value).replace(/[^\d]/g, ''), 10), name = a.$('lsBatch').value.trim();
+      if (!tabs.length) return a.toast('Tick at least one tab.', true);
+      if (!(n > 0)) return a.toast('Enter how many contacts to pull.', true);
+      if (!name) return a.toast('Give this batch a name, e.g. the webinar it is for.', true);
+      if (!confirm('Pull ' + a.fmt(n) + ' fresh contacts from "' + L.sel.name + '" for "' + name + '"?\n\nThey will be marked as used and skipped in future pulls.')) return;
+      var btn = this; a.busy(btn, true, 'Pulling…');
+      a.call('pullBatch', L.sel.id, tabs, a.$('lsPhoneOnly').checked, n, name).then(function (r) {
+        L.last = r;
+        var per = Object.keys(r.perTab).map(function (k) { return a.esc(k) + ': ' + a.fmt(r.perTab[k]); }).join(' · ');
+        a.$('lsResult').innerHTML = '<div class="result"><div class="total"><div><div class="cap">Pulled for “' + a.esc(r.name) + '”' +
+          (r.pulled < n ? ' (only ' + a.fmt(r.pulled) + ' fresh contacts were left)' : '') + '</div><div class="big">' + a.fmt(r.pulled) + '</div></div>' +
+          '<button class="btn primary" id="lsDl">⬇ Download ' + a.fmt(r.pulled) + ' contacts</button></div><div class="save tagline">From tabs — ' + per + '</div></div>';
+        a.$('lsBatch').value = '';
+        clearPreview();
+        a.toast('Batch saved and marked as used.');
+        return load();
+      }).catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
+    a.$('lsResult').addEventListener('click', function (e) {
+      if (e.target.id === 'lsDl' && L.last) a.downloadCsv(L.last.name + ' – ' + L.last.pulled + ' contacts', L.last.rows, ['Name', 'Email', 'Phone', 'Source tab']);
+    });
+
+    a.$('lsRescan').addEventListener('click', function () {
+      var btn = this; a.busy(btn, true, 'Scanning… (1–2 min)');
+      a.call('scanSourcesNow').then(function (r) { a.toast('Found ' + r.sheets + ' sheets.'); return load(); })
+        .catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
+    a.$('lsAdd').addEventListener('click', function () {
+      var url = a.$('lsAddUrl').value.trim(); if (!url) return;
+      var btn = this; a.busy(btn, true, 'Adding…');
+      a.call('addSourceByLink', url).then(function (r) { a.toast('Added "' + r.name + '".'); a.$('lsAddUrl').value = ''; return load(); })
+        .catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
+
+    a.$('lsBatches').addEventListener('click', function (e) {
+      var btn = e.target.closest('button'); if (!btn) return;
+      var id = btn.getAttribute('data-dl') || btn.getAttribute('data-rel');
+      var b = (L.state.batches || []).filter(function (x) { return x.id === id; })[0]; if (!b) return;
+      if (btn.hasAttribute('data-dl')) {
+        a.busy(btn, true, '…');
+        a.call('getBatchRows', id).then(function (rows) { a.downloadCsv(b.name + ' – ' + rows.length + ' contacts', rows, ['Name', 'Email', 'Phone', 'Source tab']); })
+          .catch(function (err) { a.toast(a.errMsg(err), true); }).then(function () { a.busy(btn, false); });
+      } else {
+        if (!confirm('Release "' + b.name + '"?\n\nIts ' + a.fmt(b.pulled) + ' contacts will no longer be marked as used and can be pulled again. Only do this if the batch was never sent.')) return;
+        a.busy(btn, true, '…');
+        a.call('releaseBatch', id).then(function () { a.toast('Released "' + b.name + '".'); return load(); })
+          .catch(function (err) { a.toast(a.errMsg(err), true); a.busy(btn, false); });
+      }
+    });
+  }
+
+  function renderBatches() {
+    var a = A(), list = L.state.batches || [];
+    a.$('lsBatches').innerHTML = list.length ? '<tr><th>Batch</th><th>Sheet</th><th class="num">Contacts</th><th>Pulled</th><th></th></tr>' +
+      list.map(function (b) {
+        return '<tr><td><div class="nm">' + a.esc(b.name) + '</div><div class="muted">' + a.esc(b.tabs) + '</div></td><td>' + a.esc(b.sheet) + '</td>' +
+          '<td class="num"><b>' + a.fmt(b.pulled) + '</b></td><td>' + a.dateShort(b.createdAt) + '<div class="muted">' + a.esc(String(b.by || '').split('@')[0]) + '</div></td>' +
+          '<td style="text-align:right"><button class="btn small" data-dl="' + a.esc(b.id) + '">⬇ CSV</button> <button class="btn small ghost danger" data-rel="' + a.esc(b.id) + '">Release</button></td></tr>';
+      }).join('') : '<tr><td class="empty">No batches pulled yet.</td></tr>';
+  }
+
+  var bound = false;
+  window.Leads = { show: function () { if (!bound) { bind(); bound = true; } if (!L.loaded) load(); } };
+})();
+</script>

@@ -63,6 +63,32 @@ function findHeader(values) {
   return null;
 }
 
+/**
+ * For sheets without a header row: guess the Email / Phone / Name columns
+ * from the values themselves. Dates, IDs and timestamps are ignored.
+ */
+function sniffColumns(rows) {
+  var width = 0;
+  rows.forEach(function (r) { width = Math.max(width, r.length); });
+  var best = { email: -1, phone: -1 }, score = { email: 0, phone: 0 };
+  for (var c = 0; c < width; c++) {
+    var emails = 0, phones = 0, filled = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var v = rows[i][c];
+      if (v == null || v === '' || v instanceof Date) continue;
+      filled++;
+      var s = String(v).trim();
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) emails++;
+      else if (/^\+?[\d\s()-]{10,17}$/.test(s) && normPhone(v)) phones++;
+    }
+    if (filled && emails / filled > 0.5 && emails > score.email) { score.email = emails; best.email = c; }
+    if (filled && phones / filled > 0.5 && phones > score.phone) { score.phone = phones; best.phone = c; }
+  }
+  if (best.email < 0 && best.phone < 0) return null;
+  var first = Math.min.apply(null, [best.email, best.phone].filter(function (x) { return x >= 0; }));
+  return { name: first > 0 ? first - 1 : -1, email: best.email, phone: best.phone };
+}
+
 /** Keys used for matching a cleaned row [name, email, phone]. */
 function rowKeys(row) {
   var keys = [];
@@ -111,7 +137,9 @@ function cleanAndDedupe(rawRows, countryCode) {
     else if (kp && seen.has(kp)) idx = seen.get(kp);
     if (idx < 0) {
       idx = out.length;
-      out.push([name, email, phone]);
+      var row = [name, email, phone];
+      for (var x = 3; x < r.length; x++) row.push(r[x]); // keep extra columns (e.g. source tab)
+      out.push(row);
     } else {
       duplicates++;
       var kept = out[idx];
@@ -150,7 +178,7 @@ function pickColumns(table, cols) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns, findHeader: findHeader,
+  module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns, findHeader: findHeader, sniffColumns: sniffColumns,
     keySetOf: keySetOf, matchesSet: matchesSet, cleanAndDedupe: cleanAndDedupe,
     removeMatching: removeMatching, pickColumns: pickColumns };
 }

@@ -34,6 +34,27 @@
     saveListAsAudience: function (n) { return wait({ name: n, saved: 100 }); },
     getAudienceRows: function () { return wait([['A', 'a@x.com', '919840402282']]); },
     deleteAudience: function () { return wait(true); },
+    getSourcesState: function () {
+      var cols = { name: 1, email: 2, phone: 3 };
+      function src(id, name, tabs) { return { id: id, name: name, tabs: tabs, total: tabs.reduce(function (t, x) { return t + x.rows; }, 0), scanned: new Date(Date.now() - 2e6).toISOString() }; }
+      return wait({ scanned: new Date(Date.now() - 2e6).toISOString(), usedUrl: '#', sources: [
+        src('s1', 'August 2026 UTM', [{ name: '11 Oct 2026 7:30 PM Flexi Genie 10 Min Reg team', rows: 339, cols: cols }, { name: '4 Oct 2026 Flexi Genie', rows: 5120, cols: cols }, { name: '27 Sep 2026 TFP Live', rows: 8840, cols: cols }, { name: 'Lead Summary', rows: 0, cols: null }]),
+        src('s2', 'TFP Signups: UTM', [{ name: 'TFP Facebook Ads (Training)', rows: 227903, cols: cols }, { name: 'TFP Google Ads (Special)', rows: 57066, cols: cols }, { name: 'Sheet21', rows: 9510, cols: cols }]),
+        src('s3', 'PSP Signups: UTM', [{ name: 'PSP Facebook', rows: 41200, cols: cols }]),
+        src('s4', 'June-July 2026 UTM', [{ name: 'Webinar 5 Jul', rows: 6100, cols: cols }])] ,
+        batches: [{ id: 'B1', name: 'Flexi Genie webinar – 11 Oct', sheet: 'TFP Signups: UTM', tabs: '2 tabs', pulled: 10000, createdAt: new Date(Date.now() - 6e8).toISOString(), by: 'arman@flexifunnels.com' }] });
+    },
+    previewPool: function (id, tabs) {
+      var per = {}; tabs.forEach(function (t, i) { per[t] = 30000 - i * 9000; });
+      return wait({ available: 61240, perTab: per, steps: [{ label: 'Rows in selected tabs', count: 284969, add: true }, { label: 'Duplicates (same email or phone)', count: -171200 },
+        { label: 'No valid email or phone', count: -310 }, { label: 'Buyers', count: -3122 }, { label: 'Opted-out', count: -2011 }, { label: 'Removed by reminder team', count: -640 },
+        { label: 'Already used in earlier batches', count: -10000 }, { label: 'Internal / test emails', count: -86 }, { label: 'No phone number', count: -36360 }] }, 900);
+    },
+    pullBatch: function (id, tabs, p, n, name) { var per = {}; per[tabs[0]] = n - 2000; if (tabs[1]) per[tabs[1]] = 2000; return wait({ id: 'B2', name: name, pulled: n, perTab: per, rows: [['A', 'a@x.com', '919840402282', tabs[0]]] }, 900); },
+    getBatchRows: function () { return wait([['A', 'a@x.com', '919840402282', 'Tab']]); },
+    releaseBatch: function () { return wait(true); },
+    scanSourcesNow: function () { return wait({ sheets: 35 }); },
+    addSourceByLink: function () { return wait({ name: 'Sheet' }); },
     syncBuyersNow: function () { return wait({ removed: 0 }); }
   };
 })();
