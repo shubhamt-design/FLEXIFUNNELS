@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audience Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface-2: #f0efeb;
+  --border: #e3e2dc;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #85847e;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f0fc;
+  --danger: #c93636;
+  --danger-soft: #fbeaea;
+  --good: #1a7f4b;
+  --good-soft: #e5f4ec;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s-other: #a3a29b;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+    --text: #f0efec; --text-2: #c3c2b7; --text-3: #8d8c84;
+    --accent: #3987e5; --accent-ink: #ffffff; --accent-soft: #1b2a3d;
+    --danger: #e66767; --danger-soft: #3a1f1f; --good: #3fbf7f; --good-soft: #17301f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #6d6c66;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+  --text: #f0efec; --text-2: #c3c2b7; --text-3: #8d8c84;
+  --accent: #3987e5; --accent-ink: #ffffff; --accent-soft: #1b2a3d;
+  --danger: #e66767; --danger-soft: #3a1f1f; --good: #3fbf7f; --good-soft: #17301f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #6d6c66;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+header.top h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+header.top .sub { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+.top-links { display: flex; gap: 12px; align-items: center; color: var(--text-2); font-size: 13px; flex-wrap: wrap; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.stat .label { color: var(--text-2); font-size: 12px; font-weight: 500; }
+.stat .value { font-size: 26px; font-weight: 650; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stat .meta { color: var(--text-3); font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+.card .hint { color: var(--text-2); font-size: 13px; margin: 0 0 16px; }
+.step { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; flex: none; }
+
+label.f { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin: 14px 0 6px; }
+input[type=text], select {
+  width: 100%; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit;
+}
+input[type=text]:focus, select:focus, .ms-btn:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.small { height: 30px; padding: 0 10px; font-size: 12px; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > .grow { flex: 1; min-width: 160px; }
+
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 2px; margin-top: 14px; }
+.seg button { border: 0; background: transparent; color: var(--text-2); font: inherit; font-weight: 600; font-size: 13px; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+.drop {
+  margin-top: 10px; border: 1.5px dashed var(--border); border-radius: 10px; padding: 22px 16px; text-align: center;
+  color: var(--text-2); cursor: pointer; transition: border-color .15s, background .15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { color: var(--text); }
+.drop .small { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+.mapping { margin-top: 14px; background: var(--surface-2); border-radius: 10px; padding: 12px; }
+.mapping .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mapping label { font-size: 11px; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 4px; }
+.mapping select { height: 32px; font-size: 13px; }
+.mapping .file { font-size: 13px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.preview { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; table-layout: fixed; }
+.preview td, .preview th { padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview th { color: var(--text-3); font-weight: 600; }
+
+/* multi-select */
+.ms { position: relative; }
+.ms-btn {
+  width: 100%; min-height: 38px; padding: 6px 36px 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; position: relative;
+}
+.ms-btn::after { content: ""; position: absolute; right: 14px; top: 50%; width: 7px; height: 7px; border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3); transform: translateY(-70%) rotate(45deg); }
+.ms-btn .ph { color: var(--text-3); }
+.ms-panel {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.14); display: none;
+}
+.ms.open .ms-panel { display: block; }
+.ms-panel .search { padding: 8px; border-bottom: 1px solid var(--border); }
+.ms-panel .search input { height: 32px; }
+.ms-list { max-height: 260px; overflow: auto; padding: 4px; }
+.ms-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+.ms-item:hover { background: var(--surface-2); }
+.ms-item input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.ms-item .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-item .ct { color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 12px; }
+.ms-foot { display: flex; justify-content: space-between; padding: 6px 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12px; }
+.chip .ct { color: var(--text-2); }
+.chip button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 50%; }
+.chip button:hover { color: var(--danger); }
+
+.check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 2px 0 0; }
+.check small { display: block; color: var(--text-3); }
+
+.actions { margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* result funnel */
+.result { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.result .lines { padding: 6px 14px; }
+.result .line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-variant-numeric: tabular-nums; }
+.result .line:last-child { border-bottom: 0; }
+.result .line .l { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result .line .n { font-weight: 600; }
+.result .line.minus .n { color: var(--danger); }
+.result .total { background: var(--good-soft); padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.result .total .big { font-size: 24px; font-weight: 700; color: var(--good); font-variant-numeric: tabular-nums; }
+.result .total .cap { font-size: 12px; color: var(--text-2); }
+.result .save { padding: 12px 14px; border-top: 1px solid var(--border); }
+
+.progress { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 14px; display: none; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.status { font-size: 12px; color: var(--text-2); margin-top: 6px; min-height: 16px; }
+
+/* donut */
+.chart-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; }
+.donut { position: relative; width: 220px; height: 220px; }
+.donut svg { width: 100%; height: 100%; display: block; }
+.donut .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.donut .center b { display: block; font-size: 24px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.donut .center span { font-size: 12px; color: var(--text-2); }
+.donut path { cursor: pointer; transition: opacity .15s; }
+.donut.hovering path:not(.hot) { opacity: .35; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.legend li { display: grid; grid-template-columns: 10px 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 4px 6px; border-radius: 6px; cursor: default; }
+.legend li.hot { background: var(--surface-2); }
+.legend .sw { width: 10px; height: 10px; border-radius: 3px; }
+.legend .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend .ct { font-variant-numeric: tabular-nums; font-weight: 600; }
+.legend .pc { font-variant-numeric: tabular-nums; color: var(--text-3); font-size: 12px; width: 38px; text-align: right; }
+.tip { position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; display: none; white-space: nowrap; }
+.empty { color: var(--text-3); text-align: center; padding: 30px 10px; font-size: 13px; }
+
+/* table */
+.tbl-wrap { overflow-x: auto; margin: 0 -20px -20px; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.tbl th { text-align: left; font-size: 12px; color: var(--text-2); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); white-space: nowrap; }
+table.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.tbl tr:last-child td { border-bottom: 0; }
+table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.tbl td:first-child, table.tbl th:first-child { padding-left: 20px; }
+table.tbl td:last-child, table.tbl th:last-child { padding-right: 20px; }
+table.tbl .nm { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+table.tbl .nm .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+table.tbl .muted { color: var(--text-3); font-size: 12px; }
+.tbl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.tbl-head input { width: 220px; height: 32px; }
+
+.log { list-style: none; margin: 0; padding: 0; }
+.log li { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.log li:last-child { border-bottom: 0; }
+.log .when { color: var(--text-3); font-size: 12px; }
+.log .act { font-weight: 600; }
+.log .det { color: var(--text-2); word-break: break-word; }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; transition: .2s; z-index: 60;
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.toast.err { background: var(--danger); color: #fff; }
+.spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; display: inline-block; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.hidden { display: none !important; }
+.loading-page { padding: 80px 0; text-align: center; color: var(--text-2); }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .stats { grid-template-columns: 1fr; }
+  .chart-wrap { grid-template-columns: 1fr; justify-items: center; }
+  .legend { width: 100%; }
+  .mapping .cols { grid-template-columns: 1fr; }
+  .tbl-head input { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Audience Dashboard</h1>
+      <div class="sub">Upload webinar audiences, remove buyers & duplicates, build clean WhatsApp lists.</div>
+    </div>
+    <div class="top-links">
+      <span id="userEmail"></span>
+      <a id="dbLink" href="#" target="_blank" rel="noopener">Open data sheet ↗</a>
+    </div>
+  </header>
+
+  <div id="loadingPage" class="loading-page"><span class="spin"></span>&nbsp; Loading audiences…</div>
+
+  <main id="app" class="hidden">
+    <section class="stats">
+      <div class="stat">
+        <div class="label">Saved audiences</div>
+        <div class="value" id="statAud">0</div>
+        <div class="meta" id="statAudMeta">&nbsp;</div>
+      </div>
+      <div class="stat">
+        <div class="label">Contacts across all audiences</div>
+        <div class="value" id="statContacts">0</div>
+        <div class="meta" id="statContactsMeta">&nbsp;</div>
+      </div>
+      <div class="stat">
+        <div class="label">Buyers (excluded everywhere)</div>
+        <div class="value" id="statBuyers">0</div>
+        <div class="meta"><span id="statSync">Not synced yet</span>
+          <button class="btn small ghost" id="syncBtn" title="Re-read the buyers sheet now">↻ Sync now</button>
+          <a id="buyersLink" href="#" target="_blank" rel="noopener">Buyers sheet ↗</a></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <!-- STEP 1: BUILD LIST -->
+      <div class="card">
+        <h2><span class="step">1</span> Build a broadcast list</h2>
+        <p class="hint">Pick an audience, subtract the audiences you've already messaged. Buyers are always removed.</p>
+
+        <label class="f" for="baseSel">Audience to send to</label>
+        <select id="baseSel"></select>
+
+        <label class="f">Subtract these audiences</label>
+        <div class="ms" id="ms">
+          <button type="button" class="ms-btn" id="msBtn"><span class="ph">Choose audiences to remove…</span></button>
+          <div class="ms-panel">
+            <div class="search"><input type="text" id="msSearch" placeholder="Search audiences"></div>
+            <div class="ms-list" id="msList"></div>
+            <div class="ms-foot"><span id="msCount">0 selected</span><span>
+              <button type="button" class="btn small ghost" id="msAll">Select all</button>
+              <button type="button" class="btn small ghost" id="msClear">Clear</button></span></div>
+          </div>
+        </div>
+        <div class="chips" id="chips"></div>
+
+        <label class="check"><input type="checkbox" id="phoneOnly" checked>
+          <span>Only contacts with a phone number<small>Needed for WhatsApp broadcast</small></span></label>
+
+        <div class="actions"><button class="btn primary" id="buildBtn">Build list</button></div>
+
+        <div id="buildResult"></div>
+      </div>
+
+      <!-- STEP 2: UPLOAD -->
+      <div class="card">
+        <h2><span class="step">2</span> Upload a new audience</h2>
+        <p class="hint">Each upload is saved under its name. Duplicates (same email <em>or</em> phone) and buyers are removed automatically.</p>
+
+        <label class="f" for="upName">Audience name</label>
+        <input type="text" id="upName" placeholder="e.g. Webinar – 12 Oct 2026" maxlength="90">
+
+        <div class="seg" role="tablist">
+          <button type="button" class="on" data-src="file">Upload file</button>
+          <button type="button" data-src="drive">Google Drive link</button>
+        </div>
+
+        <div id="srcFile">
+          <div class="drop" id="drop">
+            <strong>Drop a CSV or Excel file</strong> or click to choose
+            <div class="small">Columns needed: Name, Email, Phone — any order, any extra columns ignored</div>
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv,.txt" class="hidden">
+        </div>
+        <div id="srcDrive" class="hidden">
+          <div class="row" style="margin-top:10px">
+            <input type="text" id="driveUrl" class="grow" placeholder="Paste a Google Sheets or CSV link">
+            <button class="btn" id="driveBtn">Load</button>
+          </div>
+          <div class="status">The file must be shared with the account that owns this dashboard.</div>
+        </div>
+
+        <div id="mapping" class="mapping hidden">
+          <div class="file"><span id="mapFile"></span><span id="mapRows" class="muted"></span></div>
+          <div class="cols">
+            <div><label for="mapName">Name column</label><select id="mapName"></select></div>
+            <div><label for="mapEmail">Email column</label><select id="mapEmail"></select></div>
+            <div><label for="mapPhone">Phone column</label><select id="mapPhone"></select></div>
+          </div>
+          <table class="preview" id="previewTbl"></table>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="uploadBtn" disabled>Save audience</button>
+          <button class="btn ghost hidden" id="resetBtn">Clear</button>
+        </div>
+        <div class="progress" id="upProg"><div></div></div>
+        <div class="status" id="upStatus"></div>
+        <div id="upResult"></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Audience split</h2>
+        <p class="hint">Contacts saved in each audience (after removing buyers).</p>
+        <div id="chart"></div>
+      </div>
+      <div class="card">
+        <h2>Recent activity</h2>
+        <p class="hint">Uploads, saved lists and automatic buyer removals.</p>
+        <ul class="log" id="log"></ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="tbl-head">
+        <div>
+          <h2>All audiences</h2>
+          <p class="hint">Download any audience as CSV, or delete one you no longer need.</p>
+        </div>
+        <input type="text" id="tblSearch" placeholder="Search audiences">
+      </div>
+      <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
+    </section>
+  </main>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var CHUNK = 4000;
+  var SERIES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7'];
+  var S = { audiences: [], selected: new Set(), parsed: null, lastBuild: null };
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function fmt(n) { return Number(n || 0).toLocaleString('en-IN'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      if (window.MOCK_API) return window.MOCK_API[fn].apply(null, args).then(resolve, reject);
+      var r = google.script.run.withSuccessHandler(resolve).withFailureHandler(function (e) { reject(e instanceof Error ? e : new Error(String(e && e.message || e))); });
+      r[fn].apply(r, args);
+    });
+  }
+  var toastTimer;
+  function toast(msg, isErr) {
+    var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = 'toast'; }, isErr ? 6000 : 3500);
+  }
+  function errMsg(e) { return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''); }
+  function busy(btn, on, label) {
+    if (on) { btn.dataset.label = btn.innerHTML; btn.innerHTML = '<span class="spin"></span> ' + (label || 'Working…'); btn.disabled = true; }
+    else { btn.innerHTML = btn.dataset.label || btn.innerHTML; btn.disabled = false; }
+  }
+  function ago(iso) {
+    if (!iso) return 'never';
+    var s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+    return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  }
+  function dateShort(iso) { return iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
+  function colorFor(name) {
+    // colour follows the audience (by creation order), never its rank
+    var i = S.audiences.findIndex(function (a) { return a.name === name; });
+    return i >= 0 && i < SERIES.length ? 'var(' + SERIES[i] + ')' : 'var(--s-other)';
+  }
+  function downloadCsv(filename, rows) {
+    function q(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    var lines = ['Name,Email,Phone'];
+    for (var i = 0; i < rows.length; i++) lines.push(q(rows[i][0]) + ',' + q(rows[i][1]) + ',' + q(rows[i][2]));
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename.replace(/[\\/:*?"<>|]+/g, '-') + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- load + render ---------- */
+  function load() {
+    return call('getState').then(function (st) {
+      S.audiences = st.audiences;
+      S.state = st;
+      // drop selections for audiences that no longer exist
+      S.selected.forEach(function (n) { if (!st.audiences.some(function (a) { return a.name === n; })) S.selected.delete(n); });
+      render();
+      $('loadingPage').classList.add('hidden'); $('app').classList.remove('hidden');
+    }).catch(function (e) {
+      $('loadingPage').innerHTML = esc(errMsg(e));
+    });
+  }
+
+  function render() {
+    var st = S.state, aud = S.audiences;
+    $('userEmail').textContent = st.user || '';
+    $('dbLink').href = st.dbUrl || '#';
+    $('buyersLink').href = st.buyers.sheetUrl;
+    $('statAud').textContent = fmt(aud.length);
+    var last = aud.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; })[0];
+    $('statAudMeta').textContent = last ? 'Latest: ' + last.name : 'No audiences yet';
+    var total = aud.reduce(function (s, a) { return s + a.contacts; }, 0);
+    var phones = aud.reduce(function (s, a) { return s + a.withPhone; }, 0);
+    $('statContacts').textContent = fmt(total);
+    $('statContactsMeta').textContent = fmt(phones) + ' with phone number';
+    $('statBuyers').textContent = fmt(st.buyers.count);
+    $('statSync').textContent = 'Synced ' + ago(st.buyers.lastSync);
+    renderBaseSelect(); renderMs(); renderChart(); renderTable(); renderLog();
+  }
+
+  function renderBaseSelect() {
+    var sel = $('baseSel'), cur = sel.value;
+    if (!S.audiences.length) { sel.innerHTML = '<option value="">Upload an audience first</option>'; sel.disabled = true; return; }
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Choose an audience…</option>' + newestFirst().map(function (a) {
+      return '<option value="' + esc(a.name) + '">' + esc(a.name) + ' (' + fmt(a.contacts) + ')</option>';
+    }).join('');
+    if (S.audiences.some(function (a) { return a.name === cur; })) sel.value = cur;
+  }
+  function newestFirst() { return S.audiences.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; }); }
+
+  /* ---------- subtract multi-select ---------- */
+  function renderMs() {
+    var base = $('baseSel').value, q = $('msSearch').value.trim().toLowerCase();
+    S.selected.delete(base);
+    var list = newestFirst().filter(function (a) { return a.name !== base && (!q || a.name.toLowerCase().indexOf(q) >= 0); });
+    $('msList').innerHTML = list.length ? list.map(function (a) {
+      return '<label class="ms-item"><input type="checkbox" value="' + esc(a.name) + '"' + (S.selected.has(a.name) ? ' checked' : '') + '>' +
+        '<span class="nm">' + esc(a.name) + '</span><span class="ct">' + fmt(a.contacts) + '</span></label>';
+    }).join('') : '<div class="empty">' + (q ? 'No match' : 'No other audiences yet') + '</div>';
+    var n = S.selected.size;
+    $('msCount').textContent = n + ' selected';
+    var sum = 0; S.selected.forEach(function (nm) { var a = find(nm); if (a) sum += a.contacts; });
+    $('msBtn').innerHTML = n ? '<span>' + n + ' audience' + (n > 1 ? 's' : '') + ' selected · ' + fmt(sum) + ' contacts</span>'
+      : '<span class="ph">Choose audiences to remove…</span>';
+    var chips = [];
+    S.selected.forEach(function (nm) {
+      var a = find(nm);
+      chips.push('<span class="chip">' + esc(nm) + ' <span class="ct">' + fmt(a ? a.contacts : 0) + '</span><button type="button" data-rm="' + esc(nm) + '" aria-label="Remove ' + esc(nm) + '">×</button></span>');
+    });
+    $('chips').innerHTML = chips.join('');
+  }
+  function find(name) { for (var i = 0; i < S.audiences.length; i++) if (S.audiences[i].name === name) return S.audiences[i]; return null; }
+
+  $('msBtn').addEventListener('click', function () { $('ms').classList.toggle('open'); if ($('ms').classList.contains('open')) $('msSearch').focus(); });
+  document.addEventListener('click', function (e) { if (!$('ms').contains(e.target)) $('ms').classList.remove('open'); });
+  $('msList').addEventListener('change', function (e) {
+    if (e.target.type !== 'checkbox') return;
+    if (e.target.checked) S.selected.add(e.target.value); else S.selected.delete(e.target.value);
+    clearBuild(); renderMs();
+  });
+  $('msSearch').addEventListener('input', renderMs);
+  $('msAll').addEventListener('click', function () {
+    var base = $('baseSel').value, q = $('msSearch').value.trim().toLowerCase();
+    S.audiences.forEach(function (a) { if (a.name !== base && (!q || a.name.toLowerCase().indexOf(q) >= 0)) S.selected.add(a.name); });
+    clearBuild(); renderMs();
+  });
+  $('msClear').addEventListener('click', function () { S.selected.clear(); clearBuild(); renderMs(); });
+  $('chips').addEventListener('click', function (e) { var n = e.target.getAttribute('data-rm'); if (n) { S.selected.delete(n); clearBuild(); renderMs(); } });
+  $('baseSel').addEventListener('change', function () { clearBuild(); renderMs(); });
+  $('phoneOnly').addEventListener('change', clearBuild);
+  function clearBuild() { S.lastBuild = null; $('buildResult').innerHTML = ''; }
+
+  /* ---------- build list ---------- */
+  $('buildBtn').addEventListener('click', function () {
+    var base = $('baseSel').value;
+    if (!base) return toast('Choose the audience to send to first.', true);
+    var btn = this; busy(btn, true, 'Building…');
+    var subtract = Array.from(S.selected), phoneOnly = $('phoneOnly').checked;
+    call('buildList', base, subtract, phoneOnly).then(function (res) {
+      S.lastBuild = res;
+      var lines = res.steps.map(function (s, i) {
+        var minus = i > 0;
+        return '<div class="line' + (minus ? ' minus' : '') + '"><span class="l">' + (minus ? '− ' : '') + esc(s.label) + '</span><span class="n">' +
+          (minus ? '−' + fmt(-s.count) : fmt(s.count)) + '</span></div>';
+      }).join('');
+      var def = base + ' – broadcast ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      $('buildResult').innerHTML =
+        '<div class="result"><div class="lines">' + lines + '</div>' +
+        '<div class="total"><div><div class="cap">Unique contacts ready to message</div><div class="big">' + fmt(res.final) + '</div></div>' +
+        '<button class="btn primary" id="dlBuild"' + (res.final ? '' : ' disabled') + '>⬇ Download CSV</button></div>' +
+        '<div class="save"><label class="f" style="margin-top:0" for="saveName">Optional: save this list as a new audience (so you can subtract it next time)</label>' +
+        '<div class="row"><input type="text" class="grow" id="saveName" maxlength="90" value="' + esc(def) + '"><button class="btn" id="saveBuild"' + (res.final ? '' : ' disabled') + '>Save as audience</button></div></div></div>';
+    }).catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
+  });
+  $('buildResult').addEventListener('click', function (e) {
+    var b = S.lastBuild; if (!b) return;
+    if (e.target.id === 'dlBuild') {
+      downloadCsv(b.base + (b.subtract.length ? ' minus ' + b.subtract.length + ' audiences' : '') + ' ' + new Date().toISOString().slice(0, 10), b.rows);
+    }
+    if (e.target.id === 'saveBuild') {
+      var btn = e.target, name = $('saveName').value;
+      busy(btn, true, 'Saving…');
+      call('saveListAsAudience', name, b.base, b.subtract, b.phoneOnly).then(function (r) {
+        toast('Saved "' + r.name + '" with ' + fmt(r.saved) + ' contacts.');
+        busy(btn, false); btn.textContent = 'Saved ✓'; btn.disabled = true;
+        return load();
+      }).catch(function (err) { toast(errMsg(err), true); busy(btn, false); });
+    }
+  });
+
+  /* ---------- upload ---------- */
+  var src = 'file';
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      src = b.dataset.src;
+      document.querySelectorAll('.seg button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('srcFile').classList.toggle('hidden', src !== 'file');
+      $('srcDrive').classList.toggle('hidden', src !== 'drive');
+    });
+  });
+  var drop = $('drop');
+  drop.addEventListener('click', function () { $('fileInput').click(); });
+  drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', function () { drop.classList.remove('over'); });
+  drop.addEventListener('drop', function (e) { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+  $('fileInput').addEventListener('change', function () { if (this.files[0]) readFile(this.files[0]); this.value = ''; });
+
+  function readFile(file) {
+    $('upStatus').textContent = 'Reading ' + file.name + '…';
+    var fr = new FileReader();
+    fr.onload = function () {
+      try {
+        var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array', raw: true, cellDates: false });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var table = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: false });
+        table = table.map(function (r) { return r.map(cellText); });
+        setParsed(file.name, table, file.name);
+      } catch (e) { toast('Could not read that file: ' + errMsg(e), true); $('upStatus').textContent = ''; }
+    };
+    fr.readAsArrayBuffer(file);
+  }
+  function cellText(v) {
+    if (typeof v === 'number') return Number.isInteger(v) ? v.toFixed(0) : String(v);
+    return v == null ? '' : String(v).trim();
+  }
+  $('driveBtn').addEventListener('click', function () {
+    var url = $('driveUrl').value.trim();
+    if (!url) return toast('Paste a Google Drive link first.', true);
+    var btn = this; busy(btn, true, 'Loading…');
+    call('fetchDriveTable', url).then(function (r) { setParsed(r.fileName, r.table, url); })
+      .catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
+  });
+
+  function detect(header) {
+    var h = header.map(function (x) { return String(x).trim().toLowerCase(); });
+    function f(re, not) { for (var i = 0; i < h.length; i++) if (re.test(h[i]) && !(not && not.test(h[i]))) return i; return -1; }
+    return { name: f(/name/, /e-?mail|user ?name/), email: f(/e-?mail/), phone: f(/phone|mobile|whats ?app|contact|number|cell|mob/, /e-?mail/) };
+  }
+  function setParsed(fileName, table, source) {
+    table = (table || []).filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
+    if (table.length < 1) { toast('That file is empty.', true); return; }
+    var cols = detect(table[0]);
+    var hasHeader = cols.email >= 0 || cols.phone >= 0 || cols.name >= 0;
+    var header = hasHeader ? table[0] : table[0].map(function (_, i) { return 'Column ' + String.fromCharCode(65 + i); });
+    if (!hasHeader) cols = { name: 0, email: 1, phone: 2 };
+    S.parsed = { fileName: fileName, source: source, header: header, rows: hasHeader ? table.slice(1) : table };
+    if (!$('upName').value.trim()) $('upName').value = fileName.replace(/\.(csv|xlsx|xls|tsv|txt)$/i, '').slice(0, 90);
+    ['mapName', 'mapEmail', 'mapPhone'].forEach(function (id, k) {
+      var key = ['name', 'email', 'phone'][k];
+      $(id).innerHTML = '<option value="-1">— none —</option>' + header.map(function (h, i) {
+        return '<option value="' + i + '"' + (cols[key] === i ? ' selected' : '') + '>' + esc(h || ('Column ' + (i + 1))) + '</option>';
+      }).join('');
+    });
+    $('mapFile').innerHTML = '📄 <b>' + esc(fileName) + '</b>';
+    $('mapRows').textContent = fmt(S.parsed.rows.length) + ' rows';
+    $('mapping').classList.remove('hidden'); $('resetBtn').classList.remove('hidden');
+    $('upStatus').textContent = ''; $('upResult').innerHTML = '';
+    renderPreview(); validateUpload();
+  }
+  function mapCols() { return { name: +$('mapName').value, email: +$('mapEmail').value, phone: +$('mapPhone').value }; }
+  function renderPreview() {
+    var c = mapCols(), rows = S.parsed.rows.slice(0, 4);
+    function v(r, i) { return i >= 0 ? esc(r[i]) : '<span style="color:var(--text-3)">—</span>'; }
+    $('previewTbl').innerHTML = '<tr><th>Name</th><th>Email</th><th>Phone</th></tr>' +
+      rows.map(function (r) { return '<tr><td>' + v(r, c.name) + '</td><td>' + v(r, c.email) + '</td><td>' + v(r, c.phone) + '</td></tr>'; }).join('');
+  }
+  ['mapName', 'mapEmail', 'mapPhone'].forEach(function (id) { $(id).addEventListener('change', function () { renderPreview(); validateUpload(); }); });
+  $('upName').addEventListener('input', validateUpload);
+  function validateUpload() {
+    var c = S.parsed ? mapCols() : null;
+    $('uploadBtn').disabled = !(S.parsed && $('upName').value.trim() && (c.email >= 0 || c.phone >= 0));
+  }
+  function resetUpload() {
+    S.parsed = null; $('mapping').classList.add('hidden'); $('resetBtn').classList.add('hidden');
+    $('upName').value = ''; $('driveUrl').value = ''; $('upStatus').textContent = ''; validateUpload();
+  }
+  $('resetBtn').addEventListener('click', function () { resetUpload(); $('upResult').innerHTML = ''; });
+
+  $('uploadBtn').addEventListener('click', function () {
+    var p = S.parsed, c = mapCols(), name = $('upName').value.trim();
+    var rows = p.rows.map(function (r) { return [c.name >= 0 ? r[c.name] : '', c.email >= 0 ? r[c.email] : '', c.phone >= 0 ? r[c.phone] : '']; });
+    var btn = this, prog = $('upProg'), bar = prog.firstElementChild, staging = null;
+    busy(btn, true, 'Saving…'); $('resetBtn').classList.add('hidden');
+    prog.style.display = 'block'; bar.style.width = '2%';
+    $('upStatus').textContent = 'Starting upload…';
+    call('startUpload', name).then(function (id) {
+      staging = id;
+      var i = 0;
+      function next() {
+        if (i >= rows.length) return Promise.resolve();
+        var chunk = rows.slice(i, i + CHUNK);
+        return call('appendUpload', staging, chunk).then(function () {
+          i += chunk.length;
+          bar.style.width = Math.max(2, Math.round(i / rows.length * 85)) + '%';
+          $('upStatus').textContent = 'Uploaded ' + fmt(i) + ' of ' + fmt(rows.length) + ' rows…';
+          return next();
+        });
+      }
+      return next();
+    }).then(function () {
+      $('upStatus').textContent = 'Removing duplicates and buyers…'; bar.style.width = '92%';
+      return call('finishUpload', staging, name, p.source);
+    }).then(function (r) {
+      bar.style.width = '100%';
+      $('upStatus').textContent = '';
+      $('upResult').innerHTML = '<div class="result"><div class="lines">' +
+        '<div class="line"><span class="l">Rows in file</span><span class="n">' + fmt(r.uploaded) + '</span></div>' +
+        '<div class="line minus"><span class="l">− Duplicates (same email or phone)</span><span class="n">−' + fmt(r.duplicates) + '</span></div>' +
+        '<div class="line minus"><span class="l">− No valid email or phone</span><span class="n">−' + fmt(r.invalid) + '</span></div>' +
+        '<div class="line minus"><span class="l">− Buyers</span><span class="n">−' + fmt(r.buyers) + '</span></div></div>' +
+        '<div class="total"><div><div class="cap">Saved as “' + esc(r.name) + '”</div><div class="big">' + fmt(r.saved) + '</div></div>' +
+        '<div class="cap">' + fmt(r.withPhone) + ' with phone</div></div></div>';
+      toast('Audience "' + r.name + '" saved.');
+      resetUpload();
+      return load();
+    }).catch(function (e) {
+      toast(errMsg(e), true);
+      $('upStatus').textContent = '';
+      $('resetBtn').classList.remove('hidden');
+      if (staging) call('cancelUpload', staging).catch(function () {});
+    }).then(function () {
+      busy(btn, false); validateUpload();
+      setTimeout(function () { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
+    });
+  });
+
+  /* ---------- donut chart ---------- */
+  function renderChart() {
+    var aud = S.audiences.filter(function (a) { return a.contacts > 0; });
+    if (!aud.length) { $('chart').innerHTML = '<div class="empty">Upload your first audience to see the split.</div>'; return; }
+    // fixed colour per audience: first 7 by creation order, the rest fold into "Other"
+    var slices = [], other = { name: 'Other', contacts: 0, count: 0, color: 'var(--s-other)' };
+    S.audiences.forEach(function (a, i) {
+      if (!a.contacts) return;
+      if (i < SERIES.length) slices.push({ name: a.name, contacts: a.contacts, color: 'var(' + SERIES[i] + ')' });
+      else { other.contacts += a.contacts; other.count++; }
+    });
+    if (other.count) { other.name = 'Other (' + other.count + ' audiences)'; slices.push(other); }
+    var total = slices.reduce(function (s, x) { return s + x.contacts; }, 0);
+    var R = 100, r = 66, cx = 110, cy = 110, a0 = -Math.PI / 2, paths = [];
+    slices.forEach(function (s, i) {
+      var frac = s.contacts / total, a1 = a0 + frac * Math.PI * 2;
+      var d;
+      if (slices.length === 1) {
+        d = 'M' + (cx + R) + ' ' + cy + 'A' + R + ' ' + R + ' 0 1 1 ' + (cx - R) + ' ' + cy + 'A' + R + ' ' + R + ' 0 1 1 ' + (cx + R) + ' ' + cy +
+          'M' + (cx + r) + ' ' + cy + 'A' + r + ' ' + r + ' 0 1 0 ' + (cx - r) + ' ' + cy + 'A' + r + ' ' + r + ' 0 1 0 ' + (cx + r) + ' ' + cy + 'Z';
+      } else {
+        var large = a1 - a0 > Math.PI ? 1 : 0;
+        function pt(rad, ang) { return (cx + rad * Math.cos(ang)).toFixed(2) + ' ' + (cy + rad * Math.sin(ang)).toFixed(2); }
+        d = 'M' + pt(R, a0) + 'A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + pt(R, a1) + 'L' + pt(r, a1) + 'A' + r + ' ' + r + ' 0 ' + large + ' 0 ' + pt(r, a0) + 'Z';
+      }
+      paths.push('<path d="' + d + '" fill="' + s.color + '" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round" data-i="' + i + '"></path>');
+      a0 = a1;
+    });
+    var legend = slices.map(function (s, i) {
+      return '<li data-i="' + i + '"><span class="sw" style="background:' + s.color + '"></span><span class="nm" title="' + esc(s.name) + '">' + esc(s.name) +
+        '</span><span class="ct">' + fmt(s.contacts) + '</span><span class="pc">' + Math.round(s.contacts / total * 100) + '%</span></li>';
+    }).join('');
+    $('chart').innerHTML = '<div class="chart-wrap"><div class="donut" id="donut"><svg viewBox="0 0 220 220" role="img" aria-label="Contacts per audience">' + paths.join('') +
+      '</svg><div class="center"><div><b>' + fmt(total) + '</b><span>contacts</span></div></div></div><ul class="legend" id="legend">' + legend + '</ul></div>';
+    var donut = $('donut'), tip = $('tip');
+    function hot(i, ev) {
+      donut.classList.toggle('hovering', i != null);
+      donut.querySelectorAll('path').forEach(function (p) { p.classList.toggle('hot', p.getAttribute('data-i') == i); });
+      $('legend').querySelectorAll('li').forEach(function (li) { li.classList.toggle('hot', li.getAttribute('data-i') == i); });
+      if (i == null || !ev) { tip.style.display = 'none'; return; }
+      var s = slices[i];
+      tip.textContent = s.name + ' · ' + fmt(s.contacts) + ' (' + Math.round(s.contacts / total * 100) + '%)';
+      tip.style.display = 'block';
+      tip.style.left = Math.min(ev.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + 'px';
+      tip.style.top = (ev.clientY + 14) + 'px';
+    }
+    donut.addEventListener('mousemove', function (e) { var i = e.target.getAttribute && e.target.getAttribute('data-i'); hot(i, i != null ? e : null); });
+    donut.addEventListener('mouseleave', function () { hot(null); });
+    $('legend').addEventListener('mouseover', function (e) { var li = e.target.closest('li'); if (li) hot(li.getAttribute('data-i')); });
+    $('legend').addEventListener('mouseleave', function () { hot(null); });
+  }
+
+  /* ---------- table ---------- */
+  function renderTable() {
+    var q = $('tblSearch').value.trim().toLowerCase();
+    var list = newestFirst().filter(function (a) { return !q || a.name.toLowerCase().indexOf(q) >= 0; });
+    if (!S.audiences.length) { $('tbl').innerHTML = '<tr><td class="empty">No audiences yet — upload one above.</td></tr>'; return; }
+    $('tbl').innerHTML = '<tr><th>Audience</th><th class="num">Contacts</th><th class="num">With phone</th><th class="num">Duplicates removed</th>' +
+      '<th class="num">Buyers removed</th><th>Created</th><th></th></tr>' +
+      list.map(function (a) {
+        return '<tr><td><div class="nm"><span class="sw" style="background:' + colorFor(a.name) + '"></span>' + esc(a.name) + '</div>' +
+          (a.source && /^Built from/.test(a.source) ? '<div class="muted">' + esc(a.source) + '</div>' : '') + '</td>' +
+          '<td class="num"><b>' + fmt(a.contacts) + '</b></td><td class="num">' + fmt(a.withPhone) + '</td>' +
+          '<td class="num">' + fmt(a.duplicates + a.invalid) + '</td><td class="num">' + fmt(a.buyersRemoved) + '</td>' +
+          '<td>' + dateShort(a.createdAt) + '<div class="muted">' + esc((a.createdBy || '').split('@')[0]) + '</div></td>' +
+          '<td style="text-align:right"><button class="btn small" data-dl="' + esc(a.name) + '">⬇ CSV</button> ' +
+          '<button class="btn small ghost danger" data-del="' + esc(a.name) + '">Delete</button></td></tr>';
+      }).join('') + (list.length ? '' : '<tr><td colspan="7" class="empty">No match</td></tr>');
+  }
+  $('tblSearch').addEventListener('input', renderTable);
+  $('tbl').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    var dl = btn.getAttribute('data-dl'), del = btn.getAttribute('data-del');
+    if (dl) {
+      busy(btn, true, '…');
+      call('getAudienceRows', dl).then(function (rows) { downloadCsv(dl, rows); })
+        .catch(function (err) { toast(errMsg(err), true); }).then(function () { busy(btn, false); });
+    }
+    if (del) {
+      if (!confirm('Delete the audience "' + del + '"? Its contacts will be removed from the dashboard. This cannot be undone.')) return;
+      busy(btn, true, '…');
+      call('deleteAudience', del).then(function () { toast('Deleted "' + del + '".'); return load(); })
+        .catch(function (err) { toast(errMsg(err), true); busy(btn, false); });
+    }
+  });
+
+  function renderLog() {
+    var log = S.state.log || [];
+    $('log').innerHTML = log.length ? log.map(function (l) {
+      return '<li><div><span class="act">' + esc(l.action) + '</span> <span class="when">· ' + ago(l.time) + ' · ' + esc(String(l.user || '').split('@')[0]) + '</span></div>' +
+        '<div class="det">' + esc(l.details) + '</div></li>';
+    }).join('') : '<li class="empty">Nothing yet.</li>';
+  }
+
+  $('syncBtn').addEventListener('click', function () {
+    var btn = this; busy(btn, true, 'Syncing…');
+    call('syncBuyersNow').then(function (r) {
+      toast(r.removed ? 'Removed ' + fmt(r.removed) + ' buyers from audiences.' : 'Buyers synced — no buyers found in audiences.');
+      return load();
+    }).catch(function (e) { toast(errMsg(e), true); }).then(function () { busy(btn, false); });
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
