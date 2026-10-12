@@ -1,0 +1,1419 @@
+<script>
+(function () {
+  'use strict';
+
+  // -------------------------------------------------------------------------
+  // State
+  // -------------------------------------------------------------------------
+  var state = {
+    data: null,             // {config, broadcasts, campaigns, user, today, now}
+    sort: { broadcasts: { key: 'date', dir: -1 }, campaigns: { key: 'cost', dir: -1 } },
+    compareIds: ['', '', '', ''],
+    charts: {},
+    form: { requestId: null, dirty: false, editing: null },
+    detailId: null
+  };
+
+  var NUMERIC_FIELDS = ['audience', 'sent', 'delivered', 'clicks', 'shares', 'conversions', 'revenue', 'cost'];
+  var INTEGER_FIELDS = ['audience', 'sent', 'delivered', 'clicks', 'shares', 'conversions'];
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      runner[fn].apply(runner, args);
+    });
+  }
+
+  function errorText(err) {
+    return (err && (err.message || err.toString())) || 'Something went wrong.';
+  }
+
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  var intFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+  var dec1Fmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
+  function fmtInt(n) { return intFmt.format(n || 0); }
+  function fmtPct(n) { return n === null || !isFinite(n) ? '—' : dec1Fmt.format(n * 100) + '%'; }
+  function fmtMoney(n, cur) {
+    if (n === null || n === '' || !isFinite(n)) return '—';
+    cur = cur || defaultCurrency();
+    try {
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency', currency: cur, maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0
+      }).format(n);
+    } catch (e) {
+      return cur + ' ' + intFmt.format(n);
+    }
+  }
+  function fmtCompact(n) {
+    n = n || 0;
+    var a = Math.abs(n);
+    if (a >= 1e7) return dec1Fmt.format(n / 1e7) + ' Cr';
+    if (a >= 1e5) return dec1Fmt.format(n / 1e5) + ' L';
+    if (a >= 1e3) return dec1Fmt.format(n / 1e3) + 'K';
+    return dec1Fmt.format(n);
+  }
+  function fmtMoneyCompact(n) {
+    var symbol = fmtMoney(0).replace(/[\d.,\s]/g, '');
+    return (symbol || defaultCurrency() + ' ') + fmtCompact(n);
+  }
+  function ratio(a, b) { return b > 0 ? a / b : null; }
+  function num(v) { return v === '' || v === null || v === undefined ? 0 : Number(v) || 0; }
+  function defaultCurrency() { return (state.data && state.data.config.defaultCurrency) || 'INR'; }
+
+  function addDays(iso, days) {
+    var p = iso.split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + days));
+    return d.toISOString().slice(0, 10);
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var p = iso.split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // -------------------------------------------------------------------------
+  // Toasts
+  // -------------------------------------------------------------------------
+  function toast(message, kind) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (kind || '');
+    el.textContent = message;
+    $('#toasts').appendChild(el);
+    setTimeout(function () { el.remove(); }, kind === 'error' ? 7000 : 4000);
+  }
+
+  // -------------------------------------------------------------------------
+  // Metrics
+  // -------------------------------------------------------------------------
+  /** Per-broadcast derived metrics. */
+  function derive(b) {
+    var revenueTracked = b.revenue !== '';
+    return {
+      deliveryRate: ratio(b.delivered, b.sent),
+      ctr: ratio(b.clicks, b.delivered),
+      shareRate: b.shares === '' ? null : ratio(b.shares, b.delivered),
+      conversionRate: b.conversions === '' ? null : ratio(b.conversions, b.clicks),
+      costPerDelivered: ratio(b.cost, b.delivered),
+      cpc: ratio(b.cost, b.clicks),
+      cpa: b.conversions === '' ? null : ratio(b.cost, b.conversions),
+      roi: revenueTracked && b.cost > 0 ? (num(b.revenue) - b.cost) / b.cost : null,
+      roas: revenueTracked ? ratio(num(b.revenue), b.cost) : null,
+      profit: revenueTracked ? num(b.revenue) - b.cost : null
+    };
+  }
+
+  /** Aggregates for a list of broadcasts. Only "Sent" broadcasts count toward performance. */
+  function aggregate(list) {
+    var cur = defaultCurrency();
+    var t = {
+      count: 0, audience: 0, sent: 0, delivered: 0, clicks: 0, shares: 0, conversions: 0,
+      revenue: 0, cost: 0, otherCurrencies: {}, moneyDelivered: 0, moneyClicks: 0,
+      moneyConversions: 0, moneyRevenueCost: 0, moneyRevenue: 0
+    };
+    list.forEach(function (b) {
+      if (b.status !== 'Sent') return;
+      t.count++;
+      t.audience += b.audience; t.sent += b.sent; t.delivered += b.delivered;
+      t.clicks += b.clicks; t.shares += num(b.shares); t.conversions += num(b.conversions);
+      if ((b.currency || cur) === cur) {
+        t.cost += b.cost; t.revenue += num(b.revenue);
+        // Cost ratios only use broadcasts priced in the default currency.
+        t.moneyDelivered += b.delivered; t.moneyClicks += b.clicks;
+        t.moneyConversions += num(b.conversions);
+        if (b.revenue !== '') { t.moneyRevenueCost += b.cost; t.moneyRevenue += num(b.revenue); }
+      } else {
+        var o = t.otherCurrencies[b.currency] || (t.otherCurrencies[b.currency] = { cost: 0, revenue: 0 });
+        o.cost += b.cost; o.revenue += num(b.revenue);
+      }
+    });
+    t.deliveryRate = ratio(t.delivered, t.sent);
+    t.ctr = ratio(t.clicks, t.delivered);
+    t.shareRate = ratio(t.shares, t.delivered);
+    t.conversionRate = ratio(t.conversions, t.clicks);
+    t.costPerDelivered = ratio(t.cost, t.moneyDelivered);
+    t.cpc = ratio(t.cost, t.moneyClicks);
+    t.cpa = ratio(t.cost, t.moneyConversions);
+    t.roi = t.moneyRevenueCost > 0 ? (t.moneyRevenue - t.moneyRevenueCost) / t.moneyRevenueCost : null;
+    t.roas = ratio(t.moneyRevenue, t.moneyRevenueCost);
+    t.reachRate = ratio(t.sent, t.audience);
+    return t;
+  }
+
+  // -------------------------------------------------------------------------
+  // Filters
+  // -------------------------------------------------------------------------
+  function getRange() {
+    var period = $('#fPeriod').value;
+    var today = state.data.today;
+    if (period === 'all') return { from: '', to: '', prev: null };
+    if (period === 'custom') {
+      var from = $('#fFrom').value, to = $('#fTo').value;
+      var prev = null;
+      if (from && to && to >= from) {
+        var days = Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1;
+        prev = { from: addDays(from, -days), to: addDays(from, -1) };
+      }
+      return { from: from, to: to, prev: prev };
+    }
+    var n = Number(period);
+    var start = addDays(today, -(n - 1));
+    return { from: start, to: today, prev: { from: addDays(start, -n), to: addDays(start, -1) } };
+  }
+
+  function matchesDims(b) {
+    var f = { campaign: $('#fCampaign').value, channel: $('#fChannel').value,
+      type: $('#fType').value, segment: $('#fSegment').value };
+    return (!f.campaign || b.campaign === f.campaign) && (!f.channel || b.channel === f.channel) &&
+      (!f.type || b.type === f.type) && (!f.segment || b.segment === f.segment);
+  }
+
+  function inRange(b, from, to) {
+    return (!from || b.date >= from) && (!to || b.date <= to);
+  }
+
+  function filtered() {
+    var r = getRange();
+    return state.data.broadcasts.filter(function (b) { return inRange(b, r.from, r.to) && matchesDims(b); });
+  }
+
+  function previousPeriod() {
+    var r = getRange();
+    if (!r.prev) return null;
+    return state.data.broadcasts.filter(function (b) { return inRange(b, r.prev.from, r.prev.to) && matchesDims(b); });
+  }
+
+  function fillSelect(sel, values, opts) {
+    opts = opts || {};
+    var current = sel.value;
+    var html = opts.allLabel !== undefined ? '<option value="">' + esc(opts.allLabel) + '</option>' : '';
+    html += values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+    sel.innerHTML = html;
+    if (values.indexOf(current) !== -1 || (current === '' && opts.allLabel !== undefined)) sel.value = current;
+  }
+
+  function uniqueSorted(values) {
+    var seen = {};
+    return values.filter(function (v) { if (!v || seen[v]) return false; seen[v] = true; return true; })
+      .sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function campaignNames() {
+    return uniqueSorted(state.data.campaigns.map(function (c) { return c.name; })
+      .concat(state.data.broadcasts.map(function (b) { return b.campaign; })));
+  }
+
+  function populateFilterOptions() {
+    var d = state.data;
+    var used = function (key) { return d.broadcasts.map(function (b) { return b[key]; }); };
+    fillSelect($('#fCampaign'), campaignNames(), { allLabel: 'All' });
+    fillSelect($('#fChannel'), uniqueSorted(d.config.channels.concat(used('channel'))), { allLabel: 'All' });
+    fillSelect($('#fType'), uniqueSorted(d.config.types.concat(used('type'))), { allLabel: 'All' });
+    fillSelect($('#fSegment'), uniqueSorted(d.config.segments.concat(used('segment'))), { allLabel: 'All' });
+    fillSelect($('#fStatus'), d.config.statuses, { allLabel: 'All statuses' });
+  }
+
+  // -------------------------------------------------------------------------
+  // Overview
+  // -------------------------------------------------------------------------
+  function deltaHtml(curr, prev, lowerIsBetter) {
+    if (prev === null || prev === undefined || curr === null || !isFinite(prev) || !isFinite(curr)) return '';
+    if (prev === 0) return curr === 0 ? '<div class="delta flat">No change vs previous period</div>' : '';
+    var change = (curr - prev) / Math.abs(prev);
+    var good = lowerIsBetter ? change < 0 : change > 0;
+    var cls = Math.abs(change) < 0.005 ? 'flat' : (good ? 'up' : 'down');
+    var arrow = change > 0 ? '▲' : (change < 0 ? '▼' : '•');
+    return '<div class="delta ' + cls + '">' + arrow + ' ' + dec1Fmt.format(Math.abs(change) * 100) +
+      '% vs previous period</div>';
+  }
+
+  function kpiCard(label, value, sub, delta) {
+    return '<div class="kpi"><div class="label">' + esc(label) + '</div><div class="value">' + value +
+      '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + (delta || '') + '</div>';
+  }
+
+  function otherCurrencyNote(t, field) {
+    var parts = Object.keys(t.otherCurrencies).map(function (c) {
+      return fmtMoney(t.otherCurrencies[c][field], c);
+    });
+    return parts.length ? 'Plus ' + parts.join(', ') : '';
+  }
+
+  function renderOverview() {
+    var list = filtered();
+    var prevList = previousPeriod();
+    var t = aggregate(list);
+    var p = prevList ? aggregate(prevList) : null;
+    var pv = function (k) { return p ? p[k] : null; };
+    var drafts = list.filter(function (b) { return b.status === 'Draft'; }).length;
+    var mixed = Object.keys(t.otherCurrencies).length > 0;
+
+    $('#overviewScope').textContent = 'Based on ' + fmtInt(t.count) + ' sent broadcast' +
+      (t.count === 1 ? '' : 's') + (drafts ? ' (' + drafts + ' draft' + (drafts === 1 ? '' : 's') +
+      ' not counted)' : '') + '. Money figures in ' + defaultCurrency() + '.';
+
+    $('#kpiTotals').innerHTML = [
+      kpiCard('Broadcasts sent', fmtInt(t.count), '', deltaHtml(t.count, pv('count'))),
+      kpiCard('Audience reached', fmtInt(t.audience), 'Sent to ' + fmtPct(t.reachRate) + ' of audience', deltaHtml(t.audience, pv('audience'))),
+      kpiCard('Messages delivered', fmtInt(t.delivered), 'of ' + fmtInt(t.sent) + ' sent', deltaHtml(t.delivered, pv('delivered'))),
+      kpiCard('Clicks', fmtInt(t.clicks), '', deltaHtml(t.clicks, pv('clicks'))),
+      kpiCard('Shares / retweets', fmtInt(t.shares), '', deltaHtml(t.shares, pv('shares'))),
+      kpiCard('Conversions', fmtInt(t.conversions), '', deltaHtml(t.conversions, pv('conversions'))),
+      kpiCard('Broadcast spend', fmtMoney(t.cost), otherCurrencyNote(t, 'cost'), deltaHtml(t.cost, pv('cost'), true)),
+      kpiCard('Revenue generated', fmtMoney(t.revenue), otherCurrencyNote(t, 'revenue'), deltaHtml(t.revenue, pv('revenue')))
+    ].join('');
+
+    var moneyNote = mixed ? defaultCurrency() + ' broadcasts only' : '';
+    $('#kpiDerived').innerHTML = [
+      kpiCard('Delivery rate', fmtPct(t.deliveryRate), 'Delivered ÷ sent', deltaHtml(t.deliveryRate, pv('deliveryRate'))),
+      kpiCard('Click-through rate', fmtPct(t.ctr), 'Clicks ÷ delivered', deltaHtml(t.ctr, pv('ctr'))),
+      kpiCard('Share rate', fmtPct(t.shareRate), 'Shares ÷ delivered', deltaHtml(t.shareRate, pv('shareRate'))),
+      kpiCard('Conversion rate', fmtPct(t.conversionRate), 'Conversions ÷ clicks', deltaHtml(t.conversionRate, pv('conversionRate'))),
+      kpiCard('Cost per delivered msg', fmtMoney(t.costPerDelivered), moneyNote || 'Spend ÷ delivered', deltaHtml(t.costPerDelivered, pv('costPerDelivered'), true)),
+      kpiCard('Cost per click', fmtMoney(t.cpc), moneyNote || 'Spend ÷ clicks', deltaHtml(t.cpc, pv('cpc'), true)),
+      kpiCard('Cost per conversion', fmtMoney(t.cpa), moneyNote || 'Spend ÷ conversions', deltaHtml(t.cpa, pv('cpa'), true)),
+      kpiCard('ROI', fmtPct(t.roi), (t.roas === null ? '' : 'ROAS ' + dec1Fmt.format(t.roas) + '× · ') +
+        'Broadcasts with revenue tracked', deltaHtml(t.roi, pv('roi')))
+    ].join('');
+
+    renderTrendChart(list);
+    renderFunnelChart(t);
+    renderCampaignChart(list);
+    renderByDimensionChart(list);
+    renderTopTable(list);
+  }
+
+  // ---- Charts ------------------------------------------------------------
+  function chartTheme() {
+    return {
+      text: cssVar('--text-2'), muted: cssVar('--muted'), grid: cssVar('--grid'),
+      surface: cssVar('--surface'),
+      series: [cssVar('--series-1'), cssVar('--series-2'), cssVar('--series-3'),
+        document.documentElement.matches('[data-theme="dark"]') ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? '#c98500' : '#eda100']
+    };
+  }
+
+  /** Tick options; a callback is only set on the value axis so category labels stay intact. */
+  function valueTicks(th, callback, extra) {
+    var t = { color: th.muted, font: { family: 'Inter', size: 11 }, padding: 6 };
+    Object.keys(extra).forEach(function (k) { t[k] = extra[k]; });
+    if (callback) t.callback = callback;
+    return t;
+  }
+
+  function baseOptions(th, opts) {
+    opts = opts || {};
+    return {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+      indexAxis: opts.horizontal ? 'y' : 'x',
+      interaction: { mode: opts.horizontal ? 'nearest' : 'index', intersect: false, axis: opts.horizontal ? 'y' : 'x' },
+      plugins: {
+        legend: {
+          display: !!opts.legend, position: 'top', align: 'end',
+          labels: { color: th.text, boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'rectRounded', font: { family: 'Inter', size: 12 } }
+        },
+        tooltip: {
+          backgroundColor: th.surface, titleColor: cssVar('--text'), bodyColor: th.text,
+          borderColor: cssVar('--border'), borderWidth: 1, padding: 10, boxPadding: 4,
+          titleFont: { family: 'Inter', weight: '600' }, bodyFont: { family: 'Inter' },
+          callbacks: opts.tooltip || {}
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: !!opts.horizontal, color: th.grid, drawTicks: false }, border: { display: false },
+          ticks: valueTicks(th, opts.horizontal && opts.valueTick, { maxRotation: 0, autoSkip: true }),
+          beginAtZero: true
+        },
+        y: {
+          grid: { display: !opts.horizontal, color: th.grid, drawTicks: false }, border: { display: false },
+          ticks: valueTicks(th, !opts.horizontal && opts.valueTick, {}),
+          beginAtZero: true
+        }
+      }
+    };
+  }
+
+  function drawChart(id, config, emptyMessage) {
+    var canvas = document.getElementById(id);
+    var box = canvas.parentNode;
+    var empty = box.querySelector('.empty');
+    if (state.charts[id]) { state.charts[id].destroy(); delete state.charts[id]; }
+    if (!config) {
+      canvas.style.display = 'none';
+      if (!empty) { empty = document.createElement('div'); empty.className = 'empty'; box.appendChild(empty); }
+      empty.textContent = emptyMessage || 'No sent broadcasts match these filters yet.';
+      return;
+    }
+    if (empty) empty.remove();
+    canvas.style.display = '';
+    if (typeof Chart === 'undefined') return;
+    state.charts[id] = new Chart(canvas, config);
+  }
+
+  function bucketKey(iso, unit) {
+    if (unit === 'day') return iso;
+    if (unit === 'month') return iso.slice(0, 7) + '-01';
+    var p = iso.split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    var dow = (d.getUTCDay() + 6) % 7; // Monday = 0
+    return addDays(iso, -dow);
+  }
+
+  function renderTrendChart(list) {
+    var metric = $('#trendMetric').value;
+    var label = $('#trendMetric').selectedOptions[0].textContent;
+    $('#chartTrend').closest('.card').querySelector('h3').textContent = label + ' over time';
+    var sent = list.filter(function (b) { return b.status === 'Sent'; });
+    if (!sent.length) return drawChart('chartTrend', null);
+
+    var r = getRange();
+    var dates = sent.map(function (b) { return b.date; }).sort();
+    var from = r.from || dates[0], to = r.to || dates[dates.length - 1];
+    var span = Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1;
+    var unit = span <= 45 ? 'day' : (span <= 200 ? 'week' : 'month');
+    var isMoney = metric === 'cost' || metric === 'revenue';
+
+    var buckets = {};
+    var cursor = bucketKey(from, unit);
+    var guard = 0;
+    while (cursor <= to && guard++ < 2000) {
+      buckets[cursor] = 0;
+      if (unit === 'day') cursor = addDays(cursor, 1);
+      else if (unit === 'week') cursor = addDays(cursor, 7);
+      else { var p = cursor.split('-').map(Number); cursor = new Date(Date.UTC(p[0], p[1], 1)).toISOString().slice(0, 10); }
+    }
+    sent.forEach(function (b) {
+      if (isMoney && (b.currency || defaultCurrency()) !== defaultCurrency()) return;
+      var k = bucketKey(b.date, unit);
+      buckets[k] = (buckets[k] || 0) + num(b[metric]);
+    });
+    var keys = Object.keys(buckets).sort();
+    var labelFor = function (k) {
+      var p = k.split('-').map(Number);
+      var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+      return unit === 'month' ? d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+        : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    };
+    var th = chartTheme();
+    var fmt = isMoney ? function (v) { return fmtMoney(v); } : fmtInt;
+    var many = keys.length > 40;
+    drawChart('chartTrend', {
+      type: 'line',
+      data: {
+        labels: keys.map(labelFor),
+        datasets: [{
+          label: label, data: keys.map(function (k) { return buckets[k]; }),
+          borderColor: th.series[0], backgroundColor: th.series[0], borderWidth: 2, cubicInterpolationMode: 'monotone',
+          pointRadius: many ? 0 : 3, pointHoverRadius: 5, pointBackgroundColor: th.series[0],
+          pointBorderColor: th.surface, pointBorderWidth: 2, fill: false
+        }]
+      },
+      options: baseOptions(th, {
+        valueTick: function (v) { return isMoney ? fmtMoneyCompact(v) : fmtCompact(v); },
+        tooltip: {
+          title: function (items) {
+            var k = keys[items[0].dataIndex];
+            return unit === 'week' ? 'Week of ' + fmtDate(k) : (unit === 'month' ? labelFor(k) : fmtDate(k));
+          },
+          label: function (ctx) { return ' ' + label + ': ' + fmt(ctx.parsed.y); }
+        }
+      })
+    });
+  }
+
+  function renderFunnelChart(t) {
+    if (!t.count) return drawChart('chartFunnel', null);
+    var th = chartTheme();
+    var steps = [['Audience', t.audience], ['Sent', t.sent], ['Delivered', t.delivered], ['Clicks', t.clicks]];
+    if (t.conversions) steps.push(['Conversions', t.conversions]);
+    drawChart('chartFunnel', {
+      type: 'bar',
+      data: {
+        labels: steps.map(function (s) { return s[0]; }),
+        datasets: [{
+          data: steps.map(function (s) { return s[1]; }), backgroundColor: th.series[0],
+          borderRadius: 4, borderSkipped: 'start', barPercentage: 0.7, categoryPercentage: 0.9
+        }]
+      },
+      options: baseOptions(th, {
+        horizontal: true,
+        valueTick: function (v) { return fmtCompact(v); },
+        tooltip: {
+          label: function (ctx) {
+            var i = ctx.dataIndex;
+            var line = ' ' + fmtInt(ctx.parsed.x);
+            if (i > 0) line += '  (' + fmtPct(ratio(steps[i][1], steps[i - 1][1])) + ' of ' + steps[i - 1][0].toLowerCase() + ')';
+            return line;
+          }
+        }
+      })
+    });
+  }
+
+  function groupBy(list, key) {
+    var groups = {};
+    list.forEach(function (b) {
+      var k = b[key] || '(none)';
+      (groups[k] || (groups[k] = [])).push(b);
+    });
+    return groups;
+  }
+
+  function renderCampaignChart(list) {
+    var groups = groupBy(list.filter(function (b) { return b.status === 'Sent'; }), 'campaign');
+    var rows = Object.keys(groups).map(function (k) { var a = aggregate(groups[k]); return { name: k, cost: a.cost, revenue: a.revenue }; })
+      .filter(function (r) { return r.cost || r.revenue; })
+      .sort(function (a, b) { return (b.cost + b.revenue) - (a.cost + a.revenue); })
+      .slice(0, 8);
+    if (!rows.length) return drawChart('chartCampaign', null, 'No spend or revenue recorded for these filters.');
+    var th = chartTheme();
+    var short = function (s) { return s.length > 22 ? s.slice(0, 21) + '…' : s; };
+    drawChart('chartCampaign', {
+      type: 'bar',
+      data: {
+        labels: rows.map(function (r) { return short(r.name); }),
+        datasets: [
+          { label: 'Spend', data: rows.map(function (r) { return r.cost; }), backgroundColor: th.series[0],
+            borderRadius: 4, borderSkipped: 'start', borderColor: th.surface, borderWidth: { right: 2 } },
+          { label: 'Revenue', data: rows.map(function (r) { return r.revenue; }), backgroundColor: th.series[1],
+            borderRadius: 4, borderSkipped: 'start', borderColor: th.surface, borderWidth: { right: 2 } }
+        ]
+      },
+      options: baseOptions(th, {
+        horizontal: true, legend: true,
+        valueTick: function (v) { return fmtMoneyCompact(v); },
+        tooltip: {
+          title: function (items) { return rows[items[0].dataIndex].name; },
+          label: function (ctx) { return ' ' + ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.x); }
+        }
+      })
+    });
+  }
+
+  function renderByDimensionChart(list) {
+    var dim = $('#byDimension').value;
+    var dimLabel = { type: 'broadcast type', channel: 'channel', segment: 'audience segment' }[dim];
+    $('#byTypeTitle').textContent = 'Click-through rate by ' + dimLabel;
+    var groups = groupBy(list.filter(function (b) { return b.status === 'Sent'; }), dim);
+    var rows = Object.keys(groups).map(function (k) { var a = aggregate(groups[k]); return { name: k, ctr: a.ctr, n: a.count, clicks: a.clicks, delivered: a.delivered }; })
+      .filter(function (r) { return r.ctr !== null; })
+      .sort(function (a, b) { return b.ctr - a.ctr; })
+      .slice(0, 10);
+    if (!rows.length) return drawChart('chartByType', null);
+    var th = chartTheme();
+    drawChart('chartByType', {
+      type: 'bar',
+      data: {
+        labels: rows.map(function (r) { return r.name; }),
+        datasets: [{ label: 'CTR', data: rows.map(function (r) { return r.ctr * 100; }), backgroundColor: th.series[0],
+          borderRadius: 4, borderSkipped: 'start', barPercentage: 0.7, categoryPercentage: 0.9 }]
+      },
+      options: baseOptions(th, {
+        horizontal: true,
+        valueTick: function (v) { return v + '%'; },
+        tooltip: {
+          label: function (ctx) {
+            var r = rows[ctx.dataIndex];
+            return [' CTR: ' + fmtPct(r.ctr), ' ' + fmtInt(r.clicks) + ' clicks / ' + fmtInt(r.delivered) + ' delivered',
+              ' ' + r.n + ' broadcast' + (r.n === 1 ? '' : 's')];
+          }
+        }
+      })
+    });
+  }
+
+  var TOP_METRICS = {
+    ctr: { label: 'CTR', get: function (b, d) { return b.delivered > 0 ? d.ctr : null; }, fmt: fmtPct, dir: -1 },
+    clicks: { label: 'Clicks', get: function (b) { return b.clicks; }, fmt: fmtInt, dir: -1 },
+    conversions: { label: 'Conversions', get: function (b) { return b.conversions === '' ? null : b.conversions; }, fmt: fmtInt, dir: -1 },
+    roi: { label: 'ROI', get: function (b, d) { return d.roi; }, fmt: fmtPct, dir: -1 },
+    cpc: { label: 'Cost / click', get: function (b, d) { return d.cpc; }, fmt: null, dir: 1 },
+    deliveryRate: { label: 'Delivery rate', get: function (b, d) { return d.deliveryRate; }, fmt: fmtPct, dir: -1 }
+  };
+
+  function renderTopTable(list) {
+    var key = $('#topMetric').value;
+    var m = TOP_METRICS[key];
+    var rows = list.filter(function (b) { return b.status === 'Sent'; })
+      .map(function (b) { var d = derive(b); return { b: b, d: d, v: m.get(b, d) }; })
+      .filter(function (r) { return r.v !== null && isFinite(r.v); })
+      .sort(function (a, b) { return m.dir * (a.v - b.v); })
+      .slice(0, 10);
+    var table = $('#topTable');
+    if (!rows.length) {
+      table.innerHTML = '<tbody><tr><td class="muted">No sent broadcasts with this metric in the selected period.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML = '<thead><tr><th>#</th><th>Broadcast</th><th>Date</th><th>Channel</th><th>Type</th>' +
+      '<th class="num">Delivered</th><th class="num">Clicks</th><th class="num">CTR</th>' +
+      '<th class="num">Spend</th><th class="num">' + esc(m.label) + '</th></tr></thead><tbody>' +
+      rows.map(function (r, i) {
+        var b = r.b;
+        var value = m.fmt ? m.fmt(r.v) : fmtMoney(r.v, b.currency);
+        return '<tr class="clickable" data-id="' + esc(b.id) + '"><td class="rank">' + (i + 1) + '</td>' +
+          '<td class="name">' + esc(b.name) + '<div class="sub">' + esc(b.campaign) + '</div></td>' +
+          '<td>' + esc(fmtDate(b.date)) + '</td><td>' + esc(b.channel) + '</td><td>' + esc(b.type) + '</td>' +
+          '<td class="num">' + fmtInt(b.delivered) + '</td><td class="num">' + fmtInt(b.clicks) + '</td>' +
+          '<td class="num">' + fmtPct(r.d.ctr) + '</td><td class="num">' + fmtMoney(b.cost, b.currency) + '</td>' +
+          '<td class="num"><b>' + value + '</b></td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  // -------------------------------------------------------------------------
+  // Broadcasts table
+  // -------------------------------------------------------------------------
+  var BROADCAST_TABLE_COLUMNS = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: 'Broadcast' },
+    { key: 'date', label: 'Date' },
+    { key: 'channel', label: 'Channel' },
+    { key: 'type', label: 'Type' },
+    { key: 'segment', label: 'Segment' },
+    { key: 'status', label: 'Status' },
+    { key: 'audience', label: 'Audience', num: true },
+    { key: 'delivered', label: 'Delivered', num: true },
+    { key: 'deliveryRate', label: 'Deliv. %', num: true, derived: true },
+    { key: 'clicks', label: 'Clicks', num: true },
+    { key: 'ctr', label: 'CTR', num: true, derived: true },
+    { key: 'shares', label: 'Shares', num: true },
+    { key: 'conversions', label: 'Conv.', num: true },
+    { key: 'cost', label: 'Spend', num: true },
+    { key: 'cpc', label: 'Cost/click', num: true, derived: true },
+    { key: 'revenue', label: 'Revenue', num: true },
+    { key: 'roi', label: 'ROI', num: true, derived: true }
+  ];
+
+  function sortValue(b, d, key) {
+    if (key in d) return d[key] === null ? -Infinity : d[key];
+    if (key === 'date') return b.date + ' ' + b.time;
+    var v = b[key];
+    return v === '' ? -Infinity : v;
+  }
+
+  function sortRows(rows, sort) {
+    return rows.sort(function (a, b) {
+      var x = sortValue(a.b, a.d, sort.key), y = sortValue(b.b, b.d, sort.key);
+      if (typeof x === 'string' || typeof y === 'string') return sort.dir * String(x).localeCompare(String(y));
+      return sort.dir * (x - y);
+    });
+  }
+
+  function headerHtml(columns, sort) {
+    return '<thead><tr>' + columns.map(function (c) {
+      var arrow = sort.key === c.key ? ' <span class="arrow">' + (sort.dir > 0 ? '▲' : '▼') + '</span>' : '';
+      return '<th data-key="' + c.key + '"' + (c.num ? ' class="num"' : '') + '>' + esc(c.label) + arrow + '</th>';
+    }).join('') + (columns === BROADCAST_TABLE_COLUMNS ? '<th></th>' : '') + '</tr></thead>';
+  }
+
+  function broadcastTableRows() {
+    var q = $('#searchBox').value.trim().toLowerCase();
+    var status = $('#fStatus').value;
+    return filtered().filter(function (b) {
+      if (status && b.status !== status) return false;
+      if (!q) return true;
+      return [b.id, b.name, b.campaign, b.segment, b.notes, b.message, b.type, b.channel]
+        .join(' ').toLowerCase().indexOf(q) !== -1;
+    }).map(function (b) { return { b: b, d: derive(b) }; });
+  }
+
+  function renderBroadcastTable() {
+    var sort = state.sort.broadcasts;
+    var rows = sortRows(broadcastTableRows(), sort);
+    $('#tableCount').textContent = rows.length + ' broadcast' + (rows.length === 1 ? '' : 's');
+    var table = $('#broadcastTable');
+    if (!rows.length) {
+      table.innerHTML = headerHtml(BROADCAST_TABLE_COLUMNS, sort) +
+        '<tbody><tr><td colspan="' + (BROADCAST_TABLE_COLUMNS.length + 1) + '" class="muted">' +
+        (state.data.broadcasts.length ? 'No broadcasts match these filters. Try widening the period.' :
+          'No broadcasts yet. Click “+ New broadcast” to add the first one.') + '</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML = headerHtml(BROADCAST_TABLE_COLUMNS, sort) + '<tbody>' + rows.map(function (r) {
+      var b = r.b, d = r.d;
+      return '<tr class="clickable" data-id="' + esc(b.id) + '">' +
+        '<td class="muted">' + esc(b.id) + '</td>' +
+        '<td class="name">' + esc(b.name) + '<div class="sub">' + esc(b.campaign) + '</div></td>' +
+        '<td style="white-space:nowrap">' + esc(fmtDate(b.date)) + '<div class="muted small">' + esc(b.time) + '</div></td>' +
+        '<td>' + esc(b.channel) + '</td><td>' + esc(b.type) + '</td><td>' + esc(b.segment) + '</td>' +
+        '<td><span class="pill ' + esc(b.status) + '">' + esc(b.status) + '</span></td>' +
+        '<td class="num">' + fmtInt(b.audience) + '</td>' +
+        '<td class="num">' + fmtInt(b.delivered) + '</td>' +
+        '<td class="num">' + fmtPct(d.deliveryRate) + '</td>' +
+        '<td class="num">' + fmtInt(b.clicks) + '</td>' +
+        '<td class="num">' + fmtPct(d.ctr) + '</td>' +
+        '<td class="num">' + (b.shares === '' ? '—' : fmtInt(b.shares)) + '</td>' +
+        '<td class="num">' + (b.conversions === '' ? '—' : fmtInt(b.conversions)) + '</td>' +
+        '<td class="num">' + fmtMoney(b.cost, b.currency) + '</td>' +
+        '<td class="num">' + fmtMoney(d.cpc, b.currency) + '</td>' +
+        '<td class="num">' + (b.revenue === '' ? '—' : fmtMoney(b.revenue, b.currency)) + '</td>' +
+        '<td class="num">' + fmtPct(d.roi) + '</td>' +
+        '<td><button class="btn ghost small" data-edit="' + esc(b.id) + '">Edit</button></td></tr>';
+    }).join('') + '</tbody>';
+  }
+
+  function exportCsv() {
+    var rows = sortRows(broadcastTableRows(), state.sort.broadcasts);
+    var fields = ['id', 'name', 'campaign', 'date', 'time', 'type', 'segment', 'channel', 'status',
+      'audience', 'sent', 'delivered', 'clicks', 'shares', 'conversions', 'revenue', 'cost', 'currency',
+      'notes', 'message', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'];
+    var derivedFields = ['deliveryRate', 'ctr', 'shareRate', 'conversionRate', 'cpc', 'cpa', 'roi'];
+    var cell = function (v) {
+      var s = v === null || v === undefined ? '' : String(v);
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    var lines = [fields.concat(derivedFields).join(',')].concat(rows.map(function (r) {
+      return fields.map(function (f) { return cell(r.b[f]); })
+        .concat(derivedFields.map(function (f) { return r.d[f] === null ? '' : cell(Math.round(r.d[f] * 10000) / 10000); }))
+        .join(',');
+    }));
+    var blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'broadcasts-' + state.data.today + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  // -------------------------------------------------------------------------
+  // Campaigns
+  // -------------------------------------------------------------------------
+  var CAMPAIGN_TABLE_COLUMNS = [
+    { key: 'name', label: 'Campaign' }, { key: 'category', label: 'Category' },
+    { key: 'count', label: 'Sent', num: true }, { key: 'delivered', label: 'Delivered', num: true },
+    { key: 'clicks', label: 'Clicks', num: true }, { key: 'ctr', label: 'CTR', num: true },
+    { key: 'conversions', label: 'Conv.', num: true }, { key: 'cost', label: 'Spend', num: true },
+    { key: 'cpc', label: 'Cost/click', num: true }, { key: 'revenue', label: 'Revenue', num: true },
+    { key: 'roi', label: 'ROI', num: true }
+  ];
+
+  function renderCampaignTable() {
+    var list = filtered();
+    var groups = groupBy(list, 'campaign');
+    var info = {};
+    state.data.campaigns.forEach(function (c) { info[c.name] = c; });
+    var filterCampaign = $('#fCampaign').value;
+    var names = filterCampaign ? [filterCampaign] : campaignNames();
+    var sort = state.sort.campaigns;
+    var rows = names.map(function (n) {
+      var a = aggregate(groups[n] || []);
+      var c = info[n] || {};
+      return {
+        name: n, category: c.category || '', dates: [c.startDate, c.endDate].filter(Boolean).map(fmtDate).join(' – '),
+        count: a.count, delivered: a.delivered, clicks: a.clicks, ctr: a.ctr, conversions: a.conversions,
+        cost: a.cost, cpc: a.cpc, revenue: a.revenue, roi: a.roi
+      };
+    });
+    rows.sort(function (a, b) {
+      var x = a[sort.key], y = b[sort.key];
+      if (typeof x === 'string') return sort.dir * x.localeCompare(y);
+      return sort.dir * ((x === null ? -Infinity : x) - (y === null ? -Infinity : y));
+    });
+    var total = aggregate(list);
+    var table = $('#campaignTable');
+    if (!rows.length) {
+      table.innerHTML = '<tbody><tr><td class="muted">No campaigns yet. They are added automatically when you save a broadcast, or click “+ New campaign”.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML = headerHtml(CAMPAIGN_TABLE_COLUMNS, sort) + '<tbody>' + rows.map(function (r) {
+      return '<tr class="clickable" data-campaign="' + esc(r.name) + '">' +
+        '<td class="name">' + esc(r.name) + (r.dates ? '<div class="sub">' + esc(r.dates) + '</div>' : '') + '</td>' +
+        '<td>' + esc(r.category) + '</td><td class="num">' + fmtInt(r.count) + '</td>' +
+        '<td class="num">' + fmtInt(r.delivered) + '</td><td class="num">' + fmtInt(r.clicks) + '</td>' +
+        '<td class="num">' + fmtPct(r.ctr) + '</td><td class="num">' + fmtInt(r.conversions) + '</td>' +
+        '<td class="num">' + fmtMoney(r.cost) + '</td><td class="num">' + fmtMoney(r.cpc) + '</td>' +
+        '<td class="num">' + fmtMoney(r.revenue) + '</td><td class="num">' + fmtPct(r.roi) + '</td></tr>';
+    }).join('') + '</tbody><tfoot><tr><td>Total</td><td></td><td class="num">' + fmtInt(total.count) +
+      '</td><td class="num">' + fmtInt(total.delivered) + '</td><td class="num">' + fmtInt(total.clicks) +
+      '</td><td class="num">' + fmtPct(total.ctr) + '</td><td class="num">' + fmtInt(total.conversions) +
+      '</td><td class="num">' + fmtMoney(total.cost) + '</td><td class="num">' + fmtMoney(total.cpc) +
+      '</td><td class="num">' + fmtMoney(total.revenue) + '</td><td class="num">' + fmtPct(total.roi) + '</td></tr></tfoot>';
+  }
+
+  // -------------------------------------------------------------------------
+  // Compare
+  // -------------------------------------------------------------------------
+  var COMPARE_ROWS = [
+    { label: 'Campaign', get: function (b) { return b.campaign; }, text: true },
+    { label: 'Date & time', get: function (b) { return fmtDate(b.date) + ' ' + b.time; }, text: true },
+    { label: 'Type', get: function (b) { return b.type; }, text: true },
+    { label: 'Channel', get: function (b) { return b.channel; }, text: true },
+    { label: 'Segment', get: function (b) { return b.segment; }, text: true },
+    { label: 'Status', get: function (b) { return b.status; }, text: true },
+    { label: 'Audience', get: function (b) { return b.audience; }, fmt: fmtInt, best: 1 },
+    { label: 'Delivered', get: function (b) { return b.delivered; }, fmt: fmtInt, best: 1 },
+    { label: 'Delivery rate', get: function (b, d) { return d.deliveryRate; }, fmt: fmtPct, best: 1 },
+    { label: 'Clicks', get: function (b) { return b.clicks; }, fmt: fmtInt, best: 1 },
+    { label: 'Click-through rate', get: function (b, d) { return d.ctr; }, fmt: fmtPct, best: 1 },
+    { label: 'Shares', get: function (b) { return b.shares === '' ? null : b.shares; }, fmt: fmtInt, best: 1 },
+    { label: 'Share rate', get: function (b, d) { return d.shareRate; }, fmt: fmtPct, best: 1 },
+    { label: 'Conversions', get: function (b) { return b.conversions === '' ? null : b.conversions; }, fmt: fmtInt, best: 1 },
+    { label: 'Conversion rate', get: function (b, d) { return d.conversionRate; }, fmt: fmtPct, best: 1 },
+    { label: 'Spend', get: function (b) { return b.cost; }, money: true },
+    { label: 'Cost per delivered', get: function (b, d) { return d.costPerDelivered; }, money: true, best: -1 },
+    { label: 'Cost per click', get: function (b, d) { return d.cpc; }, money: true, best: -1 },
+    { label: 'Cost per conversion', get: function (b, d) { return d.cpa; }, money: true, best: -1 },
+    { label: 'Revenue', get: function (b) { return b.revenue === '' ? null : b.revenue; }, money: true, best: 1 },
+    { label: 'ROI', get: function (b, d) { return d.roi; }, fmt: fmtPct, best: 1 }
+  ];
+
+  function renderComparePickers() {
+    var options = '<option value="">— Select broadcast —</option>' + state.data.broadcasts.map(function (b) {
+      return '<option value="' + esc(b.id) + '">' + esc(b.id + ' · ' + b.name + ' · ' + fmtDate(b.date)) + '</option>';
+    }).join('');
+    $('#comparePickers').innerHTML = state.compareIds.map(function (id, i) {
+      return '<label>Broadcast ' + (i + 1) + '<select data-slot="' + i + '">' + options + '</select></label>';
+    }).join('');
+    $$('#comparePickers select').forEach(function (sel, i) {
+      sel.value = state.compareIds[i] || '';
+      if (sel.value !== state.compareIds[i]) state.compareIds[i] = '';
+    });
+  }
+
+  function renderCompare() {
+    var byId = {};
+    state.data.broadcasts.forEach(function (b) { byId[b.id] = b; });
+    var picked = state.compareIds.filter(function (id) { return id && byId[id]; })
+      .filter(function (id, i, arr) { return arr.indexOf(id) === i; })
+      .map(function (id) { return byId[id]; });
+    var out = $('#compareResult');
+    if (state.charts.chartCompare) { state.charts.chartCompare.destroy(); delete state.charts.chartCompare; }
+    if (picked.length < 2) {
+      out.innerHTML = '<div class="card"><p class="muted">Select at least two broadcasts above to compare them side by side. ' +
+        'Tip: open any broadcast and click “Add to compare”.</p></div>';
+      return;
+    }
+    var derived = picked.map(derive);
+    var currencies = uniqueSorted(picked.map(function (b) { return b.currency; }));
+    var mixedCurrency = currencies.length > 1;
+
+    var body = COMPARE_ROWS.map(function (row) {
+      var values = picked.map(function (b, i) { return row.get(b, derived[i]); });
+      var bestIdx = -1;
+      if (row.best && !(row.money && mixedCurrency)) {
+        var bestVal = null;
+        values.forEach(function (v, i) {
+          if (v === null || v === '' || !isFinite(v)) return;
+          if (bestVal === null || row.best * (v - bestVal) > 0) { bestVal = v; bestIdx = i; }
+        });
+        var ties = values.filter(function (v) { return v === bestVal; }).length;
+        if (ties === values.length) bestIdx = -1;
+      }
+      return '<tr><th>' + esc(row.label) + '</th>' + values.map(function (v, i) {
+        var shown = row.text ? esc(v) : (v === null || v === '' ? '—' :
+          (row.money ? fmtMoney(v, picked[i].currency) : row.fmt(v)));
+        var cls = (row.text ? '' : 'num') + (i === bestIdx ? ' best' : '');
+        return '<td class="' + cls + '">' + shown + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+
+    out.innerHTML = '<div class="card flush"><div class="table-wrap"><table class="data compare">' +
+      '<thead><tr><th>Metric</th>' + picked.map(function (b) {
+        return '<th>' + esc(b.name) + '<div class="muted small">' + esc(b.id) + '</div></th>';
+      }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div></div>' +
+      '<div class="card"><div class="card-head"><h3>Rates side by side</h3></div>' +
+      '<div class="chart-box"><canvas id="chartCompare"></canvas></div></div>';
+
+    var th = chartTheme();
+    var metrics = [['Delivery rate', 'deliveryRate'], ['Click-through rate', 'ctr'], ['Share rate', 'shareRate'], ['Conversion rate', 'conversionRate']];
+    if (typeof Chart === 'undefined') return;
+    state.charts.chartCompare = new Chart($('#chartCompare'), {
+      type: 'bar',
+      data: {
+        labels: metrics.map(function (m) { return m[0]; }),
+        datasets: picked.map(function (b, i) {
+          return {
+            label: b.name.length > 30 ? b.name.slice(0, 29) + '…' : b.name,
+            data: metrics.map(function (m) { var v = derived[i][m[1]]; return v === null ? null : v * 100; }),
+            backgroundColor: th.series[i], borderRadius: 4, borderSkipped: 'start',
+            borderColor: th.surface, borderWidth: { left: 1, right: 1 }
+          };
+        })
+      },
+      options: baseOptions(th, {
+        legend: true,
+        valueTick: function (v) { return v + '%'; },
+        tooltip: { label: function (ctx) { return ' ' + ctx.dataset.label + ': ' + (ctx.parsed.y === null ? '—' : dec1Fmt.format(ctx.parsed.y) + '%'); } }
+      })
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Detail modal
+  // -------------------------------------------------------------------------
+  function findBroadcast(id) {
+    for (var i = 0; i < state.data.broadcasts.length; i++) if (state.data.broadcasts[i].id === id) return state.data.broadcasts[i];
+    return null;
+  }
+
+  function openDetail(id) {
+    var b = findBroadcast(id);
+    if (!b) return;
+    var d = derive(b);
+    state.detailId = id;
+    $('#dmTitle').textContent = b.name;
+    $('#dmMeta').innerHTML = esc(b.id) + ' · <span class="pill ' + esc(b.status) + '">' + esc(b.status) + '</span> · ' +
+      esc(b.campaign) + ' · ' + esc(fmtDate(b.date)) + ' ' + esc(b.time) + ' · ' + esc(b.channel) + ' · ' +
+      esc(b.type) + ' · ' + esc(b.segment);
+    var tile = function (label, value, sub) { return kpiCard(label, value, sub ? esc(sub) : ''); };
+    $('#dmBody').innerHTML =
+      '<div class="detail-grid">' +
+      tile('Audience', fmtInt(b.audience)) + tile('Sent', fmtInt(b.sent)) +
+      tile('Delivered', fmtInt(b.delivered), fmtPct(d.deliveryRate) + ' delivery rate') +
+      tile('Clicks', fmtInt(b.clicks), fmtPct(d.ctr) + ' click-through') +
+      tile('Shares', b.shares === '' ? '—' : fmtInt(b.shares), d.shareRate === null ? '' : fmtPct(d.shareRate) + ' share rate') +
+      tile('Conversions', b.conversions === '' ? '—' : fmtInt(b.conversions), d.conversionRate === null ? '' : fmtPct(d.conversionRate) + ' of clicks') +
+      tile('Spend', fmtMoney(b.cost, b.currency), d.cpc === null ? '' : fmtMoney(d.cpc, b.currency) + ' per click') +
+      tile('Revenue', b.revenue === '' ? '—' : fmtMoney(b.revenue, b.currency), d.roi === null ? '' : 'ROI ' + fmtPct(d.roi)) +
+      '</div>' +
+      (b.message ? '<h3 style="margin:12px 0 6px">Message</h3><div class="message-box">' + esc(b.message) + '</div>' : '') +
+      (b.notes ? '<h3 style="margin:12px 0 6px">Notes</h3><div class="message-box">' + esc(b.notes) + '</div>' : '') +
+      '<p class="muted small">Created ' + esc(b.createdAt) + (b.createdBy ? ' by ' + esc(b.createdBy) : '') +
+      (b.version > 1 ? ' · Last updated ' + esc(b.updatedAt) + (b.updatedBy ? ' by ' + esc(b.updatedBy) : '') +
+        ' (version ' + b.version + ')' : '') + '</p>';
+    showModal('#detailModal');
+  }
+
+  // -------------------------------------------------------------------------
+  // Broadcast form
+  // -------------------------------------------------------------------------
+  function populateFormOptions() {
+    var c = state.data.config;
+    var form = $('#broadcastForm');
+    fillSelect(form.elements.type, c.types);
+    fillSelect(form.elements.channel, c.channels);
+    fillSelect(form.elements.status, c.statuses);
+    fillSelect(form.elements.currency, c.currencies);
+    $('#campaignList').innerHTML = campaignNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+    var segments = uniqueSorted(c.segments.concat(state.data.broadcasts.map(function (b) { return b.segment; })));
+    $('#segmentList').innerHTML = segments.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+    fillSelect($('#campaignForm').elements.category, [''].concat(c.campaignCategories));
+  }
+
+  /** Makes sure a select can show a value that was removed from the settings. */
+  function ensureOption(select, value) {
+    if (!value) return;
+    var exists = Array.prototype.some.call(select.options, function (o) { return o.value === value; });
+    if (!exists) {
+      var o = document.createElement('option');
+      o.value = value; o.textContent = value + ' (retired)';
+      select.appendChild(o);
+    }
+  }
+
+  function openBroadcastForm(id, opts) {
+    opts = opts || {};
+    var form = $('#broadcastForm');
+    populateFormOptions();
+    form.reset();
+    clearErrors(form);
+    $('#broadcastError').classList.add('hidden');
+    $('#historyBox').classList.add('hidden');
+    $('#historyBox').innerHTML = '';
+
+    var b = id ? findBroadcast(id) : null;
+    var editing = b && !opts.duplicate;
+    state.form = { requestId: uuid(), dirty: false, editing: editing ? b : null };
+
+    if (b) {
+      ['type', 'channel', 'currency'].forEach(function (f) { ensureOption(form.elements[f], b[f]); });
+      ['name', 'campaign', 'date', 'time', 'type', 'segment', 'channel', 'status', 'message',
+        'currency', 'notes'].concat(NUMERIC_FIELDS).forEach(function (f) {
+        form.elements[f].value = b[f] === null || b[f] === undefined ? '' : b[f];
+      });
+    }
+    if (editing) {
+      form.elements.id.value = b.id;
+      $('#bmTitle').textContent = 'Edit broadcast';
+      $('#bmMeta').textContent = 'Version ' + b.version + ' · last updated ' + (b.updatedAt || b.createdAt) +
+        (b.updatedBy ? ' by ' + b.updatedBy : '');
+      $('#historyBtn').classList.remove('hidden');
+      $('#saveBroadcastBtn').textContent = 'Save changes';
+    } else {
+      form.elements.id.value = '';
+      $('#bmTitle').textContent = opts.duplicate ? 'New broadcast (copy of ' + b.id + ')' : 'New broadcast';
+      $('#bmMeta').textContent = 'A Broadcast ID is generated when you save.';
+      $('#historyBtn').classList.add('hidden');
+      $('#saveBroadcastBtn').textContent = 'Save broadcast';
+      var c = state.data.config;
+      form.elements.date.value = state.data.today;
+      form.elements.time.value = opts.duplicate ? b.time : state.data.now;
+      if (!b) {
+        form.elements.status.value = 'Sent';
+        form.elements.channel.value = c.defaultChannel;
+        form.elements.currency.value = c.defaultCurrency;
+        if ($('#fCampaign').value) form.elements.campaign.value = $('#fCampaign').value;
+      } else {
+        // A copy keeps the setup but starts with fresh metrics.
+        form.elements.status.value = 'Draft';
+        NUMERIC_FIELDS.forEach(function (f) { form.elements[f].value = ''; });
+        form.elements.audience.value = b.audience || '';
+        form.elements.notes.value = '';
+      }
+    }
+    updateLiveMetrics();
+    showModal('#broadcastModal');
+    setTimeout(function () { form.elements.name.focus(); }, 50);
+  }
+
+  function readForm(form) {
+    var data = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (el.name) data[el.name] = typeof el.value === 'string' ? el.value.trim() : el.value;
+    });
+    return data;
+  }
+
+  function parseNum(v, integer) {
+    if (v === '' || v === null || v === undefined) return { value: null };
+    var n = Number(String(v).replace(/,/g, ''));
+    if (!isFinite(n)) return { error: 'Enter a number.' };
+    if (n < 0) return { error: 'Can\'t be negative.' };
+    if (integer && Math.floor(n) !== n) return { error: 'Enter a whole number.' };
+    return { value: n };
+  }
+
+  /** Client-side checks mirror the server so most mistakes are caught before saving. */
+  function validateBroadcastForm(d) {
+    var e = {};
+    if (!d.name) e.name = 'Enter a broadcast name.';
+    if (!d.campaign) e.campaign = 'Enter or pick a campaign.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)) e.date = 'Pick a valid date.';
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)) e.time = 'Enter a time like 18:30.';
+    if (!d.type) e.type = 'Pick a broadcast type.';
+    if (!d.segment) e.segment = 'Enter the audience segment.';
+    if (!d.channel) e.channel = 'Pick a channel.';
+    if (!d.status) e.status = 'Pick a status.';
+    if (!d.currency) e.currency = 'Pick a currency.';
+    var n = {};
+    NUMERIC_FIELDS.forEach(function (f) {
+      var p = parseNum(d[f], INTEGER_FIELDS.indexOf(f) !== -1);
+      if (p.error) e[f] = p.error;
+      n[f] = p.value === null || p.value === undefined ? 0 : p.value;
+    });
+    if (!e.delivered && !e.sent && n.delivered > n.sent) e.delivered = 'Delivered can\'t be more than sent.';
+    if (!e.sent && !e.audience && n.audience > 0 && n.sent > n.audience) e.sent = 'Sent can\'t be more than the audience size.';
+    if (d.status === 'Sent') {
+      if (!e.audience && !(n.audience > 0)) e.audience = 'Required for a sent broadcast.';
+      if (!e.sent && !(n.sent > 0)) e.sent = 'Required for a sent broadcast.';
+      if (!e.date && d.date > state.data.today) e.date = 'A sent broadcast can\'t be in the future. Use Draft.';
+    }
+    return e;
+  }
+
+  function clearErrors(form) {
+    $$('.invalid', form).forEach(function (el) { el.classList.remove('invalid'); });
+    $$('.field-error', form).forEach(function (el) { el.remove(); });
+  }
+
+  function showErrors(form, errors) {
+    clearErrors(form);
+    var first = null;
+    Object.keys(errors).forEach(function (field) {
+      var input = form.elements[field];
+      if (!input) return;
+      var label = input.closest('label');
+      label.classList.add('invalid');
+      var msg = document.createElement('span');
+      msg.className = 'field-error';
+      msg.textContent = errors[field];
+      label.appendChild(msg);
+      if (!first) first = input;
+    });
+    if (first) first.focus();
+  }
+
+  function updateLiveMetrics() {
+    var d = readForm($('#broadcastForm'));
+    var b = { sent: num(d.sent), delivered: num(d.delivered), clicks: num(d.clicks), cost: num(d.cost),
+      shares: d.shares === '' ? '' : num(d.shares), conversions: d.conversions === '' ? '' : num(d.conversions),
+      revenue: d.revenue === '' ? '' : num(d.revenue) };
+    var m = derive(b);
+    var chip = function (label, v) { return '<span class="chip">' + label + ' <b>' + v + '</b></span>'; };
+    $('#liveMetrics').innerHTML = chip('Delivery rate', fmtPct(m.deliveryRate)) + chip('CTR', fmtPct(m.ctr)) +
+      chip('Conversion rate', fmtPct(m.conversionRate)) + chip('Cost per click', fmtMoney(m.cpc, d.currency)) +
+      chip('ROI', fmtPct(m.roi));
+    $('#metricsHint').style.color = d.status === 'Sent' ? '' : 'var(--muted)';
+  }
+
+  function submitBroadcast(evt, allowDuplicate) {
+    if (evt) evt.preventDefault();
+    var form = $('#broadcastForm');
+    var d = readForm(form);
+    var errorBox = $('#broadcastError');
+    errorBox.classList.add('hidden');
+    var errors = validateBroadcastForm(d);
+    if (Object.keys(errors).length) {
+      showErrors(form, errors);
+      errorBox.textContent = 'Please fix the highlighted fields.';
+      errorBox.classList.remove('hidden');
+      return;
+    }
+    clearErrors(form);
+    var editing = state.form.editing;
+    var payload = {};
+    ['name', 'campaign', 'date', 'time', 'type', 'segment', 'channel', 'status', 'message', 'currency', 'notes']
+      .concat(NUMERIC_FIELDS).forEach(function (f) { payload[f] = d[f]; });
+    payload.id = editing ? editing.id : '';
+    payload.version = editing ? editing.version : 0;
+    payload.requestId = state.form.requestId;
+    payload.allowDuplicate = !!allowDuplicate;
+
+    var btn = $('#saveBroadcastBtn');
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    call('saveBroadcast', payload).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = label;
+      if (res.ok) {
+        if (!res.unchanged) upsertBroadcast(res.record);
+        state.form.dirty = false;
+        hideModal('#broadcastModal');
+        toast(res.message, res.unchanged ? '' : 'success');
+        renderAll();
+        return;
+      }
+      if (res.duplicateOf) {
+        if (confirm(res.message)) submitBroadcast(null, true);
+        return;
+      }
+      if (res.errors) showErrors(form, res.errors);
+      errorBox.textContent = res.message || 'Could not save.';
+      errorBox.classList.remove('hidden');
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = label;
+      errorBox.textContent = 'Not saved: ' + errorText(err);
+      errorBox.classList.remove('hidden');
+    });
+  }
+
+  function upsertBroadcast(record) {
+    var list = state.data.broadcasts;
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].id === record.id) { idx = i; break; }
+    if (idx === -1) list.push(record); else list[idx] = record;
+    list.sort(function (a, b) { return (b.date + b.time).localeCompare(a.date + a.time); });
+    var known = state.data.campaigns.some(function (c) { return c.name.toLowerCase() === record.campaign.toLowerCase(); });
+    if (!known) state.data.campaigns.push({ name: record.campaign, category: 'Other', startDate: '', endDate: '', objective: '', notes: '' });
+    populateFilterOptions();
+  }
+
+  function loadHistory() {
+    var editing = state.form.editing;
+    if (!editing) return;
+    var box = $('#historyBox');
+    box.classList.remove('hidden');
+    box.innerHTML = '<p class="muted">Loading history…</p>';
+    call('getBroadcastHistory', editing.id).then(function (entries) {
+      if (!entries.length) { box.innerHTML = '<p class="muted">No history recorded for this broadcast.</p>'; return; }
+      box.innerHTML = '<h3>Change history</h3>' + entries.map(function (h) {
+        return '<div class="entry"><b>' + esc(h.action === 'CREATE' ? 'Created' : 'Updated') + '</b> · ' +
+          esc(h.timestamp) + ' · ' + esc(h.user) + ' · v' + esc(h.version) +
+          (h.action === 'UPDATE' ? '<pre>' + esc(h.changes) + '</pre>' : '') + '</div>';
+      }).join('');
+    }).catch(function (err) { box.innerHTML = '<p class="field-error">' + esc(errorText(err)) + '</p>'; });
+  }
+
+  // -------------------------------------------------------------------------
+  // Campaign form
+  // -------------------------------------------------------------------------
+  function openCampaignForm(name) {
+    populateFormOptions();
+    var form = $('#campaignForm');
+    form.reset();
+    clearErrors(form);
+    $('#campaignError').classList.add('hidden');
+    var c = null;
+    state.data.campaigns.forEach(function (x) { if (x.name === name) c = x; });
+    if (name && !c) c = { name: name, category: '', startDate: '', endDate: '', objective: '', notes: '' };
+    if (c) {
+      ensureOption(form.elements.category, c.category);
+      ['name', 'category', 'startDate', 'endDate', 'objective', 'notes'].forEach(function (f) { form.elements[f].value = c[f] || ''; });
+      var known = state.data.campaigns.some(function (x) { return x.name === name; });
+      form.elements.originalName.value = known ? c.name : '';
+      var used = state.data.broadcasts.filter(function (b) { return b.campaign === c.name; }).length;
+      $('#cmRenameNote').textContent = used ? 'Renaming also updates the ' + used + ' broadcast(s) in this campaign.' : '';
+      $('#cmTitle').textContent = 'Edit campaign';
+    } else {
+      form.elements.originalName.value = '';
+      $('#cmRenameNote').textContent = '';
+      $('#cmTitle').textContent = 'New campaign';
+    }
+    state.form.dirty = false;
+    showModal('#campaignModal');
+  }
+
+  function submitCampaign(evt) {
+    evt.preventDefault();
+    var form = $('#campaignForm');
+    var d = readForm(form);
+    var errors = {};
+    if (!d.name) errors.name = 'Enter a campaign name.';
+    if (d.startDate && d.endDate && d.endDate < d.startDate) errors.endDate = 'End date is before the start date.';
+    var errorBox = $('#campaignError');
+    if (Object.keys(errors).length) { showErrors(form, errors); return; }
+    clearErrors(form);
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    call('saveCampaign', d).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        if (res.errors) showErrors(form, res.errors);
+        errorBox.textContent = res.message;
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      state.form.dirty = false;
+      hideModal('#campaignModal');
+      toast(res.message, 'success');
+      loadData(true);
+    }).catch(function (err) {
+      btn.disabled = false;
+      errorBox.textContent = 'Not saved: ' + errorText(err);
+      errorBox.classList.remove('hidden');
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Settings
+  // -------------------------------------------------------------------------
+  var LIST_SETTINGS = ['channels', 'types', 'segments', 'campaignCategories', 'currencies'];
+
+  function renderSettings() {
+    var form = $('#settingsForm');
+    var c = state.data.config;
+    LIST_SETTINGS.forEach(function (k) { form.elements[k].value = c[k].join('\n'); });
+    form.elements.defaultCurrency.value = c.defaultCurrency;
+    form.elements.defaultChannel.value = c.defaultChannel;
+  }
+
+  function submitSettings(evt) {
+    evt.preventDefault();
+    var form = $('#settingsForm');
+    var payload = {};
+    LIST_SETTINGS.forEach(function (k) {
+      payload[k] = form.elements[k].value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    });
+    payload.defaultCurrency = form.elements.defaultCurrency.value.trim().toUpperCase();
+    payload.defaultChannel = form.elements.defaultChannel.value.trim();
+    var box = $('#settingsError');
+    box.classList.add('hidden');
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    call('saveSettings', payload).then(function (res) {
+      btn.disabled = false;
+      state.data.config = res.config;
+      populateFilterOptions();
+      renderSettings();
+      renderAll();
+      toast(res.message, 'success');
+    }).catch(function (err) {
+      btn.disabled = false;
+      box.textContent = errorText(err);
+      box.classList.remove('hidden');
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Modals & navigation
+  // -------------------------------------------------------------------------
+  function showModal(sel) { $(sel).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+  function hideModal(sel) {
+    $(sel).classList.add('hidden');
+    if (!$$('.modal').some(function (m) { return !m.classList.contains('hidden'); })) document.body.style.overflow = '';
+  }
+  function closeModal(modal) {
+    var hasForm = modal.querySelector('form');
+    if (hasForm && state.form.dirty && !confirm('Discard your unsaved changes?')) return;
+    state.form.dirty = false;
+    hideModal('#' + modal.id);
+  }
+
+  var currentView = 'overview';
+  function showView(view) {
+    currentView = view;
+    $$('.tab').forEach(function (t) { t.classList.toggle('active', t.dataset.view === view); });
+    $$('.view').forEach(function (v) { v.classList.toggle('hidden', v.id !== 'view-' + view); });
+    $('#filters').classList.toggle('hidden', view === 'compare' || view === 'settings');
+    try { localStorage.setItem('bd.view', view); } catch (e) { /* storage unavailable */ }
+    renderCurrent();
+  }
+
+  function renderCurrent() {
+    if (!state.data) return;
+    if (currentView === 'overview') renderOverview();
+    else if (currentView === 'broadcasts') renderBroadcastTable();
+    else if (currentView === 'campaigns') renderCampaignTable();
+    else if (currentView === 'compare') { renderComparePickers(); renderCompare(); }
+    else if (currentView === 'settings') renderSettings();
+  }
+  function renderAll() { renderCurrent(); }
+
+  // -------------------------------------------------------------------------
+  // Loading
+  // -------------------------------------------------------------------------
+  function loadData(quiet) {
+    if (!quiet) $('#loading').classList.remove('hidden');
+    $('#loadError').classList.add('hidden');
+    return call('getDashboardData').then(function (data) {
+      state.data = data;
+      $('#loading').classList.add('hidden');
+      $('#userLine').textContent = data.broadcasts.length + ' broadcasts · signed in as ' + data.user;
+      populateFilterOptions();
+      populateFormOptions();
+      renderCurrent();
+    }).catch(function (err) {
+      $('#loading').classList.add('hidden');
+      var box = $('#loadError');
+      box.textContent = 'Could not load the dashboard: ' + errorText(err);
+      box.classList.remove('hidden');
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Events
+  // -------------------------------------------------------------------------
+  function bind() {
+    $$('.tab').forEach(function (t) { t.addEventListener('click', function () { showView(t.dataset.view); }); });
+    $('#newBroadcastBtn').addEventListener('click', function () { if (state.data) openBroadcastForm(null); });
+    $('#refreshBtn').addEventListener('click', function () { loadData(true).then(function () { toast('Data refreshed.'); }); });
+
+    $('#fPeriod').addEventListener('change', function () {
+      var custom = this.value === 'custom';
+      $$('.custom-range').forEach(function (el) { el.classList.toggle('hidden', !custom); });
+      if (custom && !$('#fFrom').value) {
+        $('#fTo').value = state.data.today;
+        $('#fFrom').value = addDays(state.data.today, -29);
+      }
+      renderCurrent();
+    });
+    ['#fFrom', '#fTo', '#fCampaign', '#fChannel', '#fType', '#fSegment', '#fStatus', '#trendMetric', '#topMetric', '#byDimension']
+      .forEach(function (sel) { $(sel).addEventListener('change', renderCurrent); });
+    $('#searchBox').addEventListener('input', renderBroadcastTable);
+    $('#clearFilters').addEventListener('click', function () {
+      ['#fCampaign', '#fChannel', '#fType', '#fSegment', '#fStatus'].forEach(function (s) { $(s).value = ''; });
+      $('#fPeriod').value = 'all';
+      $('#searchBox').value = '';
+      $$('.custom-range').forEach(function (el) { el.classList.add('hidden'); });
+      renderCurrent();
+    });
+
+    // Table interactions (delegated)
+    document.addEventListener('click', function (e) {
+      var th = e.target.closest('table.sortable th[data-key]');
+      if (th) {
+        var which = th.closest('table').id === 'campaignTable' ? 'campaigns' : 'broadcasts';
+        var s = state.sort[which];
+        var key = th.dataset.key;
+        if (s.key === key) s.dir = -s.dir; else { s.key = key; s.dir = ['name', 'id', 'channel', 'type', 'segment', 'status', 'category'].indexOf(key) !== -1 ? 1 : -1; }
+        renderCurrent();
+        return;
+      }
+      var edit = e.target.closest('[data-edit]');
+      if (edit) { openBroadcastForm(edit.dataset.edit); return; }
+      var row = e.target.closest('tr[data-id]');
+      if (row) { openDetail(row.dataset.id); return; }
+      var camp = e.target.closest('tr[data-campaign]');
+      if (camp) { openCampaignForm(camp.dataset.campaign); return; }
+      if (e.target.matches('[data-close]') || e.target.closest('[data-close]')) {
+        closeModal(e.target.closest('.modal'));
+        return;
+      }
+      if (e.target.classList.contains('modal')) closeModal(e.target);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = $$('.modal').filter(function (m) { return !m.classList.contains('hidden'); }).pop();
+      if (open) closeModal(open);
+    });
+
+    // Detail modal buttons
+    $('#dmEdit').addEventListener('click', function () { hideModal('#detailModal'); openBroadcastForm(state.detailId); });
+    $('#dmCompare').addEventListener('click', function () {
+      var id = state.detailId;
+      if (state.compareIds.indexOf(id) === -1) {
+        var slot = state.compareIds.indexOf('');
+        if (slot === -1) { state.compareIds.shift(); state.compareIds.push(id); } else state.compareIds[slot] = id;
+      }
+      hideModal('#detailModal');
+      showView('compare');
+    });
+    var dup = document.createElement('button');
+    dup.type = 'button'; dup.className = 'btn ghost'; dup.textContent = 'Duplicate as new';
+    dup.addEventListener('click', function () { hideModal('#detailModal'); openBroadcastForm(state.detailId, { duplicate: true }); });
+    $('#dmCompare').before(dup);
+
+    // Forms
+    var bf = $('#broadcastForm');
+    bf.addEventListener('submit', submitBroadcast);
+    bf.addEventListener('input', function (e) {
+      state.form.dirty = true;
+      $('#broadcastError').classList.add('hidden');
+      var label = e.target.closest('label.invalid');
+      if (label) { label.classList.remove('invalid'); var m = label.querySelector('.field-error'); if (m) m.remove(); }
+      updateLiveMetrics();
+    });
+    bf.addEventListener('change', updateLiveMetrics);
+    $('#historyBtn').addEventListener('click', loadHistory);
+    $('#campaignForm').addEventListener('submit', submitCampaign);
+    $('#campaignForm').addEventListener('input', function () { state.form.dirty = true; });
+    $('#newCampaignBtn').addEventListener('click', function () { openCampaignForm(null); });
+    $('#settingsForm').addEventListener('submit', submitSettings);
+
+    $('#comparePickers').addEventListener('change', function (e) {
+      var slot = e.target.dataset.slot;
+      if (slot === undefined) return;
+      state.compareIds[Number(slot)] = e.target.value;
+      renderCompare();
+    });
+
+    // Redraw charts when the OS theme flips so colors stay correct.
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var redraw = function () { renderCurrent(); };
+      if (mq.addEventListener) mq.addEventListener('change', redraw); else if (mq.addListener) mq.addListener(redraw);
+    }
+    window.addEventListener('beforeunload', function (e) {
+      if (state.form.dirty && $$('.modal').some(function (m) { return !m.classList.contains('hidden'); })) {
+        e.preventDefault(); e.returnValue = '';
+      }
+    });
+  }
+
+  bind();
+  var savedView = 'overview';
+  try { savedView = localStorage.getItem('bd.view') || 'overview'; } catch (e) { /* storage unavailable */ }
+  if (!document.getElementById('view-' + savedView)) savedView = 'overview';
+  $$('.tab').forEach(function (t) { t.classList.toggle('active', t.dataset.view === savedView); });
+  $$('.view').forEach(function (v) { v.classList.toggle('hidden', v.id !== 'view-' + savedView); });
+  $('#filters').classList.toggle('hidden', savedView === 'compare' || savedView === 'settings');
+  currentView = savedView;
+  loadData();
+})();
+</script>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlexiFunnels Broadcast Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">FF</span>
+      <div>
+        <h1>Broadcast Performance</h1>
+        <p class="muted small" id="userLine">Loading…</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" data-view="overview" role="tab">Overview</button>
+      <button class="tab" data-view="broadcasts" role="tab">Broadcasts</button>
+      <button class="tab" data-view="campaigns" role="tab">Campaigns</button>
+      <button class="tab" data-view="compare" role="tab">Compare</button>
+      <button class="tab" data-view="settings" role="tab">Settings</button>
+    </nav>
+    <div class="topbar-actions">
+      <button class="btn ghost" id="refreshBtn" title="Reload data from the sheet">↻ Refresh</button>
+      <button class="btn primary" id="newBroadcastBtn">+ New broadcast</button>
+    </div>
+  </header>
+
+  <!-- Filters shared by Overview, Broadcasts, Campaigns -->
+  <section class="filters" id="filters" aria-label="Filters">
+    <label>Period
+      <select id="fPeriod">
+        <option value="all">All time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last 12 months</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </label>
+    <label class="custom-range hidden">From <input type="date" id="fFrom"></label>
+    <label class="custom-range hidden">To <input type="date" id="fTo"></label>
+    <label>Campaign <select id="fCampaign"><option value="">All</option></select></label>
+    <label>Channel <select id="fChannel"><option value="">All</option></select></label>
+    <label>Type <select id="fType"><option value="">All</option></select></label>
+    <label>Segment <select id="fSegment"><option value="">All</option></select></label>
+    <button class="btn link" id="clearFilters">Clear filters</button>
+  </section>
+
+  <main>
+    <div id="loading" class="loading"><div class="spinner"></div><p>Loading broadcasts…</p></div>
+    <div id="loadError" class="banner error hidden"></div>
+
+    <!-- OVERVIEW -->
+    <section class="view" id="view-overview">
+      <p class="muted small" id="overviewScope"></p>
+      <h2 class="section-title">Totals</h2>
+      <div class="kpi-grid" id="kpiTotals"></div>
+      <h2 class="section-title">Rates &amp; efficiency</h2>
+      <div class="kpi-grid" id="kpiDerived"></div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-head">
+            <h3>Clicks over time</h3>
+            <select id="trendMetric" aria-label="Metric">
+              <option value="clicks">Clicks</option>
+              <option value="delivered">Delivered</option>
+              <option value="conversions">Conversions</option>
+              <option value="shares">Shares</option>
+              <option value="cost">Spend</option>
+              <option value="revenue">Revenue</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="chartTrend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Engagement funnel</h3></div>
+          <div class="chart-box"><canvas id="chartFunnel"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Spend vs revenue by campaign</h3></div>
+          <div class="chart-box"><canvas id="chartCampaign"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3 id="byTypeTitle">Click-through rate by broadcast type</h3>
+            <select id="byDimension" aria-label="Group by">
+              <option value="type">By type</option>
+              <option value="channel">By channel</option>
+              <option value="segment">By segment</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="chartByType"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Top broadcasts</h3>
+          <label class="inline">Rank by
+            <select id="topMetric">
+              <option value="ctr">Click-through rate</option>
+              <option value="clicks">Clicks</option>
+              <option value="conversions">Conversions</option>
+              <option value="roi">ROI</option>
+              <option value="cpc">Lowest cost per click</option>
+              <option value="deliveryRate">Delivery rate</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap"><table class="data" id="topTable"></table></div>
+      </div>
+    </section>
+
+    <!-- BROADCASTS -->
+    <section class="view hidden" id="view-broadcasts">
+      <div class="toolbar">
+        <input type="search" id="searchBox" placeholder="Search name, campaign, ID, notes…" aria-label="Search">
+        <select id="fStatus" aria-label="Status"><option value="">All statuses</option></select>
+        <span class="muted small" id="tableCount"></span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="exportCsv">Export CSV</button>
+      </div>
+      <div class="card flush">
+        <div class="table-wrap"><table class="data sortable" id="broadcastTable"></table></div>
+      </div>
+    </section>
+
+    <!-- CAMPAIGNS -->
+    <section class="view hidden" id="view-campaigns">
+      <div class="toolbar">
+        <p class="muted small">Totals use sent broadcasts in the selected period. Click a campaign to edit its details.</p>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="newCampaignBtn">+ New campaign</button>
+      </div>
+      <div class="card flush">
+        <div class="table-wrap"><table class="data sortable" id="campaignTable"></table></div>
+      </div>
+    </section>
+
+    <!-- COMPARE -->
+    <section class="view hidden" id="view-compare">
+      <div class="card">
+        <div class="card-head">
+          <h3>Compare broadcasts</h3>
+          <span class="muted small">Pick 2–4 broadcasts. The best value in each row is highlighted.</span>
+        </div>
+        <div class="compare-pickers" id="comparePickers"></div>
+      </div>
+      <div id="compareResult"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view hidden" id="view-settings">
+      <div class="card">
+        <div class="card-head">
+          <h3>Dropdown options</h3>
+          <span class="muted small">One option per line. These also live in the Dashboard_Config sheet.</span>
+        </div>
+        <form id="settingsForm" class="settings-grid" novalidate>
+          <label>Channels<textarea name="channels" rows="7"></textarea></label>
+          <label>Broadcast types<textarea name="types" rows="7"></textarea></label>
+          <label>Audience segments<textarea name="segments" rows="7"></textarea></label>
+          <label>Campaign categories<textarea name="campaignCategories" rows="7"></textarea></label>
+          <label>Currencies<textarea name="currencies" rows="4"></textarea></label>
+          <div class="stack">
+            <label>Default currency<input name="defaultCurrency" maxlength="3"></label>
+            <label>Default channel<input name="defaultChannel"></label>
+          </div>
+          <div class="form-error hidden full" id="settingsError"></div>
+          <div class="form-actions full">
+            <button type="submit" class="btn primary">Save settings</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- BROADCAST FORM -->
+  <div class="modal hidden" id="broadcastModal" role="dialog" aria-modal="true" aria-labelledby="bmTitle">
+    <div class="modal-panel wide">
+      <div class="modal-head">
+        <div>
+          <h2 id="bmTitle">New broadcast</h2>
+          <p class="muted small" id="bmMeta"></p>
+        </div>
+        <button class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <form id="broadcastForm" novalidate>
+        <fieldset>
+          <legend>Basic information</legend>
+          <div class="form-grid">
+            <label>Broadcast ID<input name="id" readonly placeholder="Generated on save"></label>
+            <label class="span2">Broadcast name / message title <b class="req">*</b>
+              <input name="name" maxlength="150" required placeholder="e.g. Webinar day-1 reminder"></label>
+            <label>Campaign <b class="req">*</b>
+              <input name="campaign" list="campaignList" maxlength="100" required placeholder="Pick or type a new one">
+              <datalist id="campaignList"></datalist></label>
+            <label>Date <b class="req">*</b><input type="date" name="date" required></label>
+            <label>Time <b class="req">*</b><input type="time" name="time" required></label>
+            <label>Broadcast type <b class="req">*</b><select name="type" required></select></label>
+            <label>Audience segment <b class="req">*</b>
+              <input name="segment" list="segmentList" maxlength="100" required placeholder="e.g. Webinar Registrants">
+              <datalist id="segmentList"></datalist></label>
+            <label>Channel <b class="req">*</b><select name="channel" required></select></label>
+            <label>Status <b class="req">*</b><select name="status" required></select></label>
+            <label class="span3">Message content <span class="muted">(optional)</span>
+              <textarea name="message" rows="3" maxlength="5000"></textarea></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Performance metrics</legend>
+          <p class="muted small hint" id="metricsHint">Required once the status is <b>Sent</b>. Leave optional fields blank if you don't track them.</p>
+          <div class="form-grid four">
+            <label>Audience size<input name="audience" inputmode="numeric" placeholder="0"></label>
+            <label>Messages sent<input name="sent" inputmode="numeric" placeholder="0"></label>
+            <label>Messages delivered<input name="delivered" inputmode="numeric" placeholder="0"></label>
+            <label>Clicks<input name="clicks" inputmode="numeric" placeholder="0"></label>
+            <label>Shares / retweets <span class="muted">(opt.)</span><input name="shares" inputmode="numeric"></label>
+            <label>Conversions <span class="muted">(opt.)</span><input name="conversions" inputmode="numeric"></label>
+            <label>Revenue <span class="muted">(opt.)</span><input name="revenue" inputmode="decimal"></label>
+          </div>
+          <div class="live-metrics" id="liveMetrics"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Cost</legend>
+          <div class="form-grid four">
+            <label>Total broadcast cost<input name="cost" inputmode="decimal" placeholder="0"></label>
+            <label>Currency<select name="currency"></select></label>
+            <label class="span2">Notes <span class="muted">(optional)</span>
+              <textarea name="notes" rows="2" maxlength="2000"></textarea></label>
+          </div>
+        </fieldset>
+        <div class="form-error hidden" id="broadcastError" role="alert"></div>
+        <div class="form-actions">
+          <button type="button" class="btn link" id="historyBtn">View change history</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" data-close>Cancel</button>
+          <button type="submit" class="btn primary" id="saveBroadcastBtn">Save broadcast</button>
+        </div>
+        <div class="history hidden" id="historyBox"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CAMPAIGN FORM -->
+  <div class="modal hidden" id="campaignModal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 id="cmTitle">Campaign</h2>
+        <button class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <form id="campaignForm" novalidate>
+        <input type="hidden" name="originalName">
+        <div class="form-grid two">
+          <label class="span2">Campaign name <b class="req">*</b><input name="name" maxlength="100" required></label>
+          <label>Category<select name="category"></select></label>
+          <span></span>
+          <label>Start date<input type="date" name="startDate"></label>
+          <label>End date<input type="date" name="endDate"></label>
+          <label class="span2">Objective<input name="objective" maxlength="500"></label>
+          <label class="span2">Notes<textarea name="notes" rows="3" maxlength="2000"></textarea></label>
+        </div>
+        <p class="muted small" id="cmRenameNote"></p>
+        <div class="form-error hidden" id="campaignError" role="alert"></div>
+        <div class="form-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" data-close>Cancel</button>
+          <button type="submit" class="btn primary">Save campaign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="modal hidden" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="dmTitle">
+    <div class="modal-panel wide">
+      <div class="modal-head">
+        <div><h2 id="dmTitle"></h2><p class="muted small" id="dmMeta"></p></div>
+        <button class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <div id="dmBody"></div>
+      <div class="form-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" id="dmCompare">Add to compare</button>
+        <button type="button" class="btn primary" id="dmEdit">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+  <?!= include('App'); ?>
+</body>
+</html>
