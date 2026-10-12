@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop & Lush — Hair Ties That Don't Crease</title>
+<meta name="description" content="Silk scrunchies, coil ties and soft elastics that hold all day and slide out without a dent. Mix your set of trendy hair ties.">
+<meta property="og:title" content="Loop & Lush — Hair Ties That Don't Crease">
+<meta property="og:description" content="Hold everything. Crease nothing. Silk scrunchies, coil ties and soft elastics in this season's colours.">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1d1430; --ink-soft:#4b4060; --cream:#fff8f1; --blush:#ffe3ec; --lilac:#ece4ff; --mint:#dff7ec;
+  --accent:#ff4f8b; --accent-dark:#e0336f; --butter:#ffd86b;
+  --ff-accent:#ff4f8b; --ff-accent-hover:#e0336f; --ff-btn-text:#ffffff;
+  --r:28px; --u:8px;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"Space Grotesk",system-ui,sans-serif;color:var(--ink);background:var(--cream);font-size:1.0625rem;line-height:1.6;overflow-x:hidden}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;line-height:1.05;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+section{padding:calc(var(--u)*12) 0}
+
+/* ---------- announcement marquee ---------- */
+.ticker{background:var(--ink);color:var(--cream);overflow:hidden;white-space:nowrap;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase}
+.ticker-track{display:inline-flex;gap:48px;padding:10px 0;animation:scroll 28s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.ticker span::before{content:"✦";margin-right:48px;color:var(--butter)}
+@keyframes scroll{to{transform:translateX(-50%)}}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(255,248,241,.75);border-bottom:1px solid rgba(29,20,48,.06);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 10px 30px -18px rgba(29,20,48,.35)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font-family:"Fraunces",serif;font-weight:700;font-size:1.45rem;display:flex;align-items:center;gap:8px}
+.logo i{width:22px;height:22px;border-radius:50%;border:5px solid var(--accent);display:inline-block;transition:transform .6s var(--ease)}
+.logo:hover i{transform:rotate(180deg) scale(1.15);border-color:var(--ink)}
+.nav-links{display:flex;gap:32px;font-weight:500}
+.nav-links a{position:relative}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:-4px;width:100%;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:right;transition:transform .4s var(--ease)}
+.nav-links a:hover::after{transform:scaleX(1);transform-origin:left}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:10px;padding:16px 30px;border-radius:999px;font-weight:700;font-size:1rem;cursor:pointer;border:2px solid var(--ink);position:relative;overflow:hidden;isolation:isolate;transition:transform .35s var(--ease),box-shadow .35s var(--ease),color .35s}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:5px 5px 0 var(--ink)}
+.btn-primary::before{content:"";position:absolute;inset:0;background:var(--ink);transform:translateY(101%);transition:transform .45s var(--ease);z-index:-1;border-radius:inherit}
+.btn-primary:hover{transform:translate(-3px,-3px);box-shadow:8px 8px 0 var(--butter)}
+.btn-primary:hover::before{transform:translateY(0)}
+.btn-ghost{background:transparent}
+.btn-ghost:hover{background:var(--ink);color:var(--cream)}
+.btn .arrow{transition:transform .35s var(--ease)}
+.btn:hover .arrow{transform:translateX(5px) rotate(-12deg)}
+.btn-sm{padding:10px 20px;font-size:.92rem;box-shadow:3px 3px 0 var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:calc(var(--u)*10) 0 calc(var(--u)*12);overflow:hidden;background:radial-gradient(60% 60% at 85% 20%,var(--blush),transparent 70%),radial-gradient(50% 55% at 10% 90%,var(--lilac),transparent 70%),var(--cream)}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--ink);border-radius:999px;padding:6px 14px;font-size:.85rem;font-weight:500;margin-bottom:24px}
+.pill b{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,79,139,.6)}50%{box-shadow:0 0 0 8px rgba(255,79,139,0)}}
+.hero h1{font-size:clamp(2.8rem,6.6vw,5.4rem);font-weight:700;margin-bottom:24px}
+.hero h1 em{font-style:italic;font-weight:500;color:var(--accent);position:relative;white-space:nowrap}
+.hero h1 em svg{position:absolute;left:0;bottom:-8px;width:100%;height:14px}
+.hero h1 em svg path{stroke-dasharray:300;stroke-dashoffset:300;animation:draw 1.4s .9s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero p.lead{font-size:1.2rem;color:var(--ink-soft);max-width:520px;margin-bottom:36px}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.hero-note{margin-top:28px;display:flex;gap:24px;flex-wrap:wrap;font-size:.92rem;color:var(--ink-soft)}
+.hero-note span::before{content:"✓ ";color:var(--accent);font-weight:700}
+
+.hero-art{position:relative;aspect-ratio:1;max-width:520px;justify-self:center;width:100%}
+.blob{position:absolute;inset:6%;background:linear-gradient(135deg,#ffb3cd,#c9b6ff 55%,#a8ecd2);border-radius:42% 58% 63% 37%/45% 40% 60% 55%;animation:morph 12s ease-in-out infinite;filter:saturate(1.1)}
+@keyframes morph{0%,100%{border-radius:42% 58% 63% 37%/45% 40% 60% 55%;transform:rotate(0)}50%{border-radius:60% 40% 35% 65%/55% 62% 38% 45%;transform:rotate(12deg)}}
+.float{position:absolute;filter:drop-shadow(0 18px 22px rgba(29,20,48,.25));transition:transform .5s var(--ease)}
+.float svg{width:100%;height:auto;display:block}
+.f1{width:52%;left:8%;top:12%;animation:bob 6s ease-in-out infinite}
+.f2{width:38%;right:4%;top:6%;animation:bob 7s -2s ease-in-out infinite}
+.f3{width:40%;right:10%;bottom:6%;animation:bob 5.5s -1s ease-in-out infinite}
+.f4{width:26%;left:14%;bottom:12%;animation:bob 6.5s -3s ease-in-out infinite}
+@keyframes bob{0%,100%{translate:0 0;rotate:-4deg}50%{translate:0 -16px;rotate:4deg}}
+.sticker{position:absolute;right:-4px;bottom:34%;background:var(--butter);border:2px solid var(--ink);border-radius:50%;width:112px;height:112px;display:grid;place-items:center;text-align:center;font-weight:700;font-size:.82rem;line-height:1.15;animation:spin 18s linear infinite;box-shadow:4px 4px 0 var(--ink)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- scrolling words ---------- */
+.words-clip{overflow:hidden;padding:12px 0}
+.words{background:var(--accent);color:#fff;padding:22px 0;overflow:hidden;transform:rotate(-1.5deg);margin:-24px -20px -12px;border-block:2px solid var(--ink)}
+.words .ticker-track{animation-duration:22s;gap:40px}
+.words span{font-family:"Fraunces",serif;font-size:clamp(1.6rem,3.6vw,2.6rem);font-style:italic;white-space:nowrap}
+.words span::after{content:" ●";font-size:.6em;vertical-align:middle;color:var(--butter);margin-left:40px}
+
+/* ---------- section heads ---------- */
+.eyebrow{font-size:.8rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:block}
+.sec-head{max-width:680px;margin-bottom:56px}
+.sec-head h2{font-size:clamp(2.1rem,4.6vw,3.4rem);margin-bottom:16px}
+.sec-head p{color:var(--ink-soft);font-size:1.12rem}
+
+/* ---------- shop ---------- */
+.shop{background:#fff}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.card{--c:#ff8fb3;--c2:#e86a94;background:var(--cream);border:2px solid var(--ink);border-radius:var(--r);padding:20px;position:relative;overflow:hidden;transition:transform .5s var(--ease),box-shadow .5s var(--ease);transform-style:preserve-3d}
+.card::before{content:"";position:absolute;width:260px;height:260px;left:var(--mx,50%);top:var(--my,30%);transform:translate(-50%,-50%);background:radial-gradient(circle,var(--c) 0%,transparent 65%);opacity:0;transition:opacity .4s;pointer-events:none}
+.card:hover{box-shadow:8px 8px 0 var(--ink)}
+.card:hover::before{opacity:.35}
+.card .tag{position:absolute;top:16px;left:16px;z-index:2;background:var(--ink);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+.card .tag.new{background:var(--butter);color:var(--ink)}
+.prod-art{aspect-ratio:1;display:grid;place-items:center;border-radius:20px;background:color-mix(in srgb,var(--c) 22%,#fff);margin-bottom:18px;position:relative;z-index:1;transition:background .5s}
+.prod-art svg{width:72%;transition:transform .8s var(--ease)}
+.card:hover .prod-art svg{transform:rotate(25deg) scale(1.08)}
+.card h3{font-size:1.4rem;margin-bottom:4px;position:relative;z-index:1}
+.card .desc{font-size:.93rem;color:var(--ink-soft);margin-bottom:14px;position:relative;z-index:1;min-height:3em}
+.swatches{display:flex;gap:8px;margin-bottom:16px;position:relative;z-index:1}
+.sw{width:24px;height:24px;border-radius:50%;border:2px solid #fff;outline:2px solid transparent;cursor:pointer;transition:transform .25s var(--ease),outline-color .25s}
+.sw:hover{transform:scale(1.2)}
+.sw.on{outline-color:var(--ink)}
+.card-foot{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.price{font-family:"Fraunces",serif;font-size:1.5rem;font-weight:700}
+.price small{font-family:"Space Grotesk";font-size:.8rem;font-weight:500;color:var(--ink-soft)}
+.svg-main{fill:none;stroke:var(--c);transition:stroke .5s}
+.svg-pleat{fill:none;stroke:var(--c2);transition:stroke .5s}
+
+/* ---------- benefits ---------- */
+.benefits{background:var(--lilac)}
+.ben-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.ben{background:#fff;border-radius:var(--r);padding:36px 30px;border:2px solid transparent;transition:transform .45s var(--ease),border-color .45s,background .45s}
+.ben:hover{transform:translateY(-10px) rotate(-1deg);border-color:var(--ink);background:var(--blush)}
+.ben .ico{width:60px;height:60px;border-radius:18px;background:var(--ink);color:var(--butter);display:grid;place-items:center;font-size:1.6rem;margin-bottom:22px;transition:transform .6s var(--ease)}
+.ben:hover .ico{transform:rotate(-12deg) scale(1.1)}
+.ben h3{font-size:1.55rem;margin-bottom:10px}
+.ben p{color:var(--ink-soft)}
+
+/* ---------- bundle ---------- */
+.bundle{background:var(--ink);color:var(--cream);position:relative;overflow:hidden}
+.bundle::after{content:"";position:absolute;width:520px;height:520px;right:-160px;top:-160px;border-radius:50%;border:70px solid rgba(255,79,139,.25);animation:spin 30s linear infinite}
+.bundle-in{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;position:relative;z-index:1}
+.bundle h2{font-size:clamp(2.2rem,5vw,3.8rem);margin-bottom:18px}
+.bundle h2 em{color:var(--butter)}
+.bundle p{color:#d9d0ea;font-size:1.12rem;margin-bottom:32px;max-width:520px}
+.bundle .btn-primary{box-shadow:5px 5px 0 var(--butter)}
+.bundle .btn-primary::before{background:var(--butter)}
+.bundle .btn-primary:hover{color:var(--ink);box-shadow:8px 8px 0 var(--accent)}
+.stack{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stack div{aspect-ratio:1;border-radius:22px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);transition:transform .5s var(--ease),background .5s}
+.stack div:hover{transform:scale(1.08) rotate(6deg);background:rgba(255,255,255,.14)}
+.stack svg{width:68%}
+
+/* ---------- who ---------- */
+.who{background:var(--mint)}
+.who-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.who-card{background:#fff;border-radius:var(--r);padding:36px;border:2px solid var(--ink)}
+.who-card h3{font-size:1.6rem;margin-bottom:18px}
+.who-card ul{list-style:none;display:grid;gap:12px}
+.who-card li{padding-left:34px;position:relative;transition:transform .3s var(--ease)}
+.who-card li:hover{transform:translateX(6px)}
+.who-card li::before{position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.yes li::before{content:"✓";background:var(--accent);color:#fff}
+.no{background:var(--cream)}
+.no li::before{content:"✕";background:var(--ink);color:#fff}
+
+/* ---------- faq ---------- */
+.faq{background:var(--cream)}
+.faq-list{max-width:760px}
+details{border-bottom:2px solid var(--ink);padding:22px 0}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;font-family:"Fraunces",serif;font-size:1.35rem;font-weight:500;transition:color .3s}
+summary::-webkit-details-marker{display:none}
+summary:hover{color:var(--accent)}
+summary .pm{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-family:"Space Grotesk";transition:transform .45s var(--ease),background .3s,color .3s}
+details[open] summary .pm{transform:rotate(45deg);background:var(--ink);color:#fff}
+.ans{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+details[open] .ans{grid-template-rows:1fr}
+.ans > div{overflow:hidden}
+.ans p{padding-top:12px;color:var(--ink-soft);max-width:660px}
+
+/* ---------- final cta ---------- */
+.final{text-align:center;background:radial-gradient(70% 90% at 50% 100%,var(--blush),var(--cream) 70%)}
+.final h2{font-size:clamp(2.4rem,6vw,4.6rem);margin-bottom:18px}
+.final h2 em{color:var(--accent)}
+.final p{color:var(--ink-soft);font-size:1.15rem;max-width:560px;margin:0 auto 36px}
+footer{background:var(--ink);color:#bfb4d3;padding:40px 0;font-size:.9rem}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+footer .logo{color:var(--cream);font-size:1.2rem}
+
+/* ---------- reveal transitions ---------- */
+.rv{opacity:0;transform:translateY(40px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+.hero .rv{transform:translateY(24px)}
+
+/* ---------- mobile sticky buy ---------- */
+.mbar{display:none}
+
+@media (max-width:980px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .hero-grid,.bundle-in{grid-template-columns:1fr}
+  .hero-art{max-width:420px}
+  .ben-grid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  section{padding:64px 0}
+  .wrap{padding:0 16px}
+  .nav-links{display:none}
+  .grid,.who-grid{grid-template-columns:1fr}
+  .hero{padding:48px 0 72px}
+  .hero h1{font-size:2.7rem}
+  .hero h1 em{white-space:normal}
+  .btn{padding:15px 24px}
+  .hero-ctas .btn{width:100%;justify-content:center}
+  .sticker{width:90px;height:90px;font-size:.7rem}
+  .who-card{padding:26px}
+  summary{font-size:1.15rem}
+  .mbar{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;transform:translateY(140%);transition:transform .5s var(--ease)}
+  .mbar.show{transform:none}
+  .mbar .btn{width:100%;justify-content:center}
+  footer{padding-bottom:96px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+  .hero h1 em svg path{stroke-dashoffset:0}
+}
+</style>
+</head>
+<body>
+
+<!-- reusable hair-tie drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="scrunchie" viewBox="0 0 200 200">
+      <circle class="svg-main" cx="100" cy="100" r="62" stroke-width="44"/>
+      <circle class="svg-pleat" cx="100" cy="100" r="62" stroke-width="44" stroke-dasharray="4 11" opacity=".55"/>
+      <circle cx="100" cy="100" r="80" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 14" opacity=".55"/>
+    </symbol>
+    <symbol id="coil" viewBox="0 0 200 200">
+      <circle class="svg-main" cx="100" cy="100" r="64" stroke-width="20"/>
+      <circle class="svg-pleat" cx="100" cy="100" r="64" stroke-width="22" stroke-dasharray="3 6"/>
+      <circle cx="100" cy="100" r="58" fill="none" stroke="#fff" stroke-width="2" opacity=".6" stroke-dasharray="40 30"/>
+    </symbol>
+    <symbol id="elastic" viewBox="0 0 200 200">
+      <circle class="svg-main" cx="100" cy="100" r="66" stroke-width="10"/>
+      <circle class="svg-pleat" cx="100" cy="100" r="66" stroke-width="10" stroke-dasharray="1 5" opacity=".4"/>
+      <rect x="88" y="26" width="24" height="16" rx="4" fill="#d6c27a" stroke="#1d1430" stroke-width="2"/>
+    </symbol>
+    <symbol id="skinny" viewBox="0 0 200 200">
+      <circle class="svg-main" cx="100" cy="100" r="60" stroke-width="30"/>
+      <circle class="svg-pleat" cx="100" cy="100" r="60" stroke-width="30" stroke-dasharray="2 7" opacity=".5"/>
+      <path d="M100 42 q36 -40 64 -18 q-30 4 -56 30 z M100 42 q-36 -40 -64 -18 q30 4 56 30 z" fill="var(--c2)" stroke="#1d1430" stroke-width="2"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span>Mix any 5 ties into your own set</span><span>No dents, no snags, no headaches</span><span>New season colours just dropped</span><span>Gentle on curls, waves &amp; straight hair</span>
+    <span>Mix any 5 ties into your own set</span><span>No dents, no snags, no headaches</span><span>New season colours just dropped</span><span>Gentle on curls, waves &amp; straight hair</span>
+  </div>
+</div>
+
+<nav id="nav">
+  <div class="wrap nav-in">
+    <a href="#top" class="logo"><i></i>Loop &amp; Lush</a>
+    <div class="nav-links">
+      <a href="#shop">Shop</a>
+      <a href="#why">Why ours</a>
+      <a href="#bundle">Build a set</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a data-flexi-wire="product" class="btn btn-primary btn-sm">Shop now</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill rv"><b></b> The new season drop is here</span>
+      <h1 class="rv d1">Hold everything.<br><em>Crease nothing.
+        <svg viewBox="0 0 300 14" preserveAspectRatio="none"><path d="M2 10 Q 75 0 150 8 T 298 6" fill="none" stroke="#ffd86b" stroke-width="6" stroke-linecap="round"/></svg></em></h1>
+      <p class="lead rv d2">Hair ties that keep your ponytail up through the commute, the workout and the late dinner — then slide out without a kink, a snag or a single snapped strand.</p>
+      <div class="hero-ctas rv d3">
+        <a data-flexi-wire="product" class="btn btn-primary">Get your set <span class="arrow">→</span></a>
+        <a href="#shop" class="btn btn-ghost">See the colours</a>
+      </div>
+      <div class="hero-note rv d3"><span>No metal to snag</span><span>Gentle on every hair type</span><span>Mix &amp; match colours</span></div>
+    </div>
+    <div class="hero-art" id="heroArt" aria-hidden="true">
+      <div class="blob"></div>
+      <div class="float f1" data-depth="18" style="--c:#ff8fb3;--c2:#e2507f"><svg><use href="#scrunchie"/></svg></div>
+      <div class="float f2" data-depth="30" style="--c:#9c86ff;--c2:#6c55dc"><svg><use href="#coil"/></svg></div>
+      <div class="float f3" data-depth="12" style="--c:#ffd86b;--c2:#e8b52e"><svg><use href="#skinny"/></svg></div>
+      <div class="float f4" data-depth="24" style="--c:#45c79b;--c2:#279a73"><svg><use href="#elastic"/></svg></div>
+      <div class="sticker">MIX<br>ANY 5<br>✦</div>
+    </div>
+  </div>
+</header>
+
+<div class="words-clip"><div class="words" aria-hidden="true">
+  <div class="ticker-track">
+    <span>silk scrunchies</span><span>coil ties</span><span>bow scrunchies</span><span>soft elastics</span><span>zero creases</span>
+    <span>silk scrunchies</span><span>coil ties</span><span>bow scrunchies</span><span>soft elastics</span><span>zero creases</span>
+  </div>
+</div></div>
+
+<section class="shop" id="shop">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">The collection</span>
+      <h2>Four ties. Every hairstyle covered.</h2>
+      <p>Tap a colour to preview it. Each one is made for a different job — pick your favourite or mix them all.</p>
+    </div>
+    <div class="grid">
+      <article class="card rv" style="--c:#ff8fb3;--c2:#e2507f">
+        <span class="tag">Bestseller</span>
+        <div class="prod-art"><svg viewBox="0 0 200 200"><use href="#scrunchie"/></svg></div>
+        <h3>The Silk Scrunchie</h3>
+        <p class="desc">Big, soft and glossy. Wear it up all day, on your wrist all night.</p>
+        <div class="swatches">
+          <button class="sw on" aria-label="Blush" style="background:#ff8fb3" data-c="#ff8fb3" data-c2="#e2507f"></button>
+          <button class="sw" aria-label="Champagne" style="background:#f2d3a8" data-c="#f2d3a8" data-c2="#cfa56b"></button>
+          <button class="sw" aria-label="Midnight" style="background:#3c3360" data-c="#3c3360" data-c2="#1d1430"></button>
+        </div>
+        <div class="card-foot"><span class="price">$14 <small>/ 3 pack</small></span><a data-flexi-wire="product" class="btn btn-primary btn-sm">Add</a></div>
+      </article>
+
+      <article class="card rv d1" style="--c:#9c86ff;--c2:#6c55dc">
+        <span class="tag new">New</span>
+        <div class="prod-art"><svg viewBox="0 0 200 200"><use href="#coil"/></svg></div>
+        <h3>Coil Ties</h3>
+        <p class="desc">The spiral that grips without squeezing. Built for gym days and thick hair.</p>
+        <div class="swatches">
+          <button class="sw on" aria-label="Lilac" style="background:#9c86ff" data-c="#9c86ff" data-c2="#6c55dc"></button>
+          <button class="sw" aria-label="Clear frost" style="background:#cfe8ff" data-c="#cfe8ff" data-c2="#8ab8e6"></button>
+          <button class="sw" aria-label="Cherry" style="background:#ff5a5f" data-c="#ff5a5f" data-c2="#c8323a"></button>
+        </div>
+        <div class="card-foot"><span class="price">$9 <small>/ 6 pack</small></span><a data-flexi-wire="product" class="btn btn-primary btn-sm">Add</a></div>
+      </article>
+
+      <article class="card rv d2" style="--c:#ffd86b;--c2:#e8b52e">
+        <span class="tag">Trending</span>
+        <div class="prod-art"><svg viewBox="0 0 200 200"><use href="#skinny"/></svg></div>
+        <h3>Bow Scrunchie</h3>
+        <p class="desc">The ribbon moment, without the fuss. Turns a messy bun into a look.</p>
+        <div class="swatches">
+          <button class="sw on" aria-label="Butter" style="background:#ffd86b" data-c="#ffd86b" data-c2="#e8b52e"></button>
+          <button class="sw" aria-label="Ballet pink" style="background:#ffc2d4" data-c="#ffc2d4" data-c2="#f08fae"></button>
+          <button class="sw" aria-label="Noir" style="background:#2a2238" data-c="#2a2238" data-c2="#000000"></button>
+        </div>
+        <div class="card-foot"><span class="price">$16 <small>/ 2 pack</small></span><a data-flexi-wire="product" class="btn btn-primary btn-sm">Add</a></div>
+      </article>
+
+      <article class="card rv d3" style="--c:#45c79b;--c2:#279a73">
+        <span class="tag">Everyday</span>
+        <div class="prod-art"><svg viewBox="0 0 200 200"><use href="#elastic"/></svg></div>
+        <h3>Soft Elastics</h3>
+        <p class="desc">Thin, seamless and snag-free. The quiet hero for sleek ponies and braids.</p>
+        <div class="swatches">
+          <button class="sw on" aria-label="Matcha" style="background:#45c79b" data-c="#45c79b" data-c2="#279a73"></button>
+          <button class="sw" aria-label="Mocha" style="background:#9b6b4e" data-c="#9b6b4e" data-c2="#6d4532"></button>
+          <button class="sw" aria-label="Sky" style="background:#7cc4ff" data-c="#7cc4ff" data-c2="#3f8fd6"></button>
+        </div>
+        <div class="card-foot"><span class="price">$8 <small>/ 10 pack</small></span><a data-flexi-wire="product" class="btn btn-primary btn-sm">Add</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="benefits" id="why">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Why they feel different</span>
+      <h2>Your hair, minus the tie drama.</h2>
+    </div>
+    <div class="ben-grid">
+      <div class="ben rv"><div class="ico">〰</div><h3>Take it down, no dent</h3><p>Wear a high pony to work and let it down for dinner. Soft fabric and coils spread the hold, so there's no line left behind.</p></div>
+      <div class="ben rv d1"><div class="ico">✦</div><h3>No snags, no snapping</h3><p>No metal joins and no rough seams. Slide them out without ripping out the strands you've spent months growing.</p></div>
+      <div class="ben rv d2"><div class="ico">♡</div><h3>Looks good on your wrist</h3><p>Colours picked to look like an accessory, not an afterthought — so the tie on your wrist is part of the outfit.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="bundle" id="bundle">
+  <div class="wrap bundle-in">
+    <div class="rv">
+      <span class="eyebrow" style="color:var(--butter)">Build your set</span>
+      <h2>Pick any five. <em>Make it yours.</em></h2>
+      <p>Grab a scrunchie for the weekend, coils for the gym and elastics for everything else. Mix colours and styles into one set — it makes a great gift, too.</p>
+      <a data-flexi-wire="product" class="btn btn-primary">Build my set <span class="arrow">→</span></a>
+    </div>
+    <div class="stack rv d1" aria-hidden="true">
+      <div style="--c:#ff8fb3;--c2:#e2507f"><svg viewBox="0 0 200 200"><use href="#scrunchie"/></svg></div>
+      <div style="--c:#9c86ff;--c2:#6c55dc"><svg viewBox="0 0 200 200"><use href="#coil"/></svg></div>
+      <div style="--c:#ffd86b;--c2:#e8b52e"><svg viewBox="0 0 200 200"><use href="#skinny"/></svg></div>
+      <div style="--c:#45c79b;--c2:#279a73"><svg viewBox="0 0 200 200"><use href="#elastic"/></svg></div>
+      <div style="--c:#f2d3a8;--c2:#cfa56b"><svg viewBox="0 0 200 200"><use href="#scrunchie"/></svg></div>
+      <div style="--c:#ff5a5f;--c2:#c8323a"><svg viewBox="0 0 200 200"><use href="#coil"/></svg></div>
+    </div>
+  </div>
+</section>
+
+<section class="who">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Is this for you?</span>
+      <h2>Made for people who live in a ponytail.</h2>
+    </div>
+    <div class="who-grid">
+      <div class="who-card yes rv">
+        <h3>You'll love these if…</h3>
+        <ul>
+          <li>You tie your hair up the second you get home</li>
+          <li>Your old ties leave a kink you can't brush out</li>
+          <li>You've lost count of the ties that snapped mid-day</li>
+          <li>You want your hair tie to match your outfit</li>
+        </ul>
+      </div>
+      <div class="who-card no rv d1">
+        <h3>Probably not for you if…</h3>
+        <ul>
+          <li>You want heavy-duty clips or claw grips</li>
+          <li>You need a plain tie and don't care how it looks</li>
+          <li>Your hair is too short to tie up</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Questions</span>
+      <h2>Before you add to bag.</h2>
+    </div>
+    <div class="faq-list rv">
+      <details open><summary>Which tie should I pick for thick or curly hair?<span class="pm">+</span></summary><div class="ans"><div><p>Coil Ties and the Silk Scrunchie. Coils grip with tension spread around the spiral, and the scrunchie's wide fabric holds volume without squashing your curls.</p></div></div></details>
+      <details><summary>Will they really not leave a dent?<span class="pm">+</span></summary><div class="ans"><div><p>Scrunchies and coils are the gentlest options, because the pressure is spread over a wider area instead of one tight line. For the least crease, tie it a little looser than you would a standard elastic.</p></div></div></details>
+      <details><summary>Do coil ties stretch out?<span class="pm">+</span></summary><div class="ans"><div><p>They loosen with wear — that's normal. Drop a stretched coil into warm water for a minute and it springs back into shape.</p></div></div></details>
+      <details><summary>How do I wash the scrunchies?<span class="pm">+</span></summary><div class="ans"><div><p>Hand wash in cool water with a little gentle shampoo, squeeze out the water (don't wring), and let them air-dry flat.</p></div></div></details>
+      <details><summary>Can I mix different styles and colours?<span class="pm">+</span></summary><div class="ans"><div><p>Yes — that's the point. Build a set from any five ties in any colours you like.</p></div></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2 class="rv">Your next favourite<br><em>hair tie</em> is right here.</h2>
+    <p class="rv d1">Pick your colours, build your set, and say goodbye to dented ponytails.</p>
+    <a data-flexi-wire="product" class="btn btn-primary rv d2">Shop the collection <span class="arrow">→</span></a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="logo">Loop &amp; Lush</span>
+    <span>Hair ties that hold everything and crease nothing.</span>
+  </div>
+</footer>
+
+<div class="mbar" id="mbar"><a data-flexi-wire="product" class="btn btn-primary">Get your set <span class="arrow">→</span></a></div>
+
+<script>
+(function(){
+  // reveal on scroll
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.15,rootMargin:'0px 0px -40px 0px'});
+    els.forEach(function(el){io.observe(el);});
+  } else { els.forEach(function(el){el.classList.add('in');}); }
+
+  // nav shadow + mobile buy bar
+  var nav=document.getElementById('nav'), bar=document.getElementById('mbar');
+  window.addEventListener('scroll',function(){
+    var y=window.scrollY;
+    nav.classList.toggle('scrolled',y>10);
+    bar.classList.toggle('show',y>window.innerHeight*.8 && (window.innerHeight+y)<document.body.scrollHeight-200);
+  },{passive:true});
+
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // colour swatches
+  document.querySelectorAll('.card').forEach(function(card){
+    card.querySelectorAll('.sw').forEach(function(sw){
+      sw.addEventListener('click',function(){
+        card.querySelectorAll('.sw').forEach(function(s){s.classList.remove('on');});
+        sw.classList.add('on');
+        card.style.setProperty('--c',sw.dataset.c);
+        card.style.setProperty('--c2',sw.dataset.c2);
+      });
+    });
+    if(reduce) return;
+    // spotlight + 3D tilt
+    card.addEventListener('mousemove',function(e){
+      var r=card.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+      card.style.setProperty('--mx',x+'px'); card.style.setProperty('--my',y+'px');
+      var rx=((y/r.height)-.5)*-8, ry=((x/r.width)-.5)*8;
+      card.style.transform='perspective(900px) rotateX('+rx+'deg) rotateY('+ry+'deg) translate(-4px,-4px)';
+    });
+    card.addEventListener('mouseleave',function(){card.style.transform='';});
+  });
+
+  // hero parallax
+  var art=document.getElementById('heroArt');
+  if(art && !reduce){
+    art.parentElement.addEventListener('mousemove',function(e){
+      var r=art.getBoundingClientRect(), cx=(e.clientX-r.left-r.width/2)/r.width, cy=(e.clientY-r.top-r.height/2)/r.height;
+      art.querySelectorAll('.float').forEach(function(f){var d=+f.dataset.depth;f.style.transform='translate('+(cx*d)+'px,'+(cy*d)+'px)';});
+    });
+  }
+
+  // magnetic buttons
+  if(!reduce && window.matchMedia('(hover:hover)').matches){
+    document.querySelectorAll('.btn-primary:not(.btn-sm)').forEach(function(b){
+      b.addEventListener('mousemove',function(e){var r=b.getBoundingClientRect();b.style.translate=((e.clientX-r.left-r.width/2)*.15)+'px '+((e.clientY-r.top-r.height/2)*.25)+'px';});
+      b.addEventListener('mouseleave',function(){b.style.translate='';});
+    });
+  }
+})();
+</script>
+</body>
+</html>
