@@ -13,7 +13,7 @@ with the target and only changes what differs.
 | Form page A | `https://sb.flexifunnels.com/funnel-agent` ← webhook column G |
 | Form page B | `https://sb.flexifunnels.com/flexi-genie-regteam` ← webhook column H |
 | Thank-you pages (WhatsApp link) | `https://sb.flexifunnels.com/funnel-agent-ty`, `https://sb.flexifunnels.com/flexi-genie-ty` |
-| Zoom redirect page | `https://sb.flexifunnels.com/zoom-join` |
+| Zoom redirect page | `https://sb.flexifunnels.com/genie-demo` |
 | ActiveCampaign connection | "SB - Active Campaign" (user_email_service_id 950) |
 
 ## Steps
@@ -54,7 +54,7 @@ with the target and only changes what differs.
    replace_with = F, expect_count = <times it appears>)`. Preview first, then
    send with `confirm_edit=true`.
 
-5. **Zoom link on the redirect page.** `get_page_html(step_url = zoom-join)`.
+5. **Zoom link on the redirect page.** `get_page_html(step_url = genie-demo)`.
    The page holds the same Zoom URL 3 times: meta refresh, fallback link and
    `window.location.replace`. If that URL is not D, call
    `update_agentic_page(replace_find = <old url>, replace_with = D,

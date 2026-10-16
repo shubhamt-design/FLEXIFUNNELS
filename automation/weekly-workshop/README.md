@@ -8,7 +8,7 @@ Each week, one row in a Google Sheet updates everything below:
 | Form webhook (UTM sheet tab) | `/flexi-genie-regteam` | column H, created by Apps Script |
 | ActiveCampaign list | both form pages | column E (list name) |
 | WhatsApp community link | `/funnel-agent-ty`, `/flexi-genie-ty` | column F |
-| Zoom link | `/zoom-join` redirect | column D |
+| Zoom link | `/genie-demo` redirect | column D |
 
 ## How it works
 
