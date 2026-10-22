@@ -14,7 +14,8 @@ var SHEETS = {
   DATA: 'Broadcast_Data',
   CAMPAIGNS: 'Campaigns',
   CONFIG: 'Dashboard_Config',
-  HISTORY: 'Broadcast_History'
+  HISTORY: 'Broadcast_History',
+  TEMPLATES: 'Schedule_Templates'
 };
 
 // Column order of Broadcast_Data. `key` is the field name used by the web app.
@@ -65,6 +66,18 @@ var HISTORY_COLUMNS = [
   { key: 'version',   header: 'Version' },
   { key: 'changes',   header: 'Changes (field: old → new)' },
   { key: 'snapshot',  header: 'Previous Record (JSON)' }
+];
+
+// One row per broadcast slot. Day Offset is relative to the webinar date
+// (-2 = two days before, 0 = webinar day, 1 = next day).
+var TEMPLATE_COLUMNS = [
+  { key: 'template',  header: 'Template' },
+  { key: 'dayOffset', header: 'Day Offset', format: '0' },
+  { key: 'time',      header: 'Time',       format: '@' },
+  { key: 'slot',      header: 'Slot Name' },
+  { key: 'type',      header: 'Broadcast Type' },
+  { key: 'segment',   header: 'Audience Segment' },
+  { key: 'notes',     header: 'Notes' }
 ];
 
 var CONFIG_HEADERS = ['Setting', 'Value', 'Notes'];
@@ -148,8 +161,14 @@ function setupSpreadsheet() {
     configSheet.getRange(2, 1, rows.length, 3).setValues(rows);
   }
 
+  var templateSheet = ensureSheet_(ss, SHEETS.TEMPLATES, TEMPLATE_COLUMNS);
+  if (templateSheet.getLastRow() < 2) {
+    var slots = getDefaultTemplateRows_();
+    templateSheet.getRange(2, 1, slots.length, TEMPLATE_COLUMNS.length).setValues(slots);
+  }
+
   var message = 'Sheets are ready: ' + [SHEETS.DATA, SHEETS.CAMPAIGNS, SHEETS.CONFIG,
-    SHEETS.HISTORY].join(', ') + '.';
+    SHEETS.HISTORY, SHEETS.TEMPLATES].join(', ') + '.';
   try {
     SpreadsheetApp.getUi().alert(APP_TITLE, message, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (e) {

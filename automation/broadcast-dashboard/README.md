@@ -9,6 +9,7 @@ apps-script/
   Code.gs         web app entry, spreadsheet menu, one-time setup, sheet schema
   Config.gs       Dashboard_Config read/write (channels, types, currencies…)
   Broadcasts.gs   server API: load data, save/edit broadcasts, history, campaigns
+  Templates.gs    webinar schedule templates and bulk "Schedule webinar" creation
   Index.html      page layout (tabs, forms, modals)
   Styles.html     styling, light and dark mode
   App.html        client logic: KPIs, charts (Chart.js), tables, forms
@@ -23,6 +24,7 @@ apps-script/
 | **Broadcasts** | Every record, searchable and sortable, with derived metrics per row. Click a row for details; **Edit**, **Duplicate as new**, **Add to compare**. Export the filtered list to CSV. |
 | **Campaigns** | Totals per campaign with a total row. Click a campaign to set its category, dates, objective and notes, or to rename it. Renaming also updates its broadcasts. |
 | **Compare** | Pick 2–4 broadcasts and see them side by side, with the best value in each row highlighted and a chart of their rates. |
+| **Schedule webinar** (button) | Pick a schedule template, the webinar date and the campaign. Every slot in the template becomes a **Draft** broadcast on the right date and time, created in one go. Untick slots you're skipping. Slots that already exist for that campaign and date are flagged and never created twice. |
 | **Settings** | Edit the dropdown options: channels, broadcast types, audience segments, campaign categories, currencies, default currency and channel. |
 
 Filters for period, campaign, channel, type and segment apply to the Overview,
@@ -83,6 +85,7 @@ are never added together.
 | `Campaigns` | Campaign name, category, start/end date, objective, notes, timestamps. New campaign names typed into the broadcast form are added automatically. |
 | `Dashboard_Config` | `Setting / Value / Notes` rows. List settings (Channel, Broadcast Type, Audience Segment, Campaign Category, Currency) have one row per option; Default Currency and Default Channel have one row each. |
 | `Broadcast_History` | Audit log of every create and edit. |
+| `Schedule_Templates` | One row per broadcast slot: Template, Day Offset, Time, Slot Name, Broadcast Type, Audience Segment, Notes. See below. |
 
 Columns are matched by header name, so you can reorder columns or add your own
 extra columns without breaking anything. Don't rename the headers.
@@ -94,7 +97,7 @@ extra columns without breaking anything. Don't rename the headers.
 2. **Add the code.** In the sheet, open **Extensions → Apps Script**. Delete the
    default `Code.gs` contents, then create these files and paste in the
    matching file from `apps-script/`:
-   - Script files: `Code`, `Config`, `Broadcasts`
+   - Script files: `Code`, `Config`, `Broadcasts`, `Templates`
    - HTML files (**+ → HTML**): `Index`, `Styles`, `App`. Use exactly these
      names, without `.html`.
    - Optional: **Project Settings → Show "appsscript.json"** and paste the
@@ -108,14 +111,46 @@ extra columns without breaking anything. Don't rename the headers.
      dashboard record who made each change.
    - Copy the web app URL and share it with the team. It also appears under
      the sheet's **Broadcast Dashboard → Open dashboard** menu.
-5. **After code changes**, use **Deploy → Manage deployments → Edit → New
+5. **Already installed an earlier version?** Add the new `Templates` script
+   file, replace the other files, run `setupSpreadsheet` once to create
+   `Schedule_Templates`, then publish a new version as in step 6.
+6. **After code changes**, use **Deploy → Manage deployments → Edit → New
    version** so the same URL serves the new code.
 
 **Standalone project instead of a sheet-bound one?** Add a Script Property
 `SPREADSHEET_ID` with the sheet's ID (Project Settings → Script Properties).
 
+## Webinar schedule templates
+
+Setup fills `Schedule_Templates` with the three schedules the team uses:
+
+| Template | Slots |
+|---|---|
+| **Tuesday Webinar** (14) | 1 day before: 10 AM, 2 PM, 6 PM · Webinar day: 10 AM, 2:30 PM, 5:30 PM tool access, 7 PM, 7:25 PM, 7:30 PM reg + missed, 7:35, 7:40, 7:50, 8 PM · Next day before 11 AM |
+| **Sunday Webinar + Encore** (25) | 2 days before: 10 AM, 6 PM · 1 day before: 10 AM, 2 PM, 6 PM · Webinar day: 8, 9, 10, 10:30, 10:55, 11:05, 11:10, 11:15, 11:25, 11:35 AM · 7:30 PM encore: reminders at 2:30, 4:30, 5:30, 7, 7:25 PM, then 7:30 PM reg + missed, 7:35, 7:40, 7:50, 8 PM |
+| **Wednesday Webinar** (12) | Webinar day: 10 AM, 10 AM missed audience, 2 PM, 5:30 PM, 7 PM, 7:25 PM, 7:30 PM reg + missed, 7:35, 7:40, 7:50, 8 PM · Next day before 11 AM |
+
+- **Day Offset** is counted from the webinar date: `-2` two days before, `-1`
+  the day before, `0` webinar day, `1` the next day.
+- **Time** is 24-hour `HH:MM`. "Next day – before 11 AM" is scheduled at 10:30.
+- **Audience Segment** is optional. When it's blank, the segment chosen in the
+  Schedule dialog is used (default *Webinar Registrants*). The 7:30 PM slots
+  use *Registrants + Missed*; the Wednesday 10 AM missed slot uses *Missed
+  Audience*.
+- **Broadcast Type** must be one of the types in Settings. Unknown types fall
+  back to *Reminder*.
+- To change a schedule, edit its rows. To add a schedule, add rows with a new
+  Template name. If the name contains a weekday ("Friday Masterclass"), the
+  dialog suggests the next date on that day and warns if you pick another.
+
+Each slot becomes a broadcast named after the slot, e.g. *Webinar day – 7:25
+PM*, in the campaign you choose. When a broadcast goes out, open it, change
+its status to **Sent** and fill in the numbers.
+
 ## Day-to-day use
 
+- **Plan a webinar:** click **Schedule webinar**, pick the template, date and
+  campaign, then **Create drafts**. You land on that campaign's drafts.
 - **Log a broadcast:** click **+ New broadcast**. Date, time, channel, currency
   and status (Sent) are pre-filled. As you type the numbers, live chips show
   the delivery rate, CTR, conversion rate, cost per click and ROI.

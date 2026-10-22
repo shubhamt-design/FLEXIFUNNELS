@@ -256,6 +256,13 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .banner { padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; }
   .banner.error { background: var(--bad-soft); color: var(--bad); }
+  .banner.warn { background: var(--surface-2); border: 1px solid var(--border); color: var(--warn); margin: 12px 0 0; font-weight: 500; }
+  .slot-head { display: flex; align-items: center; gap: 4px; margin: 16px 0 6px; }
+  .slot-wrap { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+  #slotTable td, #slotTable th { padding: 6px 10px; }
+  #slotTable tr.day-start td { border-top: 2px solid var(--border); }
+  #slotTable tr.off td:not(:first-child) { opacity: .45; }
+  #slotTable input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
   .toast-stack { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
   .toast {
     min-width: 260px; max-width: 380px; padding: 12px 14px; border-radius: 10px; color: #fff;
@@ -275,8 +282,8 @@
   @media (max-width: 640px) {
     .topbar, .filters { padding-left: 16px; padding-right: 16px; }
     main { padding: 16px 16px 40px; }
-    .topbar-actions { margin-left: 0; width: 100%; }
-    .topbar-actions .btn { flex: 1; }
+    .topbar-actions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+    .topbar-actions .btn { flex: 1 1 auto; padding: 8px 10px; }
     .filters label { min-width: calc(50% - 6px); flex: 1; }
     .form-grid, .form-grid.four, .form-grid.two, .settings-grid { grid-template-columns: 1fr; }
     .span2, .span3 { grid-column: auto; }

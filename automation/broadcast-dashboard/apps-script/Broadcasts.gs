@@ -3,6 +3,7 @@
  *   getDashboardData()          everything the app needs, in one read
  *   saveBroadcast(input)        create or update one broadcast
  *   getBroadcastHistory(id)     change log for one broadcast
+ *   createFromTemplate(input)   bulk-create drafts from a schedule (Templates.gs)
  *   saveCampaign(input)         create, update or rename a campaign
  *   saveSettings(input)         see Config.gs
  *
@@ -46,6 +47,7 @@ function getDashboardData() {
     config: readConfig_(),
     broadcasts: broadcasts,
     campaigns: campaigns,
+    templates: readTemplates_(),
     user: currentUser_(),
     today: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd'),
     now: Utilities.formatDate(new Date(), tz, 'HH:mm'),
@@ -271,15 +273,24 @@ function duplicateKey_(b) {
 }
 
 function nextBroadcastId_(table) {
+  return nextBroadcastIds_(table, 1)[0];
+}
+
+/** Reserves `count` consecutive IDs. Call under the script lock. */
+function nextBroadcastIds_(table, count) {
   var props = PropertiesService.getScriptProperties();
   var seq = Number(props.getProperty(SEQ_PROPERTY)) || 0;
   table.objects.forEach(function (o) {
     var m = /^BC-(\d+)$/.exec(String(o.id));
     if (m) seq = Math.max(seq, Number(m[1]));
   });
-  seq += 1;
+  var ids = [];
+  for (var i = 0; i < count; i++) {
+    seq += 1;
+    ids.push(ID_PREFIX + ('00000' + seq).slice(-5));
+  }
   props.setProperty(SEQ_PROPERTY, String(seq));
-  return ID_PREFIX + ('00000' + seq).slice(-5);
+  return ids;
 }
 
 var DIFF_FIELDS = ['name', 'campaign', 'date', 'time', 'type', 'segment', 'channel', 'message',
@@ -439,6 +450,17 @@ function readHeaderOnly_(sheet, columns) {
 
 /** Writes `record` into row `rowNumber`, keeping any extra columns from `baseRow`. */
 function writeRow_(sheet, table, rowNumber, baseRow, record) {
+  writeRows_(sheet, table, rowNumber, [toRow_(table, baseRow, record)]);
+}
+
+/** Appends many records after the last row with a single setValues call. */
+function appendRecords_(sheet, table, records) {
+  if (!records.length) return;
+  writeRows_(sheet, table, sheet.getLastRow() + 1,
+    records.map(function (r) { return toRow_(table, null, r); }));
+}
+
+function toRow_(table, baseRow, record) {
   var width = table.headers.length;
   var row = baseRow ? baseRow.slice(0, width) : [];
   while (row.length < width) row.push('');
@@ -447,9 +469,14 @@ function writeRow_(sheet, table, rowNumber, baseRow, record) {
     var v = record[k];
     row[table.index[k]] = typeof v === 'string' ? protectText_(v) : (v === null ? '' : v);
   });
+  return row;
+}
+
+function writeRows_(sheet, table, firstRow, rows) {
+  var lastRow = firstRow + rows.length - 1;
   var maxRows = sheet.getMaxRows();
-  if (rowNumber > maxRows) sheet.insertRowsAfter(maxRows, Math.max(100, rowNumber - maxRows));
-  sheet.getRange(rowNumber, 1, 1, width).setValues([row]);
+  if (lastRow > maxRows) sheet.insertRowsAfter(maxRows, Math.max(100, lastRow - maxRows));
+  sheet.getRange(firstRow, 1, rows.length, table.headers.length).setValues(rows);
 }
 
 function findRowIndex_(table, key, value, caseInsensitive) {

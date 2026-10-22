@@ -28,6 +28,7 @@
     </nav>
     <div class="topbar-actions">
       <button class="btn ghost" id="refreshBtn" title="Reload data from the sheet">↻ Refresh</button>
+      <button class="btn ghost" id="scheduleBtn" title="Create all broadcasts for a webinar from a schedule template">Schedule webinar</button>
       <button class="btn primary" id="newBroadcastBtn">+ New broadcast</button>
     </div>
   </header>
@@ -274,6 +275,47 @@
           <span class="spacer"></span>
           <button type="button" class="btn ghost" data-close>Cancel</button>
           <button type="submit" class="btn primary">Save campaign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCHEDULE FROM TEMPLATE -->
+  <div class="modal hidden" id="scheduleModal" role="dialog" aria-modal="true" aria-labelledby="smTitle">
+    <div class="modal-panel wide">
+      <div class="modal-head">
+        <div>
+          <h2 id="smTitle">Schedule a webinar's broadcasts</h2>
+          <p class="muted small">Creates one <b>Draft</b> per slot. Fill in the numbers after each one goes out.
+            Templates live in the Schedule_Templates sheet.</p>
+        </div>
+        <button class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <form id="scheduleForm" novalidate>
+        <div class="form-grid">
+          <label>Schedule template <b class="req">*</b><select name="template" required></select></label>
+          <label>Webinar date <b class="req">*</b><input type="date" name="webinarDate" required></label>
+          <label>Campaign <b class="req">*</b>
+            <input name="campaign" list="campaignList" maxlength="100" required placeholder="e.g. Flexi Genie – 27 Oct"></label>
+          <label>Channel <b class="req">*</b><select name="channel" required></select></label>
+          <label>Audience segment <b class="req">*</b>
+            <input name="segment" list="segmentList" maxlength="100" required>
+            <span class="muted small">Used for slots that don't set their own segment</span></label>
+          <label>Currency<select name="currency"></select></label>
+        </div>
+        <p class="banner warn hidden" id="weekdayWarn"></p>
+        <div class="slot-head">
+          <h3 id="slotCount">Broadcast slots</h3>
+          <span class="spacer"></span>
+          <button type="button" class="btn link" id="slotsAll">Select all</button>
+          <button type="button" class="btn link" id="slotsNone">Select none</button>
+        </div>
+        <div class="table-wrap slot-wrap"><table class="data" id="slotTable"></table></div>
+        <div class="form-error hidden" id="scheduleError" role="alert"></div>
+        <div class="form-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" data-close>Cancel</button>
+          <button type="submit" class="btn primary" id="createScheduleBtn">Create drafts</button>
         </div>
       </form>
     </div>

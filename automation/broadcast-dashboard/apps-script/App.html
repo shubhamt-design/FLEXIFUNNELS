@@ -11,6 +11,7 @@
     compareIds: ['', '', '', ''],
     charts: {},
     form: { requestId: null, dirty: false, editing: null },
+    schedule: { requestId: null, unchecked: {} },
     detailId: null
   };
 
@@ -179,7 +180,9 @@
     }
     var n = Number(period);
     var start = addDays(today, -(n - 1));
-    return { from: start, to: today, prev: { from: addDays(start, -n), to: addDays(start, -1) } };
+    // `open`: preset periods also list upcoming (future-dated) drafts. Sent broadcasts
+    // can't be future-dated, so performance numbers are unaffected.
+    return { from: start, to: today, open: true, prev: { from: addDays(start, -n), to: addDays(start, -1) } };
   }
 
   function matchesDims(b) {
@@ -195,7 +198,9 @@
 
   function filtered() {
     var r = getRange();
-    return state.data.broadcasts.filter(function (b) { return inRange(b, r.from, r.to) && matchesDims(b); });
+    return state.data.broadcasts.filter(function (b) {
+      return inRange(b, r.from, r.open ? '' : r.to) && matchesDims(b);
+    });
   }
 
   function previousPeriod() {
@@ -654,7 +659,7 @@
     table.innerHTML = headerHtml(BROADCAST_TABLE_COLUMNS, sort) + '<tbody>' + rows.map(function (r) {
       var b = r.b, d = r.d;
       return '<tr class="clickable" data-id="' + esc(b.id) + '">' +
-        '<td class="muted">' + esc(b.id) + '</td>' +
+        '<td class="muted" style="white-space:nowrap">' + esc(b.id) + '</td>' +
         '<td class="name">' + esc(b.name) + '<div class="sub">' + esc(b.campaign) + '</div></td>' +
         '<td style="white-space:nowrap">' + esc(fmtDate(b.date)) + '<div class="muted small">' + esc(b.time) + '</div></td>' +
         '<td>' + esc(b.channel) + '</td><td>' + esc(b.type) + '</td><td>' + esc(b.segment) + '</td>' +
@@ -1122,6 +1127,7 @@
     var known = state.data.campaigns.some(function (c) { return c.name.toLowerCase() === record.campaign.toLowerCase(); });
     if (!known) state.data.campaigns.push({ name: record.campaign, category: 'Other', startDate: '', endDate: '', objective: '', notes: '' });
     populateFilterOptions();
+    updateUserLine();
   }
 
   function loadHistory() {
@@ -1201,9 +1207,196 @@
   }
 
   // -------------------------------------------------------------------------
+  // Schedule from template
+  // -------------------------------------------------------------------------
+  var WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  function isoWeekday(iso) {
+    var p = iso.split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
+  }
+
+  /** Weekday named in a template's name ("Tuesday Webinar" → 2), or -1. */
+  function templateWeekday(name) {
+    var lower = String(name).toLowerCase();
+    for (var i = 0; i < WEEKDAYS.length; i++) if (lower.indexOf(WEEKDAYS[i].toLowerCase()) !== -1) return i;
+    return -1;
+  }
+
+  function dayLabel(offset) {
+    if (offset === 0) return 'Webinar day';
+    if (offset === -1) return '1 day before';
+    if (offset === 1) return 'Next day';
+    return offset < 0 ? (-offset) + ' days before' : offset + ' days after';
+  }
+
+  function currentTemplate() {
+    var name = $('#scheduleForm').elements.template.value;
+    return (state.data.templates || []).filter(function (t) { return t.name === name; })[0] || null;
+  }
+
+  /** Suggests the next date (today or later) that falls on the template's weekday. */
+  function suggestWebinarDate() {
+    var form = $('#scheduleForm');
+    var t = currentTemplate();
+    var dow = t ? templateWeekday(t.name) : -1;
+    if (dow === -1) { if (!form.elements.webinarDate.value) form.elements.webinarDate.value = addDays(state.data.today, 1); return; }
+    var ahead = (dow - isoWeekday(state.data.today) + 7) % 7;
+    form.elements.webinarDate.value = addDays(state.data.today, ahead);
+  }
+
+  function openScheduleForm() {
+    var templates = state.data.templates || [];
+    if (!templates.length) {
+      toast('No schedule templates found. Run "Set up / repair sheets" from the sheet\'s Broadcast Dashboard menu, ' +
+        'or add rows to the Schedule_Templates sheet.', 'error');
+      return;
+    }
+    populateFormOptions();
+    var form = $('#scheduleForm');
+    var c = state.data.config;
+    form.reset();
+    clearErrors(form);
+    $('#scheduleError').classList.add('hidden');
+    fillSelect(form.elements.template, templates.map(function (t) { return t.name; }));
+    fillSelect(form.elements.channel, c.channels);
+    fillSelect(form.elements.currency, c.currencies);
+    form.elements.channel.value = c.defaultChannel;
+    form.elements.currency.value = c.defaultCurrency;
+    form.elements.segment.value = c.segments.indexOf('Webinar Registrants') !== -1 ? 'Webinar Registrants' : (c.segments[0] || '');
+    form.elements.campaign.value = $('#fCampaign').value || '';
+    state.schedule = { requestId: uuid(), unchecked: {} };
+    suggestWebinarDate();
+    renderSlots();
+    state.form.dirty = false;
+    showModal('#scheduleModal');
+  }
+
+  /** Builds the preview rows: one per template slot with its real date. */
+  function scheduledSlots() {
+    var form = $('#scheduleForm');
+    var t = currentTemplate();
+    var date = form.elements.webinarDate.value;
+    if (!t) return [];
+    var existing = {};
+    state.data.broadcasts.forEach(function (b) {
+      existing[[b.name, b.campaign, b.channel, b.segment, b.date, b.time].join('|').toLowerCase()] = b.id;
+    });
+    return t.slots.map(function (s) {
+      var d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? addDays(date, s.dayOffset) : '';
+      var segment = s.segment || form.elements.segment.value.trim();
+      var key = [s.slot, form.elements.campaign.value.trim(), form.elements.channel.value, segment, d, s.time].join('|').toLowerCase();
+      return { slot: s, date: d, segment: segment, existingId: d ? existing[key] || '' : '' };
+    });
+  }
+
+  function renderSlots() {
+    var form = $('#scheduleForm');
+    var rows = scheduledSlots();
+    var t = currentTemplate();
+    var date = form.elements.webinarDate.value;
+
+    var warn = $('#weekdayWarn');
+    var dow = t ? templateWeekday(t.name) : -1;
+    if (date && dow !== -1 && isoWeekday(date) !== dow) {
+      warn.textContent = 'Heads up: "' + t.name + '" is a ' + WEEKDAYS[dow] + ' schedule, but ' + fmtDate(date) +
+        ' is a ' + WEEKDAYS[isoWeekday(date)] + '. The slots will still be placed relative to that date.';
+      warn.classList.remove('hidden');
+    } else {
+      warn.classList.add('hidden');
+    }
+
+    var lastOffset = null;
+    var selected = 0;
+    $('#slotTable').innerHTML = '<thead><tr><th></th><th>Day</th><th>Time</th><th>Broadcast name</th><th>Type</th><th>Segment</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var s = r.slot;
+        var on = !r.existingId && !state.schedule.unchecked[s.key];
+        if (on) selected++;
+        var dayCell = s.dayOffset !== lastOffset ? '<b>' + esc(dayLabel(s.dayOffset)) + '</b>' +
+          (r.date ? '<div class="muted small">' + esc(new Date(r.date + 'T00:00:00Z').toLocaleDateString('en-IN',
+            { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })) + '</div>' : '') : '';
+        var html = '<tr class="' + (s.dayOffset !== lastOffset ? 'day-start' : '') + (on ? '' : ' off') + '">' +
+          '<td><input type="checkbox" data-slot="' + esc(s.key) + '"' + (on ? ' checked' : '') +
+          (r.existingId ? ' disabled title="Already scheduled as ' + esc(r.existingId) + '"' : '') +
+          ' aria-label="Include ' + esc(s.slot) + '"></td>' +
+          '<td>' + dayCell + '</td><td class="num">' + esc(s.time) + '</td>' +
+          '<td>' + esc(s.slot) + (r.existingId ? ' <span class="pill">Already scheduled · ' + esc(r.existingId) + '</span>' : '') +
+          (s.notes ? '<div class="muted small">' + esc(s.notes) + '</div>' : '') + '</td>' +
+          '<td>' + esc(s.type) + '</td><td>' + esc(r.segment) + '</td></tr>';
+        lastOffset = s.dayOffset;
+        return html;
+      }).join('') + '</tbody>';
+
+    $('#slotCount').textContent = selected + ' of ' + rows.length + ' slots selected';
+    var btn = $('#createScheduleBtn');
+    btn.textContent = 'Create ' + selected + ' draft' + (selected === 1 ? '' : 's');
+    btn.disabled = selected === 0;
+  }
+
+  function submitSchedule(evt) {
+    evt.preventDefault();
+    var form = $('#scheduleForm');
+    var d = readForm(form);
+    var errorBox = $('#scheduleError');
+    errorBox.classList.add('hidden');
+    var errors = {};
+    if (!d.template) errors.template = 'Pick a schedule template.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.webinarDate)) errors.webinarDate = 'Pick the webinar date.';
+    if (!d.campaign) errors.campaign = 'Enter or pick a campaign.';
+    if (!d.segment) errors.segment = 'Enter the audience segment.';
+    if (!d.channel) errors.channel = 'Pick a channel.';
+    if (Object.keys(errors).length) { showErrors(form, errors); return; }
+    clearErrors(form);
+
+    var keys = $$('#slotTable input[type="checkbox"]:checked').map(function (cb) { return cb.dataset.slot; });
+    if (!keys.length) {
+      errorBox.textContent = 'Select at least one broadcast slot.';
+      errorBox.classList.remove('hidden');
+      return;
+    }
+    var payload = {
+      template: d.template, webinarDate: d.webinarDate, campaign: d.campaign, channel: d.channel,
+      segment: d.segment, currency: d.currency, slotKeys: keys, requestId: state.schedule.requestId
+    };
+    var btn = $('#createScheduleBtn');
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    call('createFromTemplate', payload).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = label;
+      if (!res.ok) {
+        if (res.errors) showErrors(form, res.errors);
+        errorBox.textContent = res.message || 'Could not create the broadcasts.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      res.records.forEach(upsertBroadcast);
+      state.form.dirty = false;
+      hideModal('#scheduleModal');
+      toast(res.message, 'success');
+      // Show the new drafts: this campaign, drafts only, all dates.
+      ['#fChannel', '#fType', '#fSegment'].forEach(function (s) { $(s).value = ''; });
+      $('#fCampaign').value = d.campaign;
+      $('#fPeriod').value = 'all';
+      $$('.custom-range').forEach(function (el) { el.classList.add('hidden'); });
+      $('#searchBox').value = '';
+      $('#fStatus').value = 'Draft';
+      state.sort.broadcasts = { key: 'date', dir: 1 };
+      showView('broadcasts');
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = label;
+      errorBox.textContent = 'Nothing was created: ' + errorText(err);
+      errorBox.classList.remove('hidden');
+    });
+  }
+
+  // -------------------------------------------------------------------------
   // Settings
   // -------------------------------------------------------------------------
-  var LIST_SETTINGS = ['channels', 'types', 'segments', 'campaignCategories', 'currencies'];
+  var LIST_SETTINGS =['channels', 'types', 'segments', 'campaignCategories', 'currencies'];
 
   function renderSettings() {
     var form = $('#settingsForm');
@@ -1275,6 +1468,10 @@
   }
   function renderAll() { renderCurrent(); }
 
+  function updateUserLine() {
+    $('#userLine').textContent = state.data.broadcasts.length + ' broadcasts · signed in as ' + state.data.user;
+  }
+
   // -------------------------------------------------------------------------
   // Loading
   // -------------------------------------------------------------------------
@@ -1284,7 +1481,7 @@
     return call('getDashboardData').then(function (data) {
       state.data = data;
       $('#loading').classList.add('hidden');
-      $('#userLine').textContent = data.broadcasts.length + ' broadcasts · signed in as ' + data.user;
+      updateUserLine();
       populateFilterOptions();
       populateFormOptions();
       renderCurrent();
@@ -1303,6 +1500,31 @@
     $$('.tab').forEach(function (t) { t.addEventListener('click', function () { showView(t.dataset.view); }); });
     $('#newBroadcastBtn').addEventListener('click', function () { if (state.data) openBroadcastForm(null); });
     $('#refreshBtn').addEventListener('click', function () { loadData(true).then(function () { toast('Data refreshed.'); }); });
+
+    // Schedule from template
+    $('#scheduleBtn').addEventListener('click', function () { if (state.data) openScheduleForm(); });
+    var sf = $('#scheduleForm');
+    sf.addEventListener('submit', submitSchedule);
+    sf.elements.template.addEventListener('change', function () {
+      state.schedule.unchecked = {};
+      suggestWebinarDate();
+      renderSlots();
+    });
+    sf.addEventListener('input', function (e) {
+      state.form.dirty = true;
+      var label = e.target.closest('label.invalid');
+      if (label) { label.classList.remove('invalid'); var m = label.querySelector('.field-error'); if (m) m.remove(); }
+      if (e.target.dataset.slot) {
+        if (e.target.checked) delete state.schedule.unchecked[e.target.dataset.slot];
+        else state.schedule.unchecked[e.target.dataset.slot] = true;
+      }
+      if (e.target.name !== 'template') renderSlots();
+    });
+    $('#slotsAll').addEventListener('click', function () { state.schedule.unchecked = {}; renderSlots(); });
+    $('#slotsNone').addEventListener('click', function () {
+      (currentTemplate() || { slots: [] }).slots.forEach(function (s) { state.schedule.unchecked[s.key] = true; });
+      renderSlots();
+    });
 
     $('#fPeriod').addEventListener('change', function () {
       var custom = this.value === 'custom';
