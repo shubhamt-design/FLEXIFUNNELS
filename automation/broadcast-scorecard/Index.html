@@ -173,6 +173,31 @@ button { font: inherit; cursor: pointer; }
 details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--accent); padding: 4px 0; }
 details[open] { display: flex; flex-direction: column; gap: 10px; }
 .sep { border: 0; border-top: 1px solid var(--line); width: 100%; }
+/* Campaign views */
+.savebox { background: var(--accent-soft); color: var(--ink); border-radius: var(--radius); padding: 10px 14px; font-size: 14px; max-width: 520px; }
+.savebox b { font-family: var(--font-display); font-size: 20px; color: var(--accent); }
+.save { display: inline-block; margin-left: 6px; font: 600 12px var(--font-data); color: var(--good-strong-text); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.action[data-goto] { cursor: pointer; }
+.action[data-goto]:hover { border-color: var(--accent); }
+.pair { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+.pb { height: 8px; border-radius: 4px; min-width: 2px; }
+.pb.spend { background: var(--warn); }
+.pb.clicks { background: var(--accent); }
+.pl { font-size: 12px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.seg { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 8px; flex-wrap: wrap; }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+table.slots td { vertical-align: top; }
+table.slots tr.day th { background: var(--surface-2); text-align: left; padding: 7px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.why2 { color: var(--ink-2); margin-top: 4px; white-space: normal; max-width: 340px; }
+table.slots td.name { min-width: 170px; }
+table.slots td.vcell { white-space: normal; min-width: 260px; max-width: 360px; }
+table.slots td.vcell .faint { margin-top: 2px; }
+.plan-list { margin: 0; padding-left: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 6px; }
+.plan-list li { display: flex; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.plan-list li .t { font-weight: 600; min-width: 150px; }
+.plan-list li.drop { opacity: .6; text-decoration: line-through; border-style: dashed; }
+.filters label.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
 /* Plan check */
 .rulebox { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; }
 .rulebox ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
@@ -308,7 +333,7 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
   <header class="top">
     <div>
       <h1>Webinar Broadcast Scorecard</h1>
-      <p class="sub muted">Which WhatsApp messages to resend, use more, fix or stop, with the best times to send. Built from every broadcast in the AiSensy Broadcast Analytics sheet.</p>
+      <p class="sub muted">The 10-minute webinar campaign (Tuesday, Wednesday and Sunday): which slots and messages to keep, change or cut, what each click costs, and where spend outruns results. Read live from the AiSensy Broadcast Analytics sheet.</p>
     </div>
     <div class="sync" id="sync"><span><span class="dot" id="syncDot"></span> <span id="syncText">Connecting to Google Sheets…</span></span>
       <button class="btn" id="refreshBtn" type="button">Refresh</button></div>
@@ -327,6 +352,9 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
   <section class="howto">
     <h3>How the numbers work</h3>
     <ul>
+      <li><b>Cost / click</b> = AiSensy cost ÷ clicks. <b>Spent above average</b> = what a broadcast cost beyond its clicks × the campaign’s average cost per click: money that bought clicks at an above-average price.</li>
+      <li><b>Slot verdicts</b>: Keep: top slot (15%+ more clicks than similar, at or below average cost per click). Keep. Keep slot, use the better message (one week’s message clearly beat the others). Improve the message. Cut this slot (40%+ below similar with solid evidence, or cost per click over 2.5× average). “If cut” shows the spend saved and clicks lost per webinar.</li>
+      <li><b>Live window</b>: reminders between 10:50–11:40 AM and 7:00–8:05 PM. A reminder is suggested for dropping when its cost per click is 40%+ above the live-window average and it does worse than similar sends.</li>
       <li><b>Click rate</b> = clicks ÷ delivered. <b>Read rate</b> = reads ÷ delivered. <b>Click-to-read</b> = clicks ÷ reads, which shows how persuasive the message is once opened. <b>Cost / click</b> = AiSensy cost ÷ clicks.</li>
       <li><b>vs similar</b> compares a broadcast’s clicks with what similar broadcasts got: same campaign, same timing (1+ days before, webinar morning, 1–6 h before, final hour, during live, next day) and same list size (registered list vs 5,000+). +40% means 40% more clicks than expected.</li>
       <li><b>Verdicts</b> are per message (all sends of nearly the same text). Use more: 25%+ above similar with solid evidence. Keep sending: within 10% of similar or better. Improve: below similar, with the likely reason (opened less, or read but not clicked). Remove: 40%+ below similar with solid evidence, or no clicks where some were expected. Not enough data: under 300 delivered or too few expected clicks.</li>
@@ -956,6 +984,210 @@ function liveBurst(list) {
   return rows.sort(function (a, b) { return a.key.localeCompare(b.key); });
 }
 
+
+/* ---------- 10-minute webinar campaign ---------- */
+
+/** One entry per distinct message in the playbook docs, with every slot and template it is used in. */
+function buildDocCatalog() {
+  var cat = [];
+  Object.keys(PLAYBOOKS).forEach(function (k) {
+    PLAYBOOKS[k].slots.forEach(function (s, i) {
+      var tok = messageTokens(s.text);
+      var hit = null, best = 0;
+      cat.forEach(function (e) { var j = jaccard(tok, e.tokens); if (j > best) { best = j; hit = e; } });
+      var ref = { pb: k, schedule: SCHEDULES[k].label, name: SCHEDULES[k].slots[i].name, time: s.time, offset: s.offset, audience: s.audience };
+      var templates = String(s.template).split(',').map(function (t) { return t.replace(/\(.*?\)/g, '').trim(); }).filter(Boolean);
+      if (!hit || best < 0.75) {
+        hit = { id: 'd' + (cat.length + 1), text: s.text, tokens: tok, goal: s.goal, refs: [], templates: [] };
+        hit.name = docName(s.text);
+        cat.push(hit);
+      }
+      hit.refs.push(ref);
+      templates.forEach(function (t) { if (hit.templates.indexOf(t) === -1) hit.templates.push(t); });
+    });
+  });
+  return cat;
+}
+function docLabel(text) {
+  var first = String(text).split(/(?<=[.!?])\s+/)[0];
+  return first.length > 95 ? first.slice(0, 92) + '…' : first;
+}
+/** Matches each campaign broadcast to the doc message its text came from. */
+function matchDocs(broadcasts, catalog) {
+  broadcasts.forEach(function (b) {
+    b.doc = null; b.docSim = 0;
+    if (b.family !== 'genie') return;
+    var tok = messageTokens(b.content), best = null, sim = 0;
+    catalog.forEach(function (e) { var j = jaccard(tok, e.tokens); if (j > sim) { sim = j; best = e; } });
+    if (best && sim >= 0.3) { b.doc = best; b.docSim = sim; }
+  });
+}
+
+var AREAS = ['1+ days before', 'Webinar day, morning', 'Webinar day, 1–6 h before', 'Final hour before live', 'During live', 'Next-day follow-up', 'Reply messages', 'Big old-list pushes'];
+function areaOf(b) {
+  if (b.goal === 'reply') return 'Reply messages';
+  if (b.list === 'Big list (5,000+)') return 'Big old-list pushes';
+  return b.stage;
+}
+
+/** Campaign-wide numbers: benchmark cost per click and overspend for every broadcast. */
+function campaignStats(C) {
+  var cost = 0, clicks = 0;
+  C.forEach(function (b) { if (b.goal !== 'reply' && hasClicks(b)) { cost += b.cost || 0; clicks += b.clicks; } });
+  var bench = clicks > 0 ? cost / clicks : null;
+  C.forEach(function (b) {
+    b.cpc = hasClicks(b) && b.clicks > 0 ? (b.cost || 0) / b.clicks : null;
+    b.overspend = bench && b.goal !== 'reply' && hasClicks(b) ? Math.max(0, (b.cost || 0) - b.clicks * bench) : 0;
+    b.area = areaOf(b);
+  });
+  return { bench: bench };
+}
+
+function aggregate(list) {
+  var a = { n: list.length, cost: 0, delivered: 0, read: 0, clicks: 0, clickDel: 0, exp: 0, replies: 0, repDel: 0, overspend: 0, audience: 0 };
+  list.forEach(function (b) {
+    a.cost += b.cost || 0; a.delivered += b.delivered || 0; a.read += b.read || 0; a.audience += b.audience || 0; a.overspend += b.overspend || 0;
+    if (b.goal !== 'reply' && hasClicks(b)) { a.clicks += b.clicks; a.clickDel += b.delivered; if (b.expected !== null) a.exp += b.expected; }
+    if (hasReplies(b)) { a.replies += b.replies; a.repDel += b.delivered; }
+  });
+  a.ctr = a.clickDel ? a.clicks / a.clickDel : null;
+  a.readRate = a.delivered ? a.read / a.delivered : null;
+  a.cpc = a.clicks ? a.cost / a.clicks : null;
+  a.index = a.exp > 0 ? a.clicks / a.exp : null;
+  a.z = a.exp > 0 ? (a.clicks - a.exp) / Math.sqrt(a.exp) : 0;
+  a.replyRate = a.repDel ? a.replies / a.repDel : null;
+  a.cpReply = a.replies ? a.cost / a.replies : null;
+  a.cpm = a.delivered ? a.cost / a.delivered * 1000 : null;
+  return a;
+}
+
+var SLOT_VERDICTS = {
+  top: { label: 'Keep: top slot', cls: 'more' },
+  keep: { label: 'Keep', cls: 'keep' },
+  reply: { label: 'Keep: reply slot', cls: 'keep' },
+  swap: { label: 'Keep slot, use the better message', cls: 'improve' },
+  improve: { label: 'Improve the message', cls: 'improve' },
+  cut: { label: 'Cut this slot', cls: 'remove' },
+  data: { label: 'Not enough data', cls: 'data' },
+  none: { label: 'Not sent yet', cls: 'data' }
+};
+function isLiveTime(at) { var m = at - dayStart(at); return (m >= 650 && m <= 700) || (m >= 1140 && m <= 1205); }
+
+/** One row per schedule slot of a template, judged across all completed sessions. */
+function slotVerdicts(result, tpl, bench) {
+  var insts = result.instances.filter(function (i) { return i.template === tpl && !i.upcoming; });
+  return SCHEDULES[tpl].slots.map(function (s, idx) {
+    var items = [].concat.apply([], insts.map(function (i) { return i.slots[idx].items; }));
+    var sessionsSent = insts.filter(function (i) { return i.slots[idx].items.length; }).length;
+    var a = aggregate(items);
+    var delays = [];
+    insts.forEach(function (i) { i.slots[idx].items.forEach(function (b) { delays.push(b.t - i.slots[idx].at); }); });
+    var avgDelay = delays.length ? delays.reduce(function (m, d) { return m + d; }, 0) / delays.length : null;
+    var clickItems = items.filter(function (b) { return b.goal !== 'reply' && hasClicks(b) && b.index !== null && (b.delivered || 0) >= 200; });
+    var best = clickItems.slice().sort(function (x, y) { return y.index - x.index; })[0] || null;
+    var row = { slot: s, idx: idx, items: items, sessions: insts.length, sessionsSent: sessionsSent, a: a, avgDelay: avgDelay, best: best,
+      live: insts.length ? isLiveTime(insts[0].slots[idx].at) : false,
+      costPerSession: sessionsSent ? a.cost / sessionsSent : 0, clicksPerSession: sessionsSent ? a.clicks / sessionsSent : 0 };
+    var v, why;
+    if (!items.length) { v = 'none'; why = 'This slot hasn’t gone out in any session in the data.'; }
+    else if (s.goal === 'reply' || items.every(function (b) { return b.goal === 'reply'; })) {
+      v = a.repDel >= 300 ? 'reply' : 'data';
+      why = a.repDel >= 300 ? 'Asks for a reply: ' + (a.replyRate * 100).toFixed(1) + '% reply rate at ' + (a.cpReply ? '₹' + a.cpReply.toFixed(1) : '—') + ' per reply. Judge it on replies, not clicks.'
+        : 'Asks for a reply, but the sheet has reply counts for only ' + a.repDel + ' delivered.';
+    } else if (a.exp < 3 || a.clickDel < 500) { v = 'data'; why = a.clickDel ? 'Only ' + a.clickDel + ' delivered with click data so far.' : 'No click data in the sheet for this slot yet.'; }
+    else if (((a.index < 0.6 && a.z <= -1.5) || (a.clicks === 0 && a.exp >= 5) || (bench && a.cpc && a.cpc >= 2.5 * bench && a.index < 0.8)) && (sessionsSent >= 2 || a.z <= -2.5)) {
+      v = 'cut';
+      why = 'Gets ' + Math.round((1 - a.index) * 100) + '% fewer clicks than similar sends at ' + (a.cpc ? '₹' + a.cpc.toFixed(1) : 'no clicks') + ' per click' + (bench ? ' (campaign average ₹' + bench.toFixed(1) + ')' : '') + '.';
+    } else if (a.index < 0.85 && best && best.index >= 1.0 && best.doc !== (items[0] && items[0].doc)) {
+      v = 'swap';
+      why = 'Below similar sends overall, but one week’s message here did well (' + Math.round((best.index - 1) * 100) + '% above similar). Use that message every week.';
+    } else if (a.index < 0.85) {
+      v = 'improve';
+      why = Math.round((1 - a.index) * 100) + '% fewer clicks than similar sends. The timing is fine to keep; the message needs work.';
+    } else if (a.index >= 1.15 && bench && a.cpc !== null && a.cpc <= bench) {
+      v = 'top';
+      why = Math.round((a.index - 1) * 100) + '% more clicks than similar sends, at ₹' + a.cpc.toFixed(1) + ' per click.';
+    } else {
+      v = 'keep';
+      why = (a.index >= 1 ? Math.round((a.index - 1) * 100) + '% above' : Math.round((1 - a.index) * 100) + '% below') + ' similar sends' + (a.cpc ? ', ₹' + a.cpc.toFixed(1) + ' per click' : '') + '.';
+    }
+    if (avgDelay !== null && Math.abs(avgDelay) > (row.live ? 3 : 20)) why += ' Usually sent ' + Math.round(Math.abs(avgDelay)) + ' min ' + (avgDelay > 0 ? 'late' : 'early') + '.';
+    if (sessionsSent === 1 && v !== 'none' && v !== 'data') why += ' Based on one session only.';
+    row.verdict = v; row.why = why;
+    return row;
+  });
+}
+
+/** Live-window reminders that add cost without adding many clicks. */
+function liveCutPlan(rows) {
+  var live = rows.filter(function (r) { return r.live && r.items.length && r.verdict !== 'reply'; });
+  var cost = 0, clicks = 0;
+  live.forEach(function (r) { cost += r.costPerSession; clicks += r.clicksPerSession; });
+  var avgCpc = clicks ? cost / clicks : null;
+  var cuts = live.filter(function (r) {
+    if (r.verdict === 'data') return false;
+    var cpc = r.clicksPerSession ? r.costPerSession / r.clicksPerSession : Infinity;
+    return r.verdict === 'cut' || (r.sessionsSent >= 2 && avgCpc && cpc > 1.4 * avgCpc && (r.a.index === null || r.a.index < 0.85));
+  });
+  var save = cuts.reduce(function (m, r) { return m + r.costPerSession; }, 0);
+  var lose = cuts.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
+  return { live: live, cost: cost, clicks: clicks, avgCpc: avgCpc, cuts: cuts, save: save, lose: lose, loseShare: clicks ? lose / clicks : 0, saveShare: cost ? save / cost : 0 };
+}
+
+/** Recognisable names for the doc messages, taken from their own copy. */
+var DOC_NAMES = [
+  [/People inside the community/i, '“People inside the community…” + 2-day tool access'],
+  [/Zero to One Crore/i, '“Zero to One Crore” training (reply INCOME)'],
+  [/Funnel Builder Agent/i, '“Happening tomorrow” + Funnel Builder Agent'],
+  [/At 5:30 PM today/, '“At 5:30 PM today, you’ll unlock FREE access…”'],
+  [/3 hours left/i, '“3 hours left before we send out logins!”'],
+  [/Tool access is LIVE/i, '“Your FREE AI tool access is LIVE!” (9 AM)'],
+  [/Business-Building Tool is LIVE/i, '“Your FREE AI Business-Building Tool is LIVE!”'],
+  [/just 30 min away/i, '“Just 30 min away. No replay.”'],
+  [/just 60 mins away/i, '“Just 60 mins away”'],
+  [/It happens once/i, '“It happens once. No rewind. No replay.”'],
+  [/HOUSEFULL/i, '“Housefull: the live demo just started”'],
+  [/LIVE RIGHT NOW/, '“LIVE RIGHT NOW: this is just insane”'],
+  [/This is just insane/i, '“This is just insane” (now live)'],
+  [/One final chance/i, '“One final chance to get inside” + ₹1.5L bonuses'],
+  [/almost full/i, '“Almost full: last 50 spots”'],
+  [/5 Business Models/i, '“Revealing 5 Business Models…”'],
+  [/share the reason/i, '“You missed yesterday’s session: share the reason” (Miss15)'],
+  [/missed session yesterday/i, '“1,000+ on the waitlist” (missed yesterday)'],
+  [/waitlist/i, '“1,000+ on the waitlist” (register for Sunday)'],
+  [/successfully recorded/i, '“Your entry has been successfully recorded”'],
+  [/Special Exclusive access/i, '“Don’t forget to claim your exclusive tool access”'],
+  [/2000 PEOPLE ARE ALREADY IN/i, '“Starting soon! 2,000 people already in”'],
+  [/free 2-day access to the AI Business Launcher Tool inside our community/i, '“Free 2-day tool access inside our community” (encore)'],
+  [/Missed today/i, '“Missed today’s session? One more chance tonight”'],
+  [/live interactive implementation/i, '“Happening tonight: build with me live”']
+];
+function docName(text) {
+  for (var i = 0; i < DOC_NAMES.length; i++) if (DOC_NAMES[i][0].test(text)) return DOC_NAMES[i][1];
+  return docLabel(text);
+}
+
+/** Campaign messages: sends grouped by the doc message they came from (or by text, if not in the docs). */
+function campaignMessages(C) {
+  var groups = {};
+  C.forEach(function (b) {
+    var key = b.doc ? b.doc.id : 'x' + b.message.id;
+    (groups[key] = groups[key] || { id: key, doc: b.doc, sends: [], family: 'genie' }).sends.push(b);
+  });
+  return Object.keys(groups).map(function (k) {
+    var g = groups[k];
+    g.sends.sort(function (a, b) { return a.t - b.t; });
+    var latest = g.sends[g.sends.length - 1];
+    g.content = latest.content;
+    g.hook = g.doc ? g.doc.name : '“' + messageHook(latest.content, latest.name).replace(/[,.\s]+$/, '') + '”';
+    g.media = mediaKind(latest.content);
+    g.s = judge(g.sends);
+    g.a = aggregate(g.sends);
+    g.sends.forEach(function (b) { b.cmsg = g; });
+    return g;
+  });
+}
+
 /*LOGIC-END*/
 
 (function () {
@@ -967,11 +1199,11 @@ function liveBurst(list) {
   var IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 
   var state = {
-    raw: {}, cachedAt: {}, broadcasts: [], messages: [], result: null, tab: 'decisions', metric: 'clickRate', mcp: null,
-    dec: { verdict: '', family: '', sort: 'impact', q: '' },
-    filters: { from: '2026-08-01', to: '', preset: 'aug', family: '', q: '' }, sort: { key: 't', dir: -1 }, showAll: false
+    raw: {}, cachedAt: {}, broadcasts: [], messages: [], result: null, tab: 'overview', metric: 'clickRate', mcp: null,
+    sched: 'tue', slotView: 'verdict', mfilter: { verdict: '', sort: 'impact', docs: '', q: '' },
+    bfilter: { sched: '', session: '', area: '', q: '', others: false }, sort: { key: 't', dir: -1 }, showAll: false
   };
-  try { var saved = localStorage.getItem('wbs.tab2'); if (saved) state.tab = saved; } catch (e) { /* storage unavailable */ }
+  try { var saved = localStorage.getItem('wbs.tab3'); if (saved) state.tab = saved; } catch (e) { /* storage unavailable */ }
 
   var $ = function (s) { return document.querySelector(s); };
   function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -1035,7 +1267,14 @@ function liveBurst(list) {
     state.messages = groupMessages(state.broadcasts);
     state.messages.forEach(function (g) { g.s = judge(g.sends); });
     state.qaCount = 0;
-    state.broadcasts.forEach(function (b) { b.qa = qaIssues(b); state.qaCount += b.qa.length; });
+    state.broadcasts.forEach(function (b) { b.qa = qaIssues(b); if (b.family === 'genie') state.qaCount += b.qa.length; });
+    state.catalog = buildDocCatalog();
+    matchDocs(state.broadcasts, state.catalog);
+    state.C = state.broadcasts.filter(function (b) { return b.family === 'genie'; });
+    state.stats = campaignStats(state.C);
+    state.slots = {}; state.live = {};
+    ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k] = slotVerdicts(state.result, k, state.stats.bench); state.live[k] = liveCutPlan(state.slots[k]); });
+    state.cmsgs = campaignMessages(state.C);
     var latestT = state.broadcasts.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
     var read = new Date(Math.min(state.cachedAt.analysis, state.cachedAt.contents));
     setSync('live', state.broadcasts.length + ' broadcasts · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
@@ -1081,24 +1320,26 @@ function liveBurst(list) {
   }
 
   // ---------- tabs ----------
+  var SCHED_KEYS = ['tue', 'wed', 'sun'];
+  var SCHED_SHORT = { tue: 'Tuesday', wed: 'Wednesday', sun: 'Sunday' };
+  function C() { return state.C || []; }
+  function completed() { return state.result.instances.filter(function (i) { return !i.upcoming; }); }
   function tabsModel() {
-    var r = state.result;
-    var count = function (tpl) { return r.instances.filter(function (i) { return i.template === tpl; }).length; };
-    var decided = state.messages.filter(function (g) { return g.s.verdict !== 'data'; }).length;
+    var cut = 0;
+    SCHED_KEYS.forEach(function (k) { cut += state.slots[k].filter(function (r) { return r.verdict === 'cut'; }).length; });
     return [
-      { key: 'decisions', label: 'Decisions', count: decided + ' messages' },
-      { key: 'suggest', label: 'Suggestions', count: '' },
+      { key: 'overview', label: 'Overview', count: '' },
+      { key: 'slots', label: 'Slot verdicts', count: cut ? cut + ' to cut' : '' },
+      { key: 'messages', label: 'Messages', count: state.cmsgs.length + '' },
       { key: 'timing', label: 'Timing', count: '' },
-      { key: 'plan', label: 'Plan check', count: state.qaCount ? state.qaCount + ' issues' : '' },
-      { key: 'all', label: 'All broadcasts', count: String(state.broadcasts.length) },
-      { key: 'tue', label: 'Tuesday', count: count('tue') + ' sessions' },
-      { key: 'wed', label: 'Wednesday', count: count('wed') + ' sessions' },
-      { key: 'sun', label: 'Sunday', count: count('sun') + ' sessions' }
+      { key: 'plan', label: 'Schedule check', count: state.qaCount ? state.qaCount + ' rule issues' : '' },
+      { key: 'broadcasts', label: 'Broadcasts', count: C().length + '' },
+      { key: 'other', label: 'Other campaigns', count: (state.broadcasts.length - C().length) + '' }
     ];
   }
   function renderTabs() {
     var tabs = tabsModel();
-    if (!tabs.some(function (t) { return t.key === state.tab; })) state.tab = 'decisions';
+    if (!tabs.some(function (t) { return t.key === state.tab; })) state.tab = 'overview';
     $('#tabs').innerHTML = tabs.map(function (t) {
       return '<button class="tab" role="tab" type="button" data-tab="' + t.key + '" aria-selected="' + (t.key === state.tab) + '">' +
         esc(t.label) + (t.count ? '<span class="count">' + esc(t.count) + '</span>' : '') + '</button>';
@@ -1107,226 +1348,371 @@ function liveBurst(list) {
   function render() {
     if (!state.result) return;
     renderTabs();
-    if (state.tab === 'decisions') renderDecisions();
-    else if (state.tab === 'suggest') renderSuggestions();
-    else if (state.tab === 'all') renderAll();
-    else if (state.tab === 'plan') renderPlan();
-    else if (state.tab === 'timing') renderTiming();
-    else renderWebinar(state.tab);
+    var t = state.tab;
+    if (t === 'overview') renderOverview();
+    else if (t === 'slots') renderSlots();
+    else if (t === 'messages') renderMessages();
+    else if (t === 'timing') renderTiming();
+    else if (t === 'plan') renderPlan();
+    else if (t === 'broadcasts') renderBroadcasts();
+    else renderOther();
   }
 
   function stat(label, value, note) {
     return '<div class="stat"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div>' + (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
   }
+  function slotPill(v) { var d = SLOT_VERDICTS[v]; return '<span class="verdict v-' + d.cls + '">' + esc(d.label) + '</span>'; }
+  function verdictPill(v) { return '<span class="verdict v-' + v + '">' + esc(VERDICTS[v].label) + '</span>'; }
+  function msgName(b) { return b.doc ? b.doc.name : (b.cmsg ? b.cmsg.hook : b.name); }
+  function sessionLabel(b) { return b.session ? SCHED_SHORT[templateFor(b.session.date)] + ' · ' + dayLabel(b.session.date) : '—'; }
+  function weeksCovered() {
+    var list = C(); if (!list.length) return 1;
+    var a = Math.min.apply(null, list.map(function (b) { return b.t; })), z = Math.max.apply(null, list.map(function (b) { return b.t; }));
+    return Math.max(1, (z - a) / (7 * 1440));
+  }
+  function clockOf(mins) { var m = Math.round(mins); var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + ':' + String(mm).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); }
 
-  // ---------- Decisions ----------
-  function renderDecisions() {
-    var d = state.dec;
-    var counts = {};
-    state.messages.forEach(function (g) { counts[g.s.verdict] = (counts[g.s.verdict] || 0) + 1; });
-    var fams = FAMILIES.filter(function (x) { return state.messages.some(function (g) { return g.family === x.key; }); });
-    var html = '<div class="wrap" style="gap:16px">' +
-      '<div class="intro"><h2>What to resend, use more, fix or stop</h2><p class="muted">Each card is one message (all the times it was sent). It is scored against similar sends: same campaign, same timing (day before, webinar morning, final hour, live) and same list size. That way a live-time reminder is never compared with a day-before invite.</p></div>' +
-      '<div class="vchips" role="group" aria-label="Verdict">' +
-      [['', 'All', state.messages.length]].concat(Object.keys(VERDICTS).map(function (k) { return [k, VERDICTS[k].label, counts[k] || 0]; })).map(function (c) {
-        return '<button type="button" class="vchip' + (c[0] ? ' v-' + c[0] : '') + '" data-vfilter="' + c[0] + '" aria-pressed="' + (d.verdict === c[0]) + '"><b>' + c[2] + '</b> ' + esc(c[1]) + '</button>';
-      }).join('') + '</div>' +
-      '<div class="filters">' +
-      '<label for="dFamily">Campaign<select id="dFamily"><option value="">All campaigns</option>' + fams.map(function (x) {
-        return '<option value="' + x.key + '"' + (d.family === x.key ? ' selected' : '') + '>' + esc(x.label) + '</option>';
-      }).join('') + '</select></label>' +
-      '<label for="dSort">Sort by<select id="dSort">' + [['impact', 'Strongest evidence first'], ['index', 'Best vs similar sends'], ['worst', 'Worst vs similar sends'], ['recent', 'Most recently sent'], ['sends', 'Most sent']].map(function (o) {
-        return '<option value="' + o[0] + '"' + (d.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
-      }).join('') + '</select></label>' +
-      '<label for="dQ">Search<input type="search" id="dQ" placeholder="Words in the message or broadcast name" value="' + esc(d.q) + '"></label>' +
-      '</div><div id="decList" class="cards-col"></div></div>';
-    $('#main').innerHTML = html;
-    renderDecisionList();
+  // ---------- Overview ----------
+  function campaignActions() {
+    var list = C(), bench = state.stats.bench, tot = aggregate(list), weeks = weeksCovered(), acts = [];
+    var big = aggregate(list.filter(function (b) { return b.area === 'Big old-list pushes'; }));
+    if (big.n && big.cpc && bench && big.cpc > 2 * bench) {
+      acts.push({ tone: 'bad', save: big.cost / weeks, lose: big.clicks / weeks, text: 'Stop or shrink the old-list re-registration pushes',
+        detail: big.n + ' sends to lists of 5,000+ cost ' + inr(big.cost) + ' (' + pct(big.cost / tot.cost, 0) + ' of campaign spend) for ' + pct(big.clicks / tot.clicks, 0) + ' of the clicks: ' + inr(big.cpc) + ' per click against the campaign average of ' + inr(bench) + '. Stopping them saves about ' + inr(big.cost / weeks) + ' a week and loses about ' + int(big.clicks / weeks) + ' clicks a week. If you keep them, send to a smaller list with your best message.', tab: 'broadcasts', area: 'Big old-list pushes' });
+    }
+    SCHED_KEYS.forEach(function (k) {
+      var lp = state.live[k];
+      if (lp.cuts.length) acts.push({ tone: 'warn', save: lp.save, lose: lp.lose, text: SCHED_SHORT[k] + ' webinar: drop the ' + lp.cuts.map(function (r) { return r.slot.name.replace(/^.*· /, ''); }).join(', ') + ' live reminder' + (lp.cuts.length > 1 ? 's' : ''),
+        detail: 'Saves about ' + inr(lp.save) + ' per webinar (' + pct(lp.saveShare, 0) + ' of live-window spend) and loses about ' + int(lp.lose) + ' clicks (' + pct(lp.loseShare, 0) + ' of live-window clicks). These reminders cost ' + lp.cuts.map(function (r) { return inr(r.clicksPerSession ? r.costPerSession / r.clicksPerSession : null); }).join(', ') + ' per click, against ' + inr(lp.avgCpc) + ' for the live window as a whole.', tab: 'slots', sched: k });
+      state.slots[k].filter(function (r) { return r.verdict === 'cut' && !r.live; }).forEach(function (r) {
+        acts.push({ tone: 'warn', save: r.costPerSession, lose: r.clicksPerSession, text: SCHED_SHORT[k] + ' webinar: cut or rewrite the ' + r.slot.name + ' slot', detail: r.why + ' Costs about ' + inr(r.costPerSession) + ' per webinar.', tab: 'slots', sched: k });
+      });
+    });
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'remove'; }).sort(function (a, b) { return b.a.cost - a.a.cost; }).slice(0, 3).forEach(function (g) {
+      acts.push({ tone: 'bad', text: 'Replace the message ' + g.hook, detail: g.s.why + ' Used ' + g.s.sends + ' time' + (g.s.sends > 1 ? 's' : '') + ', ' + inr(g.a.cost) + ' spent, ' + inr(g.a.cpc) + ' per click.', msg: g.id });
+    });
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'more'; }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
+      acts.push({ tone: 'good', text: 'Use ' + g.hook + ' in more slots', detail: g.s.why + ' ' + inr(g.a.cpc) + ' per click across ' + g.s.sends + ' send' + (g.s.sends > 1 ? 's' : '') + '.', msg: g.id });
+    });
+    SCHED_KEYS.forEach(function (k) {
+      state.slots[k].filter(function (r) { return r.verdict === 'swap'; }).forEach(function (r) {
+        acts.push({ tone: 'good', text: SCHED_SHORT[k] + ' ' + r.slot.name + ': use ' + msgName(r.best) + ' every week', detail: r.why, tab: 'slots', sched: k });
+      });
+    });
+    return acts;
   }
 
-  function renderDecisionList() {
-    var d = state.dec, q = d.q.trim().toLowerCase();
-    var list = state.messages.filter(function (g) {
-      if (d.verdict && g.s.verdict !== d.verdict) return false;
-      if (d.family && g.family !== d.family) return false;
-      if (q && (g.content + ' ' + g.sends.map(function (b) { return b.name; }).join(' ')).toLowerCase().indexOf(q) === -1) return false;
+  function renderOverview() {
+    var list = C(), tot = aggregate(list), bench = state.stats.bench, weeks = weeksCovered();
+    var done = completed(), perSession = done.length ? tot.cost / done.length : null;
+    var acts = campaignActions();
+    var save = acts.reduce(function (m, a) { return m + (a.save || 0); }, 0), lose = acts.reduce(function (m, a) { return m + (a.lose || 0); }, 0);
+    var weekly = tot.cost / weeks;
+    var html = '<div class="wrap" style="gap:20px">';
+    html += '<div class="intro"><h2>10-minute webinar campaign</h2><p class="muted">Flexi Genie “Launch Your Business Online in 10 Minutes” broadcasts for the Tuesday, Wednesday and Sunday webinars: ' +
+      esc(dayLabel(Math.min.apply(null, list.map(function (b) { return b.t; })))) + ' to ' + esc(dayLabel(Math.max.apply(null, list.map(function (b) { return b.t; })))) + '. Every broadcast is matched to its webinar session, its schedule slot and the doc message it came from.</p></div>';
+    html += '<div class="strip">' +
+      stat('Webinar sessions', done.length, esc(done.map(function (i) { return SCHED_SHORT[i.template].slice(0, 3) + ' ' + dayLabel(i.date).replace(/^\w+, /, ''); }).join(' · '))) +
+      stat('Spend', inr(tot.cost), inr(perSession) + ' per session · ' + inr(weekly) + ' per week') +
+      stat('Clicks', int(tot.clicks), int(done.length ? tot.clicks / done.length : null) + ' per session') +
+      stat('Cost per click', inr(tot.cpc), 'Click rate ' + pct(tot.ctr, 2) + ' · read rate ' + pct(tot.readRate, 0)) +
+      stat('Spent above average', inr(tot.overspend), pct(tot.cost ? tot.overspend / tot.cost : null, 0) + ' of spend went on clicks costing more than ' + inr(bench)) +
+      '</div>';
+
+    html += '<section class="section"><div class="section-head"><div><h2>What to change</h2><p class="muted small">Ranked by money saved. Click an item for the details.</p></div>' +
+      (save ? '<div class="savebox"><b>' + inr(save) + '</b> a week could be saved (' + pct(weekly ? save / weekly : null, 0) + ' of weekly spend), losing about ' + int(lose) + ' clicks a week (' + pct(tot.clicks ? lose / (tot.clicks / weeks) : null, 0) + ').</div>' : '') + '</div>' +
+      '<ol class="actions">' + acts.sort(function (a, b) { return (b.save || 0) - (a.save || 0); }).map(function (a) {
+        var attrs = a.msg ? ' data-msg="' + a.msg + '"' : a.tab ? ' data-goto="' + a.tab + '"' + (a.sched ? ' data-sched="' + a.sched + '"' : '') + (a.area ? ' data-area="' + esc(a.area) + '"' : '') : '';
+        return '<li class="action ' + a.tone + '"' + attrs + ' tabindex="0"><b>' + esc(a.text) + (a.save ? ' <span class="save">saves ' + inr(a.save) + (a.tab === 'broadcasts' ? ' a week' : ' per webinar') + '</span>' : '') + '</b><span>' + esc(a.detail) + '</span></li>';
+      }).join('') + '</ol></section>';
+
+    // Where the money goes
+    var rows = AREAS.map(function (k) { return { k: k, a: aggregate(list.filter(function (b) { return b.area === k; })) }; }).filter(function (r) { return r.a.n; });
+    html += '<section class="section"><div class="section-head"><div><h2>Where the money goes</h2><p class="muted small">Share of spend next to share of clicks for each part of the campaign. Where the spend bar is longer than the clicks bar, money is working less hard. Reply messages are judged on replies.</p></div></div>' +
+      '<div class="table-wrap"><table class="list"><thead><tr><th>Part of the campaign</th><th class="r">Broadcasts</th><th style="min-width:220px">Spend vs clicks</th><th class="r">Spend</th><th class="r">Clicks</th><th class="r">Cost / click</th><th class="r">Click rate</th><th class="r">Spent above average</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var sp = tot.cost ? r.a.cost / tot.cost : 0, cl = tot.clicks ? r.a.clicks / tot.clicks : 0;
+        var reply = r.k === 'Reply messages';
+        return '<tr class="click" data-goto="broadcasts" data-area="' + esc(r.k) + '" tabindex="0"><td class="name"><b>' + esc(r.k) + '</b></td><td class="r num">' + r.a.n + '</td>' +
+          '<td><div class="pair"><span class="pb spend" style="width:' + Math.round(sp * 100) + '%"></span><span class="pl">' + pct(sp, 0) + ' of spend</span></div>' +
+          (reply ? '<div class="pair"><span class="pl faint">' + pct(r.a.replyRate, 1) + ' reply rate</span></div>' : '<div class="pair"><span class="pb clicks" style="width:' + Math.round(cl * 100) + '%"></span><span class="pl">' + pct(cl, 0) + ' of clicks</span></div>') + '</td>' +
+          '<td class="r num">' + inr(r.a.cost) + '</td><td class="r num">' + (reply ? int(r.a.replies) + ' replies' : int(r.a.clicks)) + '</td><td class="r num">' + (reply ? inr(r.a.cpReply) + '/reply' : '<span class="idx ' + (r.a.cpc && bench ? (r.a.cpc > 1.5 * bench ? 'down' : r.a.cpc < 0.7 * bench ? 'up' : '') : '') + '">' + inr(r.a.cpc) + '</span>') + '</td>' +
+          '<td class="r num">' + (reply ? '—' : pct(r.a.ctr, 2)) + '</td><td class="r num">' + (r.a.overspend >= 1 ? inr(r.a.overspend) : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+
+    // Sessions
+    var sess = state.result.instances.slice().sort(function (a, b) { return b.date - a.date; }).map(function (i) {
+      var a = aggregate(i.broadcasts);
+      var scored = i.broadcasts.filter(function (b) { return b.goal !== 'reply' && b.index !== null && (b.delivered || 0) >= 200; });
+      var best = scored.slice().sort(function (x, y) { return y.index - x.index; })[0], worst = scored.slice().sort(function (x, y) { return x.index - y.index; })[0];
+      return { i: i, a: a, best: best, worst: worst };
+    });
+    html += '<section class="section"><div class="section-head"><div><h2>Each webinar session</h2><p class="muted small">All broadcasts for a session, from the first invite to the next-day follow-up.</p></div></div>' +
+      '<div class="charts"><div class="chart"><h3>Spend per session</h3>' + barChart(sess.slice().reverse().map(function (x) { return { label: SCHED_SHORT[x.i.template].slice(0, 3) + ' ' + when(x.i.date, { day: 'numeric', month: 'short' }), v: x.a.cost, dim: x.i.upcoming, tip: SCHED_SHORT[x.i.template] + ' ' + dayLabel(x.i.date) + ': ' + inr(x.a.cost) + (x.i.upcoming ? ' so far' : '') }; }), function (v) { return '₹' + nf.format(Math.round(v)); }) + '</div>' +
+      '<div class="chart"><h3>Cost per click per session</h3>' + barChart(sess.slice().reverse().map(function (x) { return { label: SCHED_SHORT[x.i.template].slice(0, 3) + ' ' + when(x.i.date, { day: 'numeric', month: 'short' }), v: x.a.cpc || 0, dim: x.i.upcoming, tip: SCHED_SHORT[x.i.template] + ' ' + dayLabel(x.i.date) + ': ' + inr(x.a.cpc) + ' per click, ' + int(x.a.clicks) + ' clicks' }; }), function (v) { return '₹' + v.toFixed(0); }) + '</div></div>' +
+      '<div class="table-wrap"><table class="list"><thead><tr><th>Session</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Spend</th><th class="r">Clicks</th><th class="r">Cost / click</th><th class="r">Click rate</th><th class="r">Spent above avg</th><th>Best broadcast</th><th>Weakest broadcast</th></tr></thead><tbody>' +
+      sess.map(function (x) {
+        var one = function (b) { return b ? '<a href="#" data-ids="' + esc(b.id) + '">' + esc(b.slot ? b.slot.name : timeLabel(b.t)) + '</a> <span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>' : '—'; };
+        return '<tr><td class="name"><b>' + esc(SCHED_SHORT[x.i.template]) + ' · ' + esc(dayLabel(x.i.date)) + '</b>' + (movedNote(x.i) ? '<div class="faint small">' + esc(movedNote(x.i).replace(/^ \(|\)$/g, '')) + '</div>' : '') + (x.i.upcoming ? '<div class="faint small">in progress</div>' : '') + '</td>' +
+          '<td class="r num">' + x.a.n + '</td><td class="r num">' + int(x.a.delivered) + '</td><td class="r num">' + inr(x.a.cost) + '</td><td class="r num">' + int(x.a.clicks) + '</td><td class="r num">' + inr(x.a.cpc) + '</td><td class="r num">' + pct(x.a.ctr, 2) +
+          '</td><td class="r num">' + (x.a.overspend >= 1 ? inr(x.a.overspend) : '—') + '</td><td class="small">' + one(x.best) + '</td><td class="small">' + one(x.worst) + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+    $('#main').innerHTML = html + '</div>';
+  }
+
+  // ---------- Slot verdicts ----------
+  function renderSlots() {
+    var k = state.sched, rows = state.slots[k], lp = state.live[k], bench = state.stats.bench;
+    var insts = state.result.instances.filter(function (i) { return i.template === k && !i.upcoming; });
+    var html = '<div class="wrap" style="gap:18px"><div class="section-head"><div class="seg" role="group" aria-label="Webinar">' + SCHED_KEYS.map(function (s) {
+      return '<button type="button" data-sched="' + s + '" aria-pressed="' + (s === k) + '">' + SCHED_SHORT[s] + ' webinar</button>';
+    }).join('') + '</div><div class="seg" role="group" aria-label="View">' + [['verdict', 'Verdicts'], ['grid', 'Session by session']].map(function (v) {
+      return '<button type="button" data-slotview="' + v[0] + '" aria-pressed="' + (state.slotView === v[0]) + '">' + v[1] + '</button>';
+    }).join('') + '</div></div>';
+    if (state.slotView === 'grid') { $('#main').innerHTML = html + gridHtml(k) + '</div>'; return; }
+    if (!insts.length) { $('#main').innerHTML = html + '<div class="state"><h2>No completed ' + esc(SCHED_SHORT[k]) + ' sessions yet</h2></div></div>'; return; }
+
+    var spend = rows.reduce(function (m, r) { return m + r.costPerSession; }, 0), clicks = rows.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
+    html += '<div class="intro"><h2>' + esc(SCHEDULES[k].label) + ': keep, change or cut each slot</h2><p class="muted">Judged on ' + insts.length + ' session' + (insts.length > 1 ? 's' : '') + ' (' + esc(insts.map(function (i) { return dayLabel(i.date); }).join(', ')) + '). A typical session costs ' +
+      inr(spend) + ' across its slots and brings about ' + int(clicks) + ' clicks (' + inr(clicks ? spend / clicks : null) + ' per click; campaign average ' + inr(bench) + '). Click a row to see the broadcasts.</p></div>';
+    html += '<div class="table-wrap"><table class="list slots"><thead><tr><th>Slot</th><th style="min-width:250px">Verdict</th><th class="r">Sent</th><th>Usually sent</th><th class="r">Cost / send</th><th class="r">Clicks / send</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">vs similar</th><th class="r">If cut</th></tr></thead><tbody>';
+    var lastOff = null;
+    rows.forEach(function (r) {
+      if (r.slot.offset !== lastOff) {
+        lastOff = r.slot.offset;
+        html += '<tr class="day"><th colspan="10">' + (r.slot.offset === 0 ? 'Webinar day' : r.slot.offset === -1 ? '1 day before' : r.slot.offset === 1 ? 'Next day' : (-r.slot.offset) + ' days before') + '</th></tr>';
+      }
+      var a = r.a, reply = r.verdict === 'reply' || r.slot.goal === 'reply';
+      var times = r.items.map(function (b) { return b.t - dayStart(b.t); });
+      var avgClock = times.length ? clockOf(times.reduce(function (m, x) { return m + x; }, 0) / times.length) : '—';
+      var perSend = r.items.length ? 1 / r.items.length : 0;
+      html += '<tr' + (r.items.length ? ' class="click" data-ids="' + esc(r.items.map(function (b) { return b.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
+        '<td class="name"><b>' + esc(r.slot.name) + '</b>' + (r.live ? ' <span class="pill">live window</span>' : '') + '<div class="faint small">' + esc(r.slot.audience || '') + ' · ' + esc(String(r.slot.template || '').split(',')[0]) + '</div></td>' +
+        '<td class="vcell">' + slotPill(r.verdict) + '<div class="small why2">' + esc(r.why) + '</div>' + (r.best && (r.verdict === 'swap' || r.verdict === 'improve' || r.verdict === 'top' || r.verdict === 'keep') ? '<div class="faint small">Best here: ' + esc(msgName(r.best)) + ' (' + esc(dayLabel(r.best.t)) + ', ' + pct(rate(r.best), 2) + ')</div>' : '') + '</td>' +
+        '<td class="r num">' + r.sessionsSent + ' of ' + r.sessions + '</td>' +
+        '<td class="small">' + (r.items.length ? esc(avgClock) + (r.avgDelay !== null && Math.abs(r.avgDelay) >= 5 ? ' <span class="faint">(' + (r.avgDelay > 0 ? '+' : '−') + Math.round(Math.abs(r.avgDelay)) + 'm)</span>' : '') : '—') + '</td>' +
+        '<td class="r num">' + inr(a.cost * perSend) + '</td>' +
+        '<td class="r num">' + (reply ? int(a.replies * perSend) + ' replies' : int(a.clicks * perSend)) + '</td>' +
+        '<td class="r num">' + (reply ? pct(a.replyRate, 1) + ' reply' : pct(a.ctr, 2)) + '</td>' +
+        '<td class="r num">' + (reply ? inr(a.cpReply) + '/reply' : '<span class="idx ' + (a.cpc && bench ? (a.cpc > 1.5 * bench ? 'down' : a.cpc < 0.7 * bench ? 'up' : '') : '') + '">' + inr(a.cpc) + '</span>') + '</td>' +
+        '<td class="r num"><span class="idx ' + idxClass(a.index) + '">' + (reply ? '—' : vsSimilar(a.index)) + '</span></td>' +
+        
+        '<td class="r num small">' + (r.items.length && !reply ? '−' + inr(r.costPerSession) + '<div class="faint">−' + int(r.clicksPerSession) + ' clicks</div>' : '—') + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // Live window
+    if (lp.live.length) {
+      var liveSorted = lp.live.slice().sort(function (a, b) { return a.slot.time.localeCompare(b.slot.time); });
+      var maxClicks = Math.max.apply(null, liveSorted.map(function (r) { return r.clicksPerSession; }).concat([1]));
+      html += '<section class="section"><div class="section-head"><div><h2>Live window: which reminders earn their cost?</h2><p class="muted small">The same list gets a reminder every 5–10 minutes around live time. ' +
+        'Together they cost ' + inr(lp.cost) + ' per session for ' + int(lp.clicks) + ' clicks (' + inr(lp.avgCpc) + ' per click).' +
+        (lp.cuts.length ? ' <b>Dropping ' + lp.cuts.map(function (r) { return r.slot.name.replace(/^.*· /, ''); }).join(', ') + ' saves ' + inr(lp.save) + ' per session (' + pct(lp.saveShare, 0) + ') and loses ' + int(lp.lose) + ' clicks (' + pct(lp.loseShare, 0) + ').</b>' : ' Every reminder is pulling its weight right now.') + '</p></div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Reminder</th><th>Message used most</th><th style="min-width:180px">Clicks per session</th><th class="r">Cost per session</th><th class="r">Cost / click</th><th class="r">Share of live clicks</th><th>Suggestion</th></tr></thead><tbody>' +
+        liveSorted.map(function (r) {
+          var cpc = r.clicksPerSession ? r.costPerSession / r.clicksPerSession : null, cut = lp.cuts.indexOf(r) !== -1;
+          var counts = {}; r.items.forEach(function (b) { var n = msgName(b); counts[n] = (counts[n] || 0) + 1; });
+          var top = Object.keys(counts).sort(function (x, y) { return counts[y] - counts[x]; })[0] || '—';
+          return '<tr class="click" data-ids="' + esc(r.items.map(function (b) { return b.id; }).join(',')) + '" tabindex="0"><td class="name"><b>' + esc(r.slot.name.replace(/^.*· /, '')) + '</b></td><td class="name small">' + esc(top) + '</td>' +
+            '<td><div class="pair"><span class="pb clicks" style="width:' + Math.round(r.clicksPerSession / maxClicks * 100) + '%"></span><span class="pl">' + int(r.clicksPerSession) + '</span></div></td>' +
+            '<td class="r num">' + inr(r.costPerSession) + '</td><td class="r num"><span class="idx ' + (cpc && lp.avgCpc ? (cpc > 1.4 * lp.avgCpc ? 'down' : cpc < 0.8 * lp.avgCpc ? 'up' : '') : '') + '">' + inr(cpc) + '</span></td>' +
+            '<td class="r num">' + pct(lp.clicks ? r.clicksPerSession / lp.clicks : null, 0) + '</td><td>' + (cut ? '<span class="verdict v-remove">Drop</span>' : '<span class="verdict v-keep">Keep</span>') + '</td></tr>';
+        }).join('') + '</tbody></table></div></section>';
+    }
+
+    // Recommended schedule
+    var keep = rows.filter(function (r) { return r.items.length && r.verdict !== 'cut' && lp.cuts.indexOf(r) === -1; });
+    var dropped = rows.filter(function (r) { return r.items.length && (r.verdict === 'cut' || lp.cuts.indexOf(r) !== -1); });
+    var newSpend = keep.reduce(function (m, r) { return m + r.costPerSession; }, 0), newClicks = keep.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
+    html += '<section class="section"><div class="section-head"><div><h2>Suggested schedule for the next ' + esc(SCHED_SHORT[k]) + ' webinar</h2><p class="muted small">' +
+      'About ' + inr(newSpend) + ' per session instead of ' + inr(spend) + ' (' + (spend ? '−' + pct((spend - newSpend) / spend, 0) : '') + '), keeping about ' + int(newClicks) + ' of ' + int(clicks) + ' clicks (' + pct(clicks ? newClicks / clicks : null, 0) + ').</p></div></div>' +
+      '<ol class="plan-list">' + rows.filter(function (r) { return r.items.length || r.verdict === 'none'; }).map(function (r) {
+        var drop = dropped.indexOf(r) !== -1;
+        var use = r.best && r.best.index >= 1 ? msgName(r.best) : (r.slot.plan ? docName(r.slot.plan) : '');
+        return '<li class="' + (drop ? 'drop' : '') + '"><span class="t">' + esc(r.slot.name) + '</span><span>' + (drop ? 'Drop' : r.verdict === 'none' ? 'Not sent so far' : 'Send ' + esc(use)) + '</span></li>';
+      }).join('') + '</ol></section>';
+    $('#main').innerHTML = html + '</div>';
+  }
+
+  // ---------- Messages ----------
+  function renderMessages() {
+    var f = state.mfilter, counts = {};
+    state.cmsgs.forEach(function (g) { counts[g.s.verdict] = (counts[g.s.verdict] || 0) + 1; });
+    var html = '<div class="wrap" style="gap:16px"><div class="intro"><h2>Which messages to keep using</h2><p class="muted">Each card is one message from the docs (with its template names and the slots it’s used in), or a message that isn’t in the docs. It combines every time it was sent, scored against similar sends with the same timing and list size.</p></div>' +
+      '<div class="vchips" role="group" aria-label="Verdict">' + [['', 'All', state.cmsgs.length]].concat(Object.keys(VERDICTS).map(function (v) { return [v, VERDICTS[v].label, counts[v] || 0]; })).map(function (c) {
+        return '<button type="button" class="vchip' + (c[0] ? ' v-' + c[0] : '') + '" data-vfilter="' + c[0] + '" aria-pressed="' + (f.verdict === c[0]) + '"><b>' + c[2] + '</b> ' + esc(c[1]) + '</button>';
+      }).join('') + '</div><div class="filters">' +
+      '<label for="mSort">Sort by<select id="mSort">' + [['impact', 'Strongest evidence first'], ['cost', 'Most spend'], ['cpc', 'Highest cost per click'], ['index', 'Best vs similar'], ['recent', 'Most recently sent']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (f.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>' +
+      '<label for="mDocs">Show<select id="mDocs"><option value="">All messages</option><option value="doc"' + (f.docs === 'doc' ? ' selected' : '') + '>Doc messages only</option><option value="x"' + (f.docs === 'x' ? ' selected' : '') + '>Not in the docs</option></select></label>' +
+      '<label for="mQ">Search<input type="search" id="mQ" placeholder="Words, template or broadcast name" value="' + esc(f.q) + '"></label></div><div id="msgList" class="cards-col"></div></div>';
+    $('#main').innerHTML = html;
+    renderMessageList();
+  }
+  function renderMessageList() {
+    var f = state.mfilter, q = f.q.trim().toLowerCase();
+    var list = state.cmsgs.filter(function (g) {
+      if (f.verdict && g.s.verdict !== f.verdict) return false;
+      if (f.docs === 'doc' && !g.doc) return false;
+      if (f.docs === 'x' && g.doc) return false;
+      if (q && (g.hook + ' ' + g.content + ' ' + (g.doc ? g.doc.templates.join(' ') : '') + ' ' + g.sends.map(function (b) { return b.name; }).join(' ')).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
     var last = function (g) { return g.sends[g.sends.length - 1].t; };
     list.sort(function (a, b) {
-      if (d.sort === 'index') return (b.s.index === null ? -1 : b.s.index) - (a.s.index === null ? -1 : a.s.index);
-      if (d.sort === 'worst') return (a.s.index === null ? 99 : a.s.index) - (b.s.index === null ? 99 : b.s.index);
-      if (d.sort === 'recent') return last(b) - last(a);
-      if (d.sort === 'sends') return b.s.sends - a.s.sends;
+      if (f.sort === 'cost') return b.a.cost - a.a.cost;
+      if (f.sort === 'cpc') return (b.a.cpc || 0) - (a.a.cpc || 0);
+      if (f.sort === 'index') return (b.s.index === null ? -1 : b.s.index) - (a.s.index === null ? -1 : a.s.index);
+      if (f.sort === 'recent') return last(b) - last(a);
       return VERDICTS[a.s.verdict].rank - VERDICTS[b.s.verdict].rank || Math.abs(b.s.z) - Math.abs(a.s.z);
     });
-    if (!list.length) { $('#decList').innerHTML = '<div class="state"><h2>No messages match</h2><p class="muted">Clear a filter to see more.</p></div>'; return; }
-    $('#decList').innerHTML = list.map(messageCard).join('');
+    $('#msgList').innerHTML = list.length ? list.map(messageCard).join('') : '<div class="state"><h2>No messages match</h2><p class="muted">Clear a filter to see more.</p></div>';
   }
-
   function messageCard(g) {
-    var s = g.s, first = g.sends[0], last = g.sends[g.sends.length - 1];
-    var slots = {};
-    g.sends.forEach(function (b) { var k = b.slot ? b.slot.name : b.stage; slots[k] = (slots[k] || 0) + 1; });
-    var zeroNote = s.clicks === 0 && s.clickDel >= 1000 && /https?:\/\//.test(g.content)
-      ? '<p class="small warnline">Zero clicks with a link in the message: check that the link is set up as a trackable button in AiSensy, or clicks are not counted.</p>' : '';
+    var s = g.s, a = g.a, first = g.sends[0], last = g.sends[g.sends.length - 1];
+    var best = g.sends.filter(function (b) { return b.index !== null && (b.delivered || 0) >= 200; }).sort(function (x, y) { return y.index - x.index; })[0];
+    var where = g.doc ? g.doc.refs.map(function (r) { return SCHED_SHORT[r.pb] + ' ' + r.name; }).join(' · ') : '';
     return '<article class="mcard v-' + s.verdict + '" data-id="' + g.id + '">' +
-      '<div class="mhead">' + verdictPill(s.verdict) +
-      (s.verdict !== 'data' ? '<span class="conf">' + esc(s.confidence) + ' confidence</span>' : '') +
-      (s.goal === 'reply' ? '<span class="pill">Asks for a reply</span>' : '') +
-      '<span class="faint small">' + esc(familyLabel(g.family)) + ' · ' + esc(g.media) + '</span></div>' +
-      '<h3>' + esc(g.hook) + '</h3>' +
-      '<p class="why">' + esc(s.why) + '</p>' + zeroNote +
-      (s.goal === 'reply' ? replyStats(s) : '<div class="mstats">' +
-      mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) +
-      mstat('Delivered', int(s.delivered)) +
-      mstat('Read rate', pct(s.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
-      mstat('Click rate', pct(s.ctr, 2), int(s.clicks) + ' clicks') +
-      mstat('Click-to-read', pct(s.ctor, 1), s.ctorIndex !== null ? vsSimilar(s.ctorIndex) + ' vs similar' : '', idxClass(s.ctorIndex)) +
-      mstat('Cost / click', inr(s.cpc), inr(s.cost) + ' spent') +
-      mstat('Clicks vs similar', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') +
-      '</div>') +
+      '<div class="mhead">' + verdictPill(s.verdict) + (s.verdict !== 'data' ? '<span class="conf">' + esc(s.confidence) + ' confidence</span>' : '') +
+      (s.goal === 'reply' ? '<span class="pill">Asks for a reply</span>' : '') + (g.doc ? '<span class="pill">In the docs</span>' : '<span class="pill warn">Not in the docs</span>') +
+      '<span class="faint small">' + esc(g.media) + (g.doc ? ' · template ' + esc(g.doc.templates.join(', ')) : '') + '</span></div>' +
+      '<h3>' + esc(g.hook) + '</h3>' + (where ? '<p class="faint small">Doc slots: ' + esc(where) + '</p>' : '') +
+      '<p class="why">' + esc(s.why) + '</p>' +
+      (s.goal === 'reply' ? replyStats(s, a) : '<div class="mstats">' +
+        mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) +
+        mstat('Read rate', pct(a.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
+        mstat('Clicks', int(a.clicks), int(a.clicks / s.sends) + ' per send') + mstat('Click rate', pct(a.ctr, 2)) +
+        mstat('Spend', inr(a.cost), inr(a.cost / s.sends) + ' per send') + mstat('Cost / click', inr(a.cpc), state.stats.bench ? 'avg ' + inr(state.stats.bench) : '', a.cpc && state.stats.bench ? (a.cpc > 1.5 * state.stats.bench ? 'down' : a.cpc < 0.7 * state.stats.bench ? 'up' : '') : '') +
+        mstat('Clicks vs similar', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') + '</div>') +
       '<p class="meta small">First sent ' + esc(dayLabel(first.t)) + ', ' + esc(timeLabel(first.t)) + ' · last sent ' + esc(dayLabel(last.t)) + ', ' + esc(timeLabel(last.t)) +
-      ' · used as: ' + esc(Object.keys(slots).map(function (k) { return k + (slots[k] > 1 ? ' ×' + slots[k] : ''); }).join(', ')) + '</p>' +
-      '<details><summary>Send history and full message</summary>' + sendTable(g.sends) +
-      '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details>' +
-      '</article>';
+      (best ? ' · best result: ' + esc(dayLabel(best.t)) + ', ' + esc(timeLabel(best.t)) + ' (' + pct(rate(best), 2) + ')' : '') + '</p>' +
+      '<details><summary>Every send and the full message</summary>' + sendTable(g.sends) + '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details></article>';
   }
-  function replyStats(s) {
-    return '<div class="mstats">' +
-      mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) +
-      mstat('Delivered', int(s.delivered)) +
-      mstat('Read rate', pct(s.readRate)) +
+  function replyStats(s, a) {
+    return '<div class="mstats">' + mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) + mstat('Read rate', pct(a.readRate)) +
       mstat('Reply rate', pct(s.replyRate, 1), int(s.repliesCounted) + ' replies' + (s.replyKnown < s.delivered ? ' (counted on ' + int(s.replyKnown) + ' delivered)' : '')) +
-      mstat('Cost / reply', inr(s.cpReply), inr(s.cost) + ' spent') +
-      mstat('Replies vs other reply messages', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') +
-      '</div>';
+      mstat('Spend', inr(a.cost)) + mstat('Cost / reply', inr(s.cpReply)) +
+      mstat('Replies vs other reply messages', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>') + '</div>';
   }
   function mstat(label, value, note, cls) {
     return '<div class="ms"><div class="k">' + esc(label) + '</div><div class="v">' + value + '</div>' + (note ? '<div class="n ' + (cls || '') + '">' + esc(note) + '</div>' : '') + '</div>';
   }
   function sendTable(sends) {
-    return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th>Timing</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Replies</th><th class="r">vs similar</th></tr></thead><tbody>' +
+    return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Session · slot</th><th>Broadcast</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Replies</th><th class="r">Cost</th><th class="r">Cost / click</th><th class="r">vs similar</th></tr></thead><tbody>' +
       sends.slice().sort(function (a, b) { return b.t - a.t; }).map(function (b) {
-        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + '</td><td>' +
-          esc(b.slot ? b.slot.name : b.stage) + ' <span class="faint small">' + esc(b.list) + '</span></td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) +
-          '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + int(b.replies) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="small">' + esc(sessionLabel(b)) + (b.slot ? ' · ' + esc(b.slot.name) : ' · not in schedule') + '</td><td class="name">' + esc(b.name) + '</td>' +
+          '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + int(b.replies) +
+          '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.cpc) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>';
   }
+  function showMessage(id) {
+    closeDrawer();
+    state.tab = 'messages'; state.mfilter.verdict = ''; state.mfilter.docs = ''; state.mfilter.q = '';
+    render();
+    var target = null;
+    Array.prototype.forEach.call(document.querySelectorAll('#msgList .mcard'), function (c) { if (c.dataset.id === id) target = c; });
+    if (target) { target.querySelector('details').open = true; target.scrollIntoView({ behavior: 'smooth', block: 'start' }); target.classList.add('flash'); }
+  }
 
-  // ---------- Suggestions ----------
-  function renderSuggestions() {
-    var all = state.broadcasts, genie = all.filter(function (b) { return b.family === 'genie'; });
-    var actions = [];
-
-    // 1. Remove
-    var removes = state.messages.filter(function (g) { return g.s.verdict === 'remove'; }).sort(function (a, b) { return b.s.clickDel - a.s.clickDel; });
-    removes.slice(0, 3).forEach(function (g) {
-      actions.push({ tone: 'bad', text: 'Stop sending “' + g.hook + '”', detail: g.s.sends + ' sends, ' + int(g.s.delivered) + ' delivered, ' + int(g.s.clicks) + ' clicks (' + pct(g.s.ctr, 2) + '), ' + inr(g.s.cost) + ' spent. ' + g.s.why, id: g.id });
+  // ---------- Broadcasts ----------
+  function renderBroadcasts() {
+    var f = state.bfilter;
+    var sessions = state.result.instances.slice().sort(function (a, b) { return b.date - a.date; });
+    $('#main').innerHTML = '<div class="wrap" style="gap:16px"><div class="filters">' +
+      '<label for="bSched">Webinar<select id="bSched"><option value="">All</option>' + SCHED_KEYS.map(function (k) { return '<option value="' + k + '"' + (f.sched === k ? ' selected' : '') + '>' + SCHED_SHORT[k] + '</option>'; }).join('') + '</select></label>' +
+      '<label for="bSession">Session<select id="bSession"><option value="">All sessions</option>' + sessions.map(function (i) { return '<option value="' + i.key + '"' + (f.session === i.key ? ' selected' : '') + '>' + esc(SCHED_SHORT[i.template] + ' · ' + dayLabel(i.date)) + '</option>'; }).join('') + '</select></label>' +
+      '<label for="bArea">Part of campaign<select id="bArea"><option value="">All</option>' + AREAS.map(function (a) { return '<option' + (f.area === a ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') + '</select></label>' +
+      '<label for="bQ">Search<input type="search" id="bQ" placeholder="Broadcast name, message or template" value="' + esc(f.q) + '"></label>' +
+      '<label class="check" for="bOther"><input type="checkbox" id="bOther"' + (f.others ? ' checked' : '') + '> Include other campaigns</label>' +
+      '</div><div id="bResults" class="wrap" style="gap:16px"></div></div>';
+    renderBroadcastRows();
+  }
+  function renderBroadcastRows() {
+    var f = state.bfilter, q = f.q.trim().toLowerCase();
+    var list = (f.others ? state.broadcasts : C()).filter(function (b) {
+      if (f.sched && (!b.session || templateFor(b.session.date) !== f.sched)) return false;
+      if (f.session && (!b.session || templateFor(b.session.date) + '|' + b.session.date !== f.session)) return false;
+      if (f.area && b.area !== f.area) return false;
+      if (q && (b.name + ' ' + b.content + ' ' + (b.doc ? b.doc.templates.join(' ') + ' ' + b.doc.name : '')).toLowerCase().indexOf(q) === -1) return false;
+      return true;
     });
-    // 2. Use more
-    state.messages.filter(function (g) { return g.s.verdict === 'more'; }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
-      actions.push({ tone: 'good', text: 'Use “' + g.hook + '” in more slots', detail: vsSimilar(g.s.index) + ' clicks vs similar sends across ' + g.s.sends + ' send' + (g.s.sends > 1 ? 's' : '') + ' (' + pct(g.s.ctr, 2) + ' click rate). Base new versions on it.', id: g.id });
-    });
-    // 3. Timing (registered list, before live)
-    var pre = genie.filter(function (b) { return isPreLive(b.stage) && b.list === 'Registered list'; });
-    var hours = rateBy(pre, function (b) { return Math.floor((b.t - dayStart(b.t)) / 60); }, 800).sort(function (a, b) { return b.ctr - a.ctr; });
-    if (hours.length >= 3) {
-      var top = hours.slice(0, 2), bottom = hours.slice(-2);
-      actions.push({ tone: 'good', text: 'Send pre-webinar reminders at ' + top.map(function (h) { return hourLabel(h.key); }).join(' or ') + ', not ' + bottom.map(function (h) { return hourLabel(h.key); }).join(' or '),
-        detail: top.map(function (h) { return hourLabel(h.key) + ' gets ' + pct(h.ctr, 2); }).join(', ') + ' click rate on your registered list; ' + bottom.map(function (h) { return hourLabel(h.key) + ' gets ' + pct(h.ctr, 2); }).join(', ') + '.' });
-    }
-    // 4. Big lists
-    var lists = rateBy(genie, function (b) { return b.list; }, 0);
-    var big = lists.filter(function (x) { return x.key === 'Big list (5,000+)'; })[0], reg = lists.filter(function (x) { return x.key === 'Registered list'; })[0];
-    if (big && reg && big.cpc && reg.cpc && big.cpc > reg.cpc * 1.5) {
-      actions.push({ tone: 'warn', text: 'Big cold-list blasts cost ' + Math.round(big.cpc / reg.cpc) + '× more per click', detail: 'Lists of 5,000+ get ' + pct(big.ctr, 2) + ' click rate at ' + inr(big.cpc) + ' per click, against ' + pct(reg.ctr, 2) + ' and ' + inr(reg.cpc) + ' on registered lists (' + inr(big.cost) + ' spent on ' + big.n + ' big sends). Send them less often, or only with a top-performing message.' });
-    }
-    // 5. Live burst
-    var burst = liveBurst(all).filter(function (x) { return x.n >= 2; });
-    if (burst.length >= 3) {
-      var bAvg = burst.reduce(function (m, x) { return m + x.clicks; }, 0) / burst.reduce(function (m, x) { return m + x.del; }, 0);
-      var weak = burst.filter(function (x) { return x.ctr < bAvg * 0.75; });
-      if (weak.length) actions.push({ tone: 'warn', text: 'Drop or rewrite the ' + weak.map(function (x) { return fmtHM(x.key); }).join(', ') + ' live reminder' + (weak.length > 1 ? 's' : ''),
-        detail: weak.map(function (x) { return fmtHM(x.key) + ' averages ' + pct(x.ctr, 2); }).join(', ') + ' against ' + pct(bAvg, 2) + ' for the whole live window. Fewer, stronger live reminders save cost without losing many clicks.' });
-    }
-    // 6. Failures
-    var fail = all.reduce(function (m, b) { return m + (b.failed || 0); }, 0), aud = all.reduce(function (m, b) { return m + (b.audience || 0); }, 0);
-    var badLists = all.filter(function (b) { return (b.audience || 0) >= 200 && b.failed / b.audience >= 0.1; });
-    if (badLists.length) actions.push({ tone: 'warn', text: badLists.length + ' broadcasts had 10%+ failed messages', detail: int(fail) + ' messages failed overall (' + pct(aud ? fail / aud : null) + ' of audience). Clean these lists first: ' + badLists.slice(0, 4).map(function (b) { return b.name + ' (' + pct(b.failed / b.audience, 0) + ')'; }).join(', ') + (badLists.length > 4 ? '…' : '') + '.' });
+    var a = aggregate(list), sort = state.sort;
+    var val = function (b) {
+      var small = (b.delivered || 0) < 100 ? (sort.dir < 0 ? -2 : 2) : 0;
+      switch (sort.key) {
+        case 'clickRate': return small || (rate(b) === null ? -1 : rate(b));
+        case 'readRate': return small || (b.delivered ? b.read / b.delivered : -1);
+        case 'index': return b.index === null ? (sort.dir < 0 ? -9 : 9) : b.index;
+        case 'cpc': return b.cpc === null || b.cpc === undefined ? (sort.dir < 0 ? -1 : 1e9) : b.cpc;
+        case 'name': return b.name.toLowerCase();
+        case 'msg': return msgName(b).toLowerCase();
+        case 'slot': return (b.slot ? b.slot.name : 'zz').toLowerCase();
+        default: var v = b[sort.key]; return v === null || v === undefined ? -1 : v;
+      }
+    };
+    var rows = list.slice().sort(function (x, y) { var p = val(x), r = val(y); return (typeof p === 'string' ? p.localeCompare(r) : p - r) * sort.dir; });
+    var shown = state.showAll ? rows : rows.slice(0, 150);
+    var th = function (key, label, right) {
+      return '<th class="sort' + (right ? ' r' : '') + '" data-sort="' + key + '" aria-sort="' + (sort.key === key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + label + (sort.key === key ? ' <span class="arrow">' + (sort.dir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
+    };
+    var html = '<div class="strip">' + stat('Broadcasts', int(a.n)) + stat('Delivered', int(a.delivered), pct(a.readRate, 0) + ' read') + stat('Clicks', int(a.clicks), pct(a.ctr, 2) + ' click rate') +
+      stat('Spend', inr(a.cost), inr(a.cpm) + ' per 1,000 delivered') + stat('Cost per click', inr(a.cpc), (a.overspend >= 1 ? inr(a.overspend) + ' above average' : '')) + '</div>';
+    html += '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('slot', 'Session · slot') + th('msg', 'Message (doc) · template') + th('name', 'Broadcast') + th('audience', 'Audience', 1) + th('delivered', 'Delivered', 1) +
+      th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('cost', 'Cost', 1) + th('cpc', 'Cost / click', 1) + th('overspend', 'Above avg', 1) + th('index', 'vs similar', 1) + '</tr></thead><tbody>' +
+      shown.map(function (b) {
+        var flags = (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') + (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '');
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + '<div class="faint small">' + esc(timeLabel(b.t)) + '</div></td>' +
+          '<td class="small">' + esc(b.family === 'genie' ? sessionLabel(b) : familyLabel(b.family)) + '<div class="faint">' + esc(b.slot ? b.slot.name : b.family === 'genie' ? 'not in schedule' : '') + '</div></td>' +
+          '<td class="name small">' + esc(b.family === 'genie' ? msgName(b) : '—') + (b.doc ? '<div class="faint">' + esc(b.doc.templates.join(', ')) + '</div>' : b.family === 'genie' ? '<div class="faint">not in the docs</div>' : '') + '</td>' +
+          '<td class="name">' + esc(b.name) + flags + '</td><td class="r num">' + int(b.audience) + '</td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null, 0) + '</td>' +
+          '<td class="r num">' + (b.goal === 'reply' ? int(b.replies) + ' rep' : int(b.clicks)) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.cpc) + '</td>' +
+          '<td class="r num">' + (b.overspend >= 1 ? inr(b.overspend) : '—') + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>' + (rows.length > shown.length ? '<div><button class="btn" type="button" id="showAllBtn">Show all ' + rows.length + '</button></div>' : '');
+    $('#bResults').innerHTML = html;
+  }
 
-    var html = '<div class="wrap" style="gap:20px">';
-    html += '<section class="section"><div class="section-head"><div><h2>Do these first</h2><p class="muted small">Generated from every broadcast in the sheet. Click an item to see its message.</p></div></div><ol class="actions">' +
-      actions.map(function (a) { return '<li class="action ' + a.tone + '"' + (a.id ? ' data-msg="' + a.id + '" tabindex="0"' : '') + '><b>' + esc(a.text) + '</b><span>' + esc(a.detail) + '</span></li>'; }).join('') + '</ol></section>';
-
-    // Timing charts
-    var hourRows = rateBy(pre, function (b) { return Math.floor((b.t - dayStart(b.t)) / 60); }, 0).sort(function (a, b) { return a.key - b.key; }).map(function (h) {
-      return { label: (h.key % 12 || 12) + (h.key < 12 ? 'a' : 'p'), v: h.ctr * 100, dim: h.del < 800, tip: hourLabel(h.key) + ': ' + pct(h.ctr, 2) + ' click rate, ' + h.n + ' broadcasts, ' + int(h.del) + ' delivered' };
-    });
-    var dow = rateBy(genie.filter(function (b) { return b.expected !== null; }), function (b) { return weekday(b.t); }, 0).sort(function (a, b) { return a.key - b.key; }).map(function (x) {
-      return { label: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][x.key], v: x.index === null ? 0 : x.index * 100, dim: x.del < 2000, tip: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][x.key] + ': ' + vsSimilar(x.index) + ' clicks vs similar sends, ' + x.n + ' broadcasts' };
-    });
-    var burstRows = liveBurst(all).map(function (x) { return { label: fmtHM(x.key).replace(' PM', 'p').replace(' AM', 'a'), v: x.ctr * 100, dim: x.n < 2, tip: fmtHM(x.key) + ': ' + pct(x.ctr, 2) + ' click rate across ' + x.n + ' sends' }; });
-    html += '<section class="section"><div class="section-head"><div><h2>When to send</h2><p class="muted small">Pale bars have little data behind them. The Timing tab shows the effect of sending late and the best hour for each stage.</p></div></div><div class="charts">' +
-      '<div class="chart"><h3>Before the webinar: click rate by hour</h3><p class="faint small">Flexi Genie reminders to registered lists, sent before live time.</p>' + barChart(hourRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
-      '<div class="chart"><h3>Live window: click rate by send time</h3><p class="faint small">Reminders in the hour around live time.</p>' + barChart(burstRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
-      '<div class="chart"><h3>Day of the week</h3><p class="faint small">Clicks vs similar sends (100 = average), so timing and list size are already accounted for.</p>' + barChart(dow, function (v) { return Math.round(v); }) + '</div>' +
-      '</div></section>';
-
-    // Message style
-    var lifts = featureLifts(genie);
-    if (lifts.length) {
-      html += '<section class="section"><div class="section-head"><div><h2>What kind of message gets clicks</h2><p class="muted small">Flexi Genie messages with and without each element, compared on clicks vs similar sends. This shows patterns, not proof: test before changing everything.</p></div></div>' +
-        '<div class="table-wrap"><table class="list"><thead><tr><th>Message element</th><th class="r">Sends with</th><th class="r">Clicks vs similar (with)</th><th class="r">(without)</th><th class="r">Effect</th></tr></thead><tbody>' +
-        lifts.map(function (x) {
-          var cls = x.lift >= 0.15 ? 'up' : x.lift <= -0.15 ? 'down' : '';
-          return '<tr><td class="name">' + esc(x.f.label) + '</td><td class="r num">' + x.withN + ' of ' + (x.withN + x.withoutN) + '</td><td class="r num">' + vsSimilar(x.withIdx) + '</td><td class="r num">' + vsSimilar(x.withoutIdx) +
-            '</td><td class="r num"><span class="idx ' + cls + '">' + (x.lift >= 0 ? '+' : '−') + Math.abs(Math.round(x.lift * 100)) + '%</span></td></tr>';
+  // ---------- Other campaigns ----------
+  function renderOther() {
+    var others = state.broadcasts.filter(function (b) { return b.family !== 'genie'; });
+    var fams = FAMILIES.filter(function (f) { return others.some(function (b) { return b.family === f.key; }); });
+    var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Other campaigns</h2><p class="muted">Broadcasts that aren’t part of the 10-minute webinar, for reference.</p></div>' +
+      '<div class="table-wrap"><table class="list"><thead><tr><th>Campaign</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Spend</th><th class="r">Cost / click</th></tr></thead><tbody>' +
+      fams.map(function (f) {
+        var a = aggregate(others.filter(function (b) { return b.family === f.key; }).map(function (b) { return Object.assign({}, b, { overspend: 0, expected: null }); }));
+        return '<tr><td class="name"><b>' + esc(f.label) + '</b></td><td class="r num">' + a.n + '</td><td class="r num">' + int(a.delivered) + '</td><td class="r num">' + pct(a.readRate, 0) + '</td><td class="r num">' + int(a.clicks) + '</td><td class="r num">' + pct(a.ctr, 2) + '</td><td class="r num">' + inr(a.cost) + '</td><td class="r num">' + inr(a.cpc) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    fams.forEach(function (f) {
+      var list = others.filter(function (b) { return b.family === f.key; }).sort(function (a, b) { return b.t - a.t; });
+      html += '<section class="section"><div class="section-head"><h2>' + esc(f.label) + '</h2></div><div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Cost</th><th class="r">Cost / click</th></tr></thead><tbody>' +
+        list.map(function (b) {
+          return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + '</td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null, 0) +
+            '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.clicks ? b.cost / b.clicks : null) + '</td></tr>';
         }).join('') + '</tbody></table></div></section>';
-    }
-
-    // Lists and campaign cost
-    var famRows = rateBy(all, function (b) { return b.family; }, 0).sort(function (a, b) { return (a.cpc || 1e9) - (b.cpc || 1e9); });
-    html += '<section class="section"><div class="section-head"><div><h2>Where the money goes</h2></div></div><div class="table-wrap"><table class="list"><thead><tr><th>Campaign / list</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Spend</th><th class="r">Cost / click</th></tr></thead><tbody>' +
-      famRows.map(function (x) { return costRow(familyLabel(x.key), x); }).join('') +
-      lists.map(function (x) { return costRow('Flexi Genie · ' + x.key, x); }).join('') + '</tbody></table></div></section>';
-
-    // Next webinar plan
-    html += '<section class="section"><div class="section-head"><div><h2>Plan for the next webinar</h2><p class="muted small">Each schedule slot, judged on every session so far, with the best message seen in that slot.</p></div></div>' +
-      ['tue', 'wed', 'sun'].map(planTable).join('') + '</section>';
-
-    html += '</div>';
-    $('#main').innerHTML = html;
+    });
+    $('#main').innerHTML = html + '</div>';
   }
-  function fmtHM(k) { var p = k.split(':').map(Number); return (p[0] % 12 || 12) + ':' + String(p[1]).padStart(2, '0') + (p[0] < 12 ? ' AM' : ' PM'); }
-  function costRow(label, x) {
-    return '<tr><td class="name">' + esc(label) + '</td><td class="r num">' + x.n + '</td><td class="r num">' + int(x.del) + '</td><td class="r num">' + int(x.clicks) + '</td><td class="r num">' + pct(x.ctr, 2) + '</td><td class="r num">' + inr(x.cost) + '</td><td class="r num">' + inr(x.cpc) + '</td></tr>';
-  }
-  function planTable(tpl) {
-    var insts = state.result.instances.filter(function (i) { return i.template === tpl && !i.upcoming; });
-    var sched = SCHEDULES[tpl];
-    if (!insts.length) return '';
-    var rows = sched.slots.map(function (s, idx) {
-      var sentItems = [].concat.apply([], insts.map(function (i) { return i.slots[idx].items; }));
-      var items = sentItems.filter(hasClicks);
-      var c = 0, e = 0, del = 0;
-      items.forEach(function (b) { c += b.clicks; del += b.delivered; if (b.expected !== null) e += b.expected; });
-      var index = e > 0 ? c / e : null;
-      var best = items.filter(function (b) { return b.index !== null && b.index >= 0.8 && b.delivered >= 200; }).sort(function (a, b) { return b.index - a.index; })[0];
-      var rec;
-      if (!sentItems.length) rec = ['', 'Not sent yet'];
-      else if (!items.length) rec = ['', 'Sent, but no click data'];
-      else if (e < 3) rec = ['data', 'Not enough data'];
-      else if (index >= 1.15) rec = ['more', 'Keep, it works'];
-      else if (index >= 0.8) rec = ['keep', 'Keep'];
-      else if (index >= 0.55) rec = ['improve', 'Use a stronger message'];
-      else rec = ['remove', 'Drop or move this slot'];
-      return '<tr><td class="name">' + esc(s.name) + '</td><td class="r num">' + (sentItems.length ? sentItems.length : '—') + '</td><td class="r num">' + pct(del ? c / del : null, 2) + '</td><td class="r num"><span class="idx ' + idxClass(index) + '">' + vsSimilar(index) + '</span></td>' +
-        '<td>' + (rec[0] ? '<span class="verdict v-' + rec[0] + '">' + esc(rec[1]) + '</span>' : '<span class="faint small">' + rec[1] + '</span>') + '</td>' +
-        '<td class="name">' + (best ? '<a href="#" data-msg="' + best.message.id + '">' + esc(best.message.hook.slice(0, 70)) + (best.message.hook.length > 70 ? '…' : '') + '</a> <span class="faint small">' + pct(rate(best), 2) + '</span>' : '<span class="faint small">' + (items.length ? 'None did well here yet' : '—') + '</span>') + '</td></tr>';
-    }).join('');
-    return '<h3 class="plan-h">' + esc(sched.label) + ' <span class="faint small">' + insts.length + ' sessions: ' + esc(insts.map(function (i) { return dayLabel(i.date); }).join(', ')) + '</span></h3>' +
-      '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">vs similar</th><th>Recommendation</th><th>Best message in this slot</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+  /** Vertical bar chart drawn to one scale; each bar has a hover tooltip. */
+  function barChart(rows, fmt) {
+    if (!rows.length) return '<p class="faint small">No data yet.</p>';
+    var W = 560, H = 190, padL = 52, padB = 22, padT = 8;
+    var max = Math.max.apply(null, rows.map(function (r) { return r.v; }).concat([0]));
+    if (max <= 0) max = 1;
+    var step = Math.pow(10, Math.floor(Math.log10(max))), nice = Math.ceil(max / step) * step;
+    var ticks = [0, nice / 2, nice];
+    var bw = (W - padL) / rows.length, gap = Math.min(10, bw * 0.3);
+    var y = function (v) { return padT + (H - padT - padB) * (1 - v / nice); };
+    var every = Math.ceil(rows.length / 8);
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">';
+    ticks.forEach(function (tk) { svg += '<line class="grid" x1="' + padL + '" x2="' + W + '" y1="' + y(tk) + '" y2="' + y(tk) + '"></line><text x="' + (padL - 6) + '" y="' + (y(tk) + 4) + '" text-anchor="end">' + esc(fmt(tk)) + '</text>'; });
+    rows.forEach(function (r, i) {
+      var x = padL + i * bw + gap / 2, h = Math.max(0, y(0) - y(r.v));
+      svg += '<g><title>' + esc(r.tip) + '</title><rect class="bar' + (r.dim ? ' dim' : '') + '" x="' + x.toFixed(1) + '" y="' + (y(0) - h).toFixed(1) + '" width="' + Math.max(1, bw - gap).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"></rect>' +
+        '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + (H - padT - padB) + '" fill="transparent"></rect></g>';
+      if (i % every === 0) svg += '<text class="lbl" x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(r.label) + '</text>';
+    });
+    return svg + '</svg>';
   }
 
   // ---------- Timing ----------
@@ -1339,9 +1725,9 @@ function liveBurst(list) {
   ];
   function liveSlot(slot) { var m = slot.at - dayStart(slot.at); return (m >= 650 && m <= 700) || m >= 1140; }
   function sumUp(list) {
-    var c = 0, e = 0, del = 0;
-    list.forEach(function (b) { c += b.clicks; del += b.delivered; if (b.expected !== null) e += b.expected; });
-    return { n: list.length, clicks: c, del: del, ctr: del ? c / del : null, index: e > 0 ? c / e : null };
+    var c = 0, e = 0, del = 0, cost = 0;
+    list.forEach(function (b) { c += b.clicks; del += b.delivered; cost += b.cost || 0; if (b.expected !== null) e += b.expected; });
+    return { n: list.length, clicks: c, del: del, cost: cost, cpc: c ? cost / c : null, ctr: del ? c / del : null, index: e > 0 ? c / e : null };
   }
   function renderTiming() {
     var sched = state.broadcasts.filter(function (b) { return b.slot && b.goal !== 'reply' && hasClicks(b) && b.index !== null; })
@@ -1365,8 +1751,8 @@ function liveBurst(list) {
       } else if (on && !late.n) verdict = 'Every send in this window has gone out on time so far.';
       html += '<section class="section"><div class="section-head"><div><h2>' + (kind === 'live' ? 'Live-window reminders (around live time)' : 'Reminders before live time') + '</h2>' +
         (verdict ? '<p class="small"><b>' + esc(verdict) + '</b></p>' : '') + '</div></div>' +
-        '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Click rate</th><th class="r">Clicks vs similar</th></tr></thead><tbody>' +
-        res.map(function (r) { return '<tr><td class="name">' + esc(r.bk.label) + '</td><td class="r num">' + r.s.n + '</td><td class="r num">' + int(r.s.del) + '</td><td class="r num">' + pct(r.s.ctr, 2) + '</td><td class="r num"><span class="idx ' + idxClass(r.s.index) + '">' + vsSimilar(r.s.index) + '</span></td></tr>'; }).join('') +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">Clicks vs similar</th></tr></thead><tbody>' +
+        res.map(function (r) { return '<tr><td class="name">' + esc(r.bk.label) + '</td><td class="r num">' + r.s.n + '</td><td class="r num">' + int(r.s.del) + '</td><td class="r num">' + pct(r.s.ctr, 2) + '</td><td class="r num">' + inr(r.s.cpc) + '</td><td class="r num"><span class="idx ' + idxClass(r.s.index) + '">' + vsSimilar(r.s.index) + '</span></td></tr>'; }).join('') +
         '</tbody></table></div>' + (kind === 'live' ? '<p class="faint small">Live reminders are only 5–10 minutes apart. A reminder sent late lands on top of the next one and usually gets fewer clicks.</p>' : '') + '</section>';
     });
 
@@ -1406,7 +1792,7 @@ function liveBurst(list) {
         var cells = hours.map(function (h) { return sumUp(reg.filter(function (b) { return b.stage === st && Math.floor((b.t - dayStart(b.t)) / 60) === h; })); });
         var max = Math.max.apply(null, cells.map(function (c) { return c.ctr || 0; }).concat([0]));
         return '<tr><th class="slot" scope="row">' + esc(st) + '</th>' + cells.map(function (c) {
-          return '<td class="cell">' + (c.n ? '<div class="cellbtn ' + heatClass(c.ctr, max) + '" style="cursor:default' + (c.del < 500 ? ';opacity:.55' : '') + '"><span class="v">' + pct(c.ctr, 1) + '</span><span class="s">' + c.n + ' sent · ' + int(c.del) + ' dlv</span></div>' : '<div class="empty-cell">—</div>') + '</td>';
+          return '<td class="cell">' + (c.n ? '<div class="cellbtn ' + heatClass(c.ctr, max) + '" style="cursor:default' + (c.del < 500 ? ';opacity:.55' : '') + '"><span class="v">' + pct(c.ctr, 1) + '</span><span class="s">' + c.n + ' sent · ' + inr(c.cpc) + '/click</span></div>' : '<div class="empty-cell">—</div>') + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div></section>';
 
@@ -1414,8 +1800,8 @@ function liveBurst(list) {
     var morning = sumUp(reg.filter(function (b) { var m = b.t - dayStart(b.t); return m >= 570 && m < 660; }));
     var noon = sumUp(reg.filter(function (b) { var m = b.t - dayStart(b.t); return m >= 690 && m < 780; }));
     html += '<section class="section"><div class="section-head"><div><h2>What if a 10 AM message goes out at 12 PM?</h2></div></div><div class="insights">' +
-      '<div class="insight"><span class="tag good">9:30–11 AM</span><p><b class="num">' + pct(morning.ctr, 2) + '</b> click rate across ' + morning.n + ' broadcasts (' + int(morning.del) + ' delivered)</p></div>' +
-      '<div class="insight"><span class="tag low">11:30 AM–1 PM</span><p><b class="num">' + pct(noon.ctr, 2) + '</b> click rate across ' + noon.n + ' broadcasts (' + int(noon.del) + ' delivered)</p></div>' +
+      '<div class="insight"><span class="tag good">9:30–11 AM</span><p><b class="num">' + pct(morning.ctr, 2) + '</b> click rate, ' + inr(morning.cpc) + ' per click, across ' + morning.n + ' broadcasts (' + int(morning.del) + ' delivered)</p></div>' +
+      '<div class="insight"><span class="tag low">11:30 AM–1 PM</span><p><b class="num">' + pct(noon.ctr, 2) + '</b> click rate, ' + inr(noon.cpc) + ' per click, across ' + noon.n + ' broadcasts (' + int(noon.del) + ' delivered)</p></div>' +
       '<div class="insight"><p class="small">' + esc(noonVerdict(morning, noon)) + '</p></div></div></section>';
 
     $('#main').innerHTML = html + '</div>';
@@ -1530,127 +1916,6 @@ function liveBurst(list) {
     $('#main').innerHTML = html + '</div>';
   }
 
-  // ---------- All broadcasts ----------
-  function renderAll() {
-    var f = state.filters;
-    var fams = FAMILIES.filter(function (x) { return state.broadcasts.some(function (b) { return b.family === x.key; }); });
-    var presets = [['aug', 'Since 1 Aug'], ['30', 'Last 30 days'], ['7', 'Last 7 days'], ['all', 'All time']];
-    $('#main').innerHTML = '<div class="wrap" style="gap:16px"><div class="filters">' +
-      '<label>Period<div class="presets" role="group" aria-label="Period">' + presets.map(function (p) {
-        return '<button type="button" data-preset="' + p[0] + '" aria-pressed="' + (f.preset === p[0]) + '">' + p[1] + '</button>';
-      }).join('') + '</div></label>' +
-      '<label for="fFrom">From<input type="date" id="fFrom" value="' + esc(f.from) + '"></label>' +
-      '<label for="fTo">To<input type="date" id="fTo" value="' + esc(f.to) + '"></label>' +
-      '<label for="fFamily">Campaign<select id="fFamily"><option value="">All campaigns</option>' + fams.map(function (x) {
-        return '<option value="' + x.key + '"' + (f.family === x.key ? ' selected' : '') + '>' + esc(x.label) + '</option>';
-      }).join('') + '</select></label>' +
-      '<label for="fQ">Search<input type="search" id="fQ" placeholder="Broadcast name or message text" value="' + esc(f.q) + '"></label>' +
-      '</div><div id="allResults" class="wrap" style="gap:16px"></div></div>';
-    renderAllResults();
-  }
-  function filteredBroadcasts() {
-    var f = state.filters, q = f.q.trim().toLowerCase();
-    return state.broadcasts.filter(function (b) {
-      var d = dateKey(b.t);
-      if (f.from && d < f.from) return false;
-      if (f.to && d > f.to) return false;
-      if (f.family && b.family !== f.family) return false;
-      if (q && (b.name + ' ' + b.content).toLowerCase().indexOf(q) === -1) return false;
-      return true;
-    });
-  }
-  function renderAllResults() {
-    var list = filteredBroadcasts(), f = state.filters, html = '';
-    var earliest = state.broadcasts.reduce(function (m, b) { return m === null || b.t < m ? b.t : m; }, null);
-    if (earliest !== null && f.from && dateKey(earliest) > f.from) {
-      html += '<p class="notice"><b>The sheet has no broadcasts before ' + esc(dayLabel(earliest)) + '.</b> Earlier ones will show here as soon as they are added to the AiSensy Broadcast Analytics sheet.</p>';
-    }
-    var t = totals(list);
-    var ctorAll = t.read > 0 ? t.clicks / t.read : null;
-    var replies = list.reduce(function (m, b) { return m + (b.replies || 0); }, 0), failed = list.reduce(function (m, b) { return m + (b.failed || 0); }, 0), aud = list.reduce(function (m, b) { return m + (b.audience || 0); }, 0);
-    html += '<div class="strip">' +
-      stat('Broadcasts', int(t.n), list.length ? esc(dayLabel(list.reduce(function (m, b) { return Math.min(m, b.t); }, Infinity)) + ' – ' + dayLabel(list.reduce(function (m, b) { return Math.max(m, b.t); }, 0))) : '') +
-      stat('Delivered', int(t.delivered), pct(aud ? t.delivered / aud : null) + ' of audience · ' + int(failed) + ' failed') +
-      stat('Read rate', pct(t.readRate), int(t.read) + ' reads') +
-      stat('Clicks', int(t.clicks), pct(t.clickRate, 2) + ' click rate · ' + pct(ctorAll) + ' of readers') +
-      stat('Replies', int(replies), pct(t.delivered ? replies / t.delivered : null, 2) + ' reply rate') +
-      stat('Spend', inr(t.cost), (t.cpc === null ? '' : inr(t.cpc) + ' per click · ') + inr(t.read ? t.cost / t.read : null) + ' per read') +
-      '</div>';
-    if (!list.length) { html += '<div class="state"><h2>No broadcasts match</h2><p class="muted">Widen the period or clear the search.</p></div>'; $('#allResults').innerHTML = html; return; }
-
-    var weeks = {};
-    list.forEach(function (b) { var d = dayStart(b.t), wk = d - ((weekday(d) + 6) % 7) * 1440; (weeks[wk] = weeks[wk] || []).push(b); });
-    var wkRows = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
-      var tt = totals(weeks[k]); return { label: when(k, { day: 'numeric', month: 'short' }), v: tt.clicks, tip: 'Week of ' + dayLabel(k) + ': ' + int(tt.clicks) + ' clicks, ' + pct(tt.clickRate, 2) + ' click rate, ' + tt.n + ' broadcasts, ' + inr(tt.cost) };
-    });
-    var wkCost = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
-      var tt = totals(weeks[k]); return { label: when(k, { day: 'numeric', month: 'short' }), v: tt.cost, tip: 'Week of ' + dayLabel(k) + ': ' + inr(tt.cost) + ' spent, ' + inr(tt.cpc) + ' per click' };
-    });
-    html += '<div class="charts"><div class="chart"><h3>Clicks per week</h3>' + barChart(wkRows, function (v) { return int(v); }) + '</div>' +
-      '<div class="chart"><h3>Spend per week</h3>' + barChart(wkCost, function (v) { return '₹' + nf.format(Math.round(v)); }) + '</div></div>';
-
-    var byFam = {};
-    list.forEach(function (b) { (byFam[b.family] = byFam[b.family] || []).push(b); });
-    html += '<section class="section"><div class="section-head"><h2>By campaign</h2></div><div class="table-wrap"><table class="list"><thead><tr><th>Campaign</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Spend</th><th class="r">Cost / click</th></tr></thead><tbody>' +
-      Object.keys(byFam).map(function (k) { return { k: k, t: totals(byFam[k]) }; }).sort(function (a, b) { return b.t.delivered - a.t.delivered; }).map(function (r) {
-        return '<tr class="click" data-family="' + r.k + '" tabindex="0"><td class="name">' + esc(familyLabel(r.k)) + '</td><td class="r num">' + r.t.n + '</td><td class="r num">' + int(r.t.delivered) + '</td><td class="r num">' + pct(r.t.readRate) +
-          '</td><td class="r num">' + int(r.t.clicks) + '</td><td class="r num">' + pct(r.t.clickRate, 2) + '</td><td class="r num">' + inr(r.t.cost) + '</td><td class="r num">' + inr(r.t.cpc) + '</td></tr>';
-      }).join('') + '</tbody></table></div></section>';
-
-    var sort = state.sort;
-    var val = function (b) {
-      var small = (b.delivered || 0) < 100 ? (sort.dir < 0 ? -2 : 2) : 0;
-      if (sort.key === 'clickRate') return small || (rate(b) === null ? -1 : rate(b));
-      if (sort.key === 'readRate') return small || (b.delivered ? b.read / b.delivered : -1);
-      if (sort.key === 'ctor') return small || (b.read ? (b.clicks || 0) / b.read : -1);
-      if (sort.key === 'index') return b.index === null ? (sort.dir < 0 ? -9 : 9) : b.index;
-      if (sort.key === 'name') return b.name.toLowerCase();
-      if (sort.key === 'family') return familyLabel(b.family);
-      if (sort.key === 'verdict') return VERDICTS[b.message.s.verdict].rank;
-      var v = b[sort.key]; return v === null || v === undefined ? -1 : v;
-    };
-    var rows = list.slice().sort(function (a, b) { var x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sort.dir; });
-    var shown = state.showAll ? rows : rows.slice(0, 100);
-    var th = function (key, label, right) {
-      return '<th class="sort' + (right ? ' r' : '') + '" data-sort="' + key + '" aria-sort="' + (sort.key === key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + label +
-        (sort.key === key ? ' <span class="arrow">' + (sort.dir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
-    };
-    html += '<section class="section"><div class="section-head"><div><h2>Every broadcast</h2><p class="muted small">Click a column to sort, or a row for the message and full numbers.</p></div></div>' +
-      '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('name', 'Broadcast') + th('family', 'Campaign') + '<th>Timing</th>' + th('delivered', 'Delivered', 1) +
-      th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('ctor', 'Click-to-read', 1) + th('index', 'vs similar', 1) + th('cost', 'Cost', 1) + th('verdict', 'Message verdict') + '</tr></thead><tbody>' +
-      shown.map(function (b) {
-        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') +
-          (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</td><td>' + esc(familyLabel(b.family)) + '</td><td class="small">' + esc(b.slot ? b.slot.name : b.stage) + '</td>' +
-          '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) +
-          '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + pct(b.read && b.clicks !== null ? b.clicks / b.read : null) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) +
-          '</span></td><td class="r num">' + inr(b.cost) + '</td><td>' + verdictPill(b.message.s.verdict) + '</td></tr>';
-      }).join('') + '</tbody></table></div>' +
-      (rows.length > shown.length ? '<div><button class="btn" type="button" id="showAllBtn">Show all ' + rows.length + ' broadcasts</button></div>' : '') + '</section>';
-    $('#allResults').innerHTML = html;
-  }
-
-  /** Vertical bar chart drawn to one scale; each bar has a hover tooltip. */
-  function barChart(rows, fmt) {
-    if (!rows.length) return '<p class="faint small">No data yet.</p>';
-    var W = 560, H = 190, padL = 48, padB = 22, padT = 8;
-    var max = Math.max.apply(null, rows.map(function (r) { return r.v; }).concat([0]));
-    if (max <= 0) max = 1;
-    var step = Math.pow(10, Math.floor(Math.log10(max))), nice = Math.ceil(max / step) * step;
-    var ticks = [0, nice / 2, nice];
-    var bw = (W - padL) / rows.length, gap = Math.min(6, bw * 0.25);
-    var y = function (v) { return padT + (H - padT - padB) * (1 - v / nice); };
-    var every = Math.ceil(rows.length / 10);
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">';
-    ticks.forEach(function (tk) { svg += '<line class="grid" x1="' + padL + '" x2="' + W + '" y1="' + y(tk) + '" y2="' + y(tk) + '"></line><text x="' + (padL - 6) + '" y="' + (y(tk) + 4) + '" text-anchor="end">' + esc(fmt(tk)) + '</text>'; });
-    rows.forEach(function (r, i) {
-      var x = padL + i * bw + gap / 2, h = Math.max(0, y(0) - y(r.v));
-      svg += '<g><title>' + esc(r.tip) + '</title><rect class="bar' + (r.dim ? ' dim' : '') + '" x="' + x.toFixed(1) + '" y="' + (y(0) - h).toFixed(1) + '" width="' + Math.max(1, bw - gap).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"></rect>' +
-        '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + (H - padT - padB) + '" fill="transparent"></rect></g>';
-      if (i % every === 0) svg += '<text class="lbl" x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(r.label) + '</text>';
-    });
-    return svg + '</svg>';
-  }
-
   // ---------- Slot grids (Tuesday / Wednesday / Sunday) ----------
   function metricValue(list) {
     var t = totals(list);
@@ -1667,10 +1932,10 @@ function liveBurst(list) {
     var r = v / max;
     return r >= 0.85 ? 'h5' : r >= 0.65 ? 'h4' : r >= 0.45 ? 'h3' : r >= 0.25 ? 'h2' : r > 0 ? 'h1' : '';
   }
-  function renderWebinar(tpl) {
+  function gridHtml(tpl) {
     var sched = SCHEDULES[tpl];
     var insts = state.result.instances.filter(function (i) { return i.template === tpl; });
-    if (!insts.length) { $('#main').innerHTML = '<div class="state"><h2>No ' + esc(sched.label.toLowerCase()) + ' sessions found yet</h2><p class="muted">Sessions appear here once their broadcasts are in the sheet.</p></div>'; return; }
+    if (!insts.length) { return '<div class="state"><h2>No ' + esc(sched.label.toLowerCase()) + ' sessions found yet</h2><p class="muted">Sessions appear here once their broadcasts are in the sheet.</p></div>'; return; }
     var all = [].concat.apply([], insts.map(function (i) { return i.broadcasts; }));
     var t = totals(all);
     var slotRows = sched.slots.map(function (s, idx) {
@@ -1717,7 +1982,7 @@ function liveBurst(list) {
     if (extras.length) {
       html += '<section class="section"><div class="section-head"><div><h2>Not in the schedule</h2><p class="muted small">Extra sends for these sessions that don’t sit on one of your slots.</p></div></div>' + sendTable(extras) + '</section>';
     }
-    $('#main').innerHTML = html + '</div>';
+    return html + '</div>';
   }
 
   // ---------- drawer ----------
@@ -1731,7 +1996,8 @@ function liveBurst(list) {
         '<div><p class="faint small">' + esc(b.session ? SCHEDULES[templateFor(b.session.date)].label + ' · ' + dayLabel(b.session.date) : familyLabel(b.family)) + (b.slot ? ' · ' + esc(b.slot.name) : '') + '</p>' +
         '<h2' + (n ? '' : ' id="drawerTitle"') + '>' + esc(b.name) + '</h2>' +
         '<p class="muted small">Sent ' + esc(dayLabel(b.t)) + ' at ' + esc(timeLabel(b.t)) + ' · ' + esc(b.stage) + ' · ' + esc(b.list) + (b.check ? ' · <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</p>' +
-        '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + ' <a href="#" data-msg="' + g.id + '">See the message card</a></p>' +
+        (b.cmsg ? '<p class="small">Message: <b>' + esc(b.cmsg.hook) + '</b>' + (b.doc ? ' · template ' + esc(b.doc.templates.join(', ')) : ' · not in the docs') + '<br>Verdict: ' + verdictPill(b.cmsg.s.verdict) + ' <a href="#" data-msg="' + b.cmsg.id + '">See the message card</a></p>'
+          : '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + '</p>') +
         (b.slot && b.slot.template ? '<p class="small muted">Schedule slot: ' + esc(b.slot.name) + ' · usual template ' + esc(b.slot.template) + ' · ' + esc(b.slot.audience) + '</p>' : '') +
         (b.qa && b.qa.length ? '<ul class="qa-list small">' + b.qa.map(function (q) { return '<li><span class="pill warn">Rule ' + q.rule + '</span> ' + esc(q.text) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
         '<div class="kv">' +
@@ -1739,6 +2005,7 @@ function liveBurst(list) {
         kv('Audience', int(b.audience)) + kv('Delivered', int(b.delivered)) + kv('Failed', int(b.failed)) +
         kv('Read rate', pct(b.delivered ? b.read / b.delivered : null)) + kv('Click-to-read', pct(b.read && b.clicks !== null ? b.clicks / b.read : null)) + kv('Replies', int(b.replies) + (hasReplies(b) ? ' (' + pct(b.replies / b.delivered, 1) + ')' : '')) +
         kv('Cost', inr(b.cost)) + kv('Cost / click', inr(b.clicks ? b.cost / b.clicks : null)) + kv('Cost / read', inr(b.read ? b.cost / b.read : null)) +
+        (b.family === 'genie' && b.goal !== 'reply' ? kv('Spent above avg', b.overspend >= 1 ? inr(b.overspend) : '—') + kv('Part of campaign', esc(b.area)) + kv('Cost / 1,000 delivered', inr(b.delivered ? b.cost / b.delivered * 1000 : null)) : '') +
         '</div><div class="bubble">' + esc(cleanText(b.content) || 'No message text in the sheet.') + '</div>';
     });
     var d = $('#drawer');
@@ -1747,56 +2014,49 @@ function liveBurst(list) {
   }
   function kv(k, v) { return '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
   function closeDrawer() { $('#drawer').hidden = true; $('#scrim').hidden = true; }
-  function showMessage(id) {
-    closeDrawer();
-    state.tab = 'decisions'; state.dec = { verdict: '', family: '', sort: state.dec.sort, q: '' };
-    render();
-    var g = state.messages.filter(function (m) { return m.id === id; })[0];
-    if (!g) return;
-    var cards = document.querySelectorAll('#decList .mcard');
-    var target = null;
-    Array.prototype.forEach.call(cards, function (c) { if (c.dataset.id === id) target = c; });
-    if (target) { target.querySelector('details').open = true; target.scrollIntoView({ behavior: 'smooth', block: 'start' }); target.classList.add('flash'); }
-  }
-
   // ---------- events ----------
-  function setTab(t) { state.tab = t; try { localStorage.setItem('wbs.tab2', t); } catch (x) { /* ignore */ } render(); window.scrollTo(0, 0); }
+  function setTab(t) { state.tab = t; try { localStorage.setItem('wbs.tab3', t); } catch (x) { /* ignore */ } render(); window.scrollTo(0, 0); }
   document.addEventListener('click', function (e) {
     var el;
     if ((el = e.target.closest('[data-tab]'))) { setTab(el.dataset.tab); return; }
     if ((el = e.target.closest('[data-msg]'))) { e.preventDefault(); showMessage(el.dataset.msg); return; }
-    if ((el = e.target.closest('[data-vfilter]'))) { state.dec.verdict = el.dataset.vfilter; renderDecisions(); return; }
-    if ((el = e.target.closest('[data-preset]'))) {
-      var p = el.dataset.preset, today = dateKey(Date.now() / 60000 + 330);
-      state.filters.preset = p; state.filters.to = '';
-      state.filters.from = p === 'aug' ? '2026-08-01' : p === 'all' ? '' : dateKey(parseIst(today + ' 00:00') - (Number(p) - 1) * 1440);
-      renderAll(); return;
+    if ((el = e.target.closest('[data-goto]'))) {
+      if (el.dataset.sched) state.sched = el.dataset.sched;
+      if (el.dataset.goto === 'broadcasts') { state.bfilter = { sched: '', session: '', area: el.dataset.area || '', q: '', others: false }; }
+      setTab(el.dataset.goto); return;
     }
-    if ((el = e.target.closest('[data-sort]'))) { var k = el.dataset.sort; if (state.sort.key === k) state.sort.dir = -state.sort.dir; else { state.sort.key = k; state.sort.dir = (k === 'name' || k === 'family' || k === 'verdict') ? 1 : -1; } renderAllResults(); return; }
-    if ((el = e.target.closest('[data-family]'))) { state.filters.family = el.dataset.family; renderAll(); return; }
-    if (e.target.id === 'showAllBtn') { state.showAll = true; renderAllResults(); return; }
+    if ((el = e.target.closest('[data-sched]'))) { state.sched = el.dataset.sched; render(); return; }
+    if ((el = e.target.closest('[data-slotview]'))) { state.slotView = el.dataset.slotview; render(); return; }
+    if ((el = e.target.closest('[data-vfilter]'))) { state.mfilter.verdict = el.dataset.vfilter; renderMessages(); return; }
+    if ((el = e.target.closest('[data-sort]'))) {
+      var k = el.dataset.sort;
+      if (state.sort.key === k) state.sort.dir = -state.sort.dir; else { state.sort.key = k; state.sort.dir = (k === 'name' || k === 'msg' || k === 'slot') ? 1 : -1; }
+      renderBroadcastRows(); return;
+    }
+    if (e.target.id === 'showAllBtn') { state.showAll = true; renderBroadcastRows(); return; }
     if ((el = e.target.closest('[data-metric]'))) { state.metric = el.dataset.metric; render(); return; }
-    if ((el = e.target.closest('[data-ids]')) && !e.target.closest('#drawer')) { openDrawer(el.dataset.ids); return; }
+    if ((el = e.target.closest('[data-ids]')) && !e.target.closest('#drawer')) { e.preventDefault(); openDrawer(el.dataset.ids); return; }
     if (e.target.id === 'drawerClose' || e.target.id === 'scrim') closeDrawer();
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeDrawer();
-    if (e.key === 'Enter' && e.target.matches) {
-      if (e.target.matches('tr[data-ids]')) openDrawer(e.target.dataset.ids);
-      else if (e.target.matches('[data-msg]')) showMessage(e.target.dataset.msg);
-      else if (e.target.matches('tr[data-family]')) { state.filters.family = e.target.dataset.family; renderAll(); }
-    }
+    if (e.key !== 'Enter' || !e.target.matches) return;
+    if (e.target.matches('[data-msg]')) showMessage(e.target.dataset.msg);
+    else if (e.target.matches('[data-goto]')) e.target.click();
+    else if (e.target.matches('tr[data-ids]')) openDrawer(e.target.dataset.ids);
   });
   document.addEventListener('input', function (e) {
-    if (e.target.id === 'fQ') { state.filters.q = e.target.value; renderAllResults(); }
-    if (e.target.id === 'dQ') { state.dec.q = e.target.value; renderDecisionList(); }
+    if (e.target.id === 'bQ') { state.bfilter.q = e.target.value; renderBroadcastRows(); }
+    if (e.target.id === 'mQ') { state.mfilter.q = e.target.value; renderMessageList(); }
   });
   document.addEventListener('change', function (e) {
     var id = e.target.id;
-    if (id === 'fFrom' || id === 'fTo') { state.filters[id === 'fFrom' ? 'from' : 'to'] = e.target.value; state.filters.preset = ''; renderAll(); }
-    if (id === 'fFamily') { state.filters.family = e.target.value; renderAllResults(); }
-    if (id === 'dFamily') { state.dec.family = e.target.value; renderDecisionList(); }
-    if (id === 'dSort') { state.dec.sort = e.target.value; renderDecisionList(); }
+    if (id === 'bSched') { state.bfilter.sched = e.target.value; renderBroadcastRows(); }
+    if (id === 'bSession') { state.bfilter.session = e.target.value; renderBroadcastRows(); }
+    if (id === 'bArea') { state.bfilter.area = e.target.value; renderBroadcastRows(); }
+    if (id === 'bOther') { state.bfilter.others = e.target.checked; renderBroadcastRows(); }
+    if (id === 'mSort') { state.mfilter.sort = e.target.value; renderMessageList(); }
+    if (id === 'mDocs') { state.mfilter.docs = e.target.value; renderMessageList(); }
   });
   $('#refreshBtn').addEventListener('click', function () { loadOnce(true); });
 

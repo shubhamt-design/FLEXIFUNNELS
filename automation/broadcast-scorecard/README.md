@@ -15,16 +15,27 @@ sheet through the Google Sheets connector.
 
 ## What's in it
 
+The dashboard is built around the **10-minute webinar campaign** (Flexi Genie
+“Launch Your Business Online in 10 Minutes”) for the Tuesday, Wednesday and
+Sunday webinars. Every broadcast is matched to its webinar session (including
+moved days), its schedule slot, and the doc message it came from, which gives
+its template name.
+
 | Tab | What it answers |
 |---|---|
-| **Decisions** | One card per message (all the times it was sent), with a verdict: **Use more**, **Keep sending**, **Improve** (with the reason: opened less, or read but not clicked) or **Remove**. Each card shows the send dates and times, delivered, read rate, click rate, click-to-read, cost per click, clicks vs similar sends, confidence and the full message text. |
-| **Plan check** | Each session against its schedule: was every slot sent, on time, to the full list (flags: not sent, late/early, small audience). Shows each slot's purpose from the team's doc next to what AiSensy actually sent, and checks every sent message against the non-negotiables (space around links, missing links, unfilled placeholders, wrong date or AM/PM). |
-| **Suggestions** | A prioritised to-do list (messages to stop, messages to reuse, better send hours, cold-list cost, weak live reminders, failing lists). Also: click rate by hour before the webinar, the live window by minute, day of week, which message elements go with more clicks, cost per click by campaign and list, and a slot-by-slot plan for the next Tuesday, Wednesday and Sunday webinar. |
-| **Timing** | The effect of sending late: before-live and live-window sends grouped by minutes late, with clicks vs similar; a dot chart of minutes late vs result; the same slot sent at different times in different weeks; the best hour to send for each stage; and a direct comparison of 10 AM vs 12 PM sends. |
-| **All broadcasts** | Filters by date (Since 1 Aug, last 30/7 days, custom), campaign and text. Totals, clicks and spend per week, a by-campaign table and a sortable list of every broadcast. |
-| **Tuesday / Wednesday / Sunday** | Your schedule slots by session, as a heat grid (click rate, vs similar, clicks or read rate). |
+| **Overview** | Campaign spend, clicks, cost per click and spend per session/week; how much was spent on clicks costing more than the campaign average; a ranked “What to change” list with the ₹ saved per webinar or per week; spend share vs click share for each part of the campaign (day before, webinar morning, 1–6 h before, final hour, live window, follow-ups, reply messages, big old-list pushes); and each session’s spend, clicks and cost per click. |
+| **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
+| **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. |
+| **Timing** | The effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
+| **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message. |
+| **Broadcasts** | Every campaign broadcast with session, slot, doc message and template, audience, delivered, read rate, clicks, click rate, cost, cost per click, spend above average and vs similar. Filter by webinar, session, part of the campaign or text; optionally include other campaigns. |
+| **Other campaigns** | Faceless, community workshop, 15 Days challenge, Genie launch offer, renewals and others, for reference. |
 
 ### How verdicts are worked out
+
+- **Spent above average** = a broadcast's cost minus its clicks × the campaign's average cost per click.
+- **Slot verdicts** need at least two sessions before suggesting a cut (unless the evidence is very strong); one-session verdicts say so.
+- A **live-window reminder** is suggested for dropping when its cost per click is 40%+ above the live-window average and it does worse than similar sends, across 2+ sessions.
 
 - Messages that ask people to **reply** (the 2 PM “Reply INCOME” message, the next-day “share the reason” message) are judged on reply rate against other reply messages, not on clicks.
 
