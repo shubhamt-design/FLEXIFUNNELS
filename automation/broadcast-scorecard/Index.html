@@ -1,0 +1,1382 @@
+<title>Webinar Broadcast Scorecard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one working column — status bar, campaign tabs, summary strip, slot × session heat grid, then top messages. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --surface-2: #eef2f0;
+  --line: #dde4e1;
+  --ink: #142019;
+  --ink-2: #4b5a53;
+  --ink-3: #7b8a83;
+  --accent: #0f7a5c;
+  --accent-ink: #ffffff;
+  --accent-soft: #e1f1eb;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --bad: #b3261e;
+  --bad-soft: #fbe7e5;
+  --good-strong: #0d6b4f;
+  --good-strong-ink: #ffffff;
+  --good-strong-text: #0d6b4f;
+  --heat-0: #f1f4f3; --heat-0-ink: #4b5a53;
+  --heat-1: #dcefe8; --heat-1-ink: #17392d;
+  --heat-2: #b4ddcd; --heat-2-ink: #12352a;
+  --heat-3: #7cc3a9; --heat-3-ink: #0b2a20;
+  --heat-4: #2f9a77; --heat-4-ink: #ffffff;
+  --heat-5: #0d6b4f; --heat-5-ink: #ffffff;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #161d1a; --surface-2: #1d2622; --line: #2a3530;
+    --ink: #e8efec; --ink-2: #b2c0ba; --ink-3: #82918a;
+    --accent: #3fbf93; --accent-ink: #06231a; --accent-soft: #173229;
+    --warn: #e8b05a; --warn-soft: #33270f; --bad: #f08a83; --bad-soft: #3a1b19; --good-strong: #35a882; --good-strong-ink: #04150f; --good-strong-text: #5fd3a8;
+    --heat-0: #1a221f; --heat-0-ink: #9fb0a8;
+    --heat-1: #18332a; --heat-1-ink: #cfe9df;
+    --heat-2: #1d4a3b; --heat-2-ink: #dff3eb;
+    --heat-3: #226550; --heat-3-ink: #ecfaf4;
+    --heat-4: #2a8466; --heat-4-ink: #ffffff;
+    --heat-5: #35a882; --heat-5-ink: #04150f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #161d1a; --surface-2: #1d2622; --line: #2a3530;
+  --ink: #e8efec; --ink-2: #b2c0ba; --ink-3: #82918a;
+  --accent: #3fbf93; --accent-ink: #06231a; --accent-soft: #173229;
+  --warn: #e8b05a; --warn-soft: #33270f; --bad: #f08a83; --bad-soft: #3a1b19; --good-strong: #35a882; --good-strong-ink: #04150f; --good-strong-text: #5fd3a8;
+  --heat-0: #1a221f; --heat-0-ink: #9fb0a8;
+  --heat-1: #18332a; --heat-1-ink: #cfe9df;
+  --heat-2: #1d4a3b; --heat-2-ink: #dff3eb;
+  --heat-3: #226550; --heat-3-ink: #ecfaf4;
+  --heat-4: #2a8466; --heat-4-ink: #ffffff;
+  --heat-5: #35a882; --heat-5-ink: #04150f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { width: 100%; min-width: 0; max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.section, #main, #allResults { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: clamp(24px, 3.4vw, 32px); font-weight: 700; }
+h2 { font-size: 19px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--ink-2); }
+.faint { color: var(--ink-3); }
+.small { font-size: 13px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between; }
+.top .sub { margin-top: 4px; max-width: 70ch; }
+.sync { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); display: inline-block; }
+.dot.live { background: var(--accent); }
+.dot.warn { background: var(--warn); }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  padding: 7px 14px; border-radius: 8px; font-weight: 500;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* Tabs */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tab {
+  border: 0; background: none; color: var(--ink-2); padding: 10px 14px 12px; font-weight: 600;
+  border-bottom: 3px solid transparent; margin-bottom: -1px; display: flex; gap: 8px; align-items: baseline;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--font-data); font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+/* Summary strip */
+.strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.stat { padding: 14px 16px; border-right: 1px solid var(--line); min-width: 0; }
+.stat:last-child { border-right: 0; }
+.stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+.stat .value { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stat .note { font-size: 12px; color: var(--ink-2); }
+
+/* Insight chips */
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.insight { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.insight ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.insight li { font-size: 14px; }
+.insight li b { font-family: var(--font-data); font-weight: 500; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; }
+.tag.good { background: var(--accent-soft); color: var(--accent); }
+.tag.low { background: var(--warn-soft); color: var(--warn); }
+
+/* Section */
+.section { display: flex; flex-direction: column; gap: 10px; }
+.section-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+
+/* Decisions */
+.intro { display: flex; flex-direction: column; gap: 4px; max-width: 80ch; }
+.vchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.vchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.vchip b { font-family: var(--font-data); font-weight: 500; color: var(--ink); }
+.vchip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.verdict { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
+.v-more.verdict { background: var(--good-strong); color: var(--good-strong-ink); }
+.vchip.v-more b { color: var(--good-strong-text); }
+.vchip.v-improve b { color: var(--warn); }
+.vchip.v-remove b { color: var(--bad); }
+.v-keep.verdict { background: var(--accent-soft); color: var(--accent); }
+.v-improve.verdict { background: var(--warn-soft); color: var(--warn); }
+.v-remove.verdict { background: var(--bad-soft); color: var(--bad); }
+.v-data.verdict { background: var(--surface-2); color: var(--ink-3); }
+.cards-col { display: flex; flex-direction: column; gap: 12px; }
+.mcard { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mcard.v-more { border-left-color: var(--good-strong); }
+.mcard.v-keep { border-left-color: var(--accent); }
+.mcard.v-improve { border-left-color: var(--warn); }
+.mcard.v-remove { border-left-color: var(--bad); }
+.mcard.flash { box-shadow: 0 0 0 3px var(--accent-soft); }
+.mhead { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.conf { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.mcard h3 { font-size: 17px; overflow-wrap: anywhere; }
+.why { color: var(--ink); font-size: 14px; }
+.warnline { color: var(--warn); }
+.mstats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.ms { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.ms .k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 600; }
+.ms .v { font-family: var(--font-data); font-size: 15px; }
+.ms .n { font-size: 11px; color: var(--ink-2); }
+.ms .n.up, .idx.up { color: var(--good-strong-text); font-weight: 600; }
+.ms .n.down, .idx.down { color: var(--bad); font-weight: 600; }
+.meta { color: var(--ink-3); }
+details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--accent); padding: 4px 0; }
+details[open] { display: flex; flex-direction: column; gap: 10px; }
+.sep { border: 0; border-top: 1px solid var(--line); width: 100%; }
+/* Suggestions */
+.actions { margin: 0; padding-left: 0; list-style: none; counter-reset: act; display: flex; flex-direction: column; gap: 8px; }
+.action { counter-increment: act; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px 12px 52px; position: relative; display: flex; flex-direction: column; gap: 3px; }
+.action::before { content: counter(act); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--font-data); background: var(--surface-2); color: var(--ink-2); }
+.action.good::before { background: var(--good-strong); color: var(--good-strong-ink); }
+.action.bad::before { background: var(--bad-soft); color: var(--bad); }
+.action.warn::before { background: var(--warn-soft); color: var(--warn); }
+.action[data-msg] { cursor: pointer; }
+.action[data-msg]:hover { border-color: var(--accent); }
+.action span { color: var(--ink-2); font-size: 14px; }
+.plan-h { margin-top: 8px; }
+/* All-broadcasts view */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+.filters input, .filters select { font: 14px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+.filters input[type="search"] { width: min(260px, 100%); }
+.presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.presets button { border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; }
+.presets button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.notice { background: var(--warn-soft); color: var(--warn); border-radius: var(--radius); padding: 12px 14px; font-size: 14px; }
+.notice b { font-weight: 600; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart svg text { fill: var(--ink-3); font: 11px var(--font-data); }
+.chart svg .lbl { fill: var(--ink-2); }
+.chart svg .grid { stroke: var(--line); stroke-width: 1; }
+.chart svg .bar { fill: var(--accent); }
+.chart svg .bar.dim { fill: var(--heat-2); }
+.chart svg .hit:hover + .bar, .chart svg .bar:hover { fill: var(--heat-5); }
+.list th.sort { cursor: pointer; user-select: none; }
+.list th.sort:hover { color: var(--ink); }
+.list th .arrow { color: var(--accent); }
+.metric-switch { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 8px; }
+.metric-switch button { border: 0; background: none; padding: 5px 10px; border-radius: 6px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.metric-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* Heat grid */
+.grid-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+table.heat { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+.heat th, .heat td { padding: 0; border-bottom: 1px solid var(--line); }
+.heat thead th {
+  position: sticky; top: 0; background: var(--surface); z-index: 1; text-align: left;
+  padding: 10px 10px 8px; font-weight: 600; white-space: nowrap; vertical-align: bottom;
+}
+.heat thead th .d { display: block; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.heat th.slot { text-align: left; padding: 8px 12px; font-weight: 500; white-space: nowrap; position: sticky; left: 0; background: var(--surface); z-index: 1; min-width: 190px; }
+.heat th.slot .t { font-family: var(--font-data); font-size: 12px; color: var(--ink-3); margin-left: 6px; }
+.heat tr.day th { background: var(--surface-2); text-align: left; padding: 7px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); position: static; }
+.heat td.cell { min-width: 112px; padding: 3px; }
+.cellbtn {
+  width: 100%; border: 0; border-radius: 6px; padding: 7px 9px; text-align: left; display: flex; flex-direction: column; gap: 1px;
+  background: var(--heat-0); color: var(--heat-0-ink); min-height: 48px;
+}
+.cellbtn .v { font-family: var(--font-data); font-size: 14px; font-weight: 500; }
+.cellbtn .s { font-size: 11px; opacity: .85; font-variant-numeric: tabular-nums; }
+.cellbtn.h1 { background: var(--heat-1); color: var(--heat-1-ink); }
+.cellbtn.h2 { background: var(--heat-2); color: var(--heat-2-ink); }
+.cellbtn.h3 { background: var(--heat-3); color: var(--heat-3-ink); }
+.cellbtn.h4 { background: var(--heat-4); color: var(--heat-4-ink); }
+.cellbtn.h5 { background: var(--heat-5); color: var(--heat-5-ink); }
+.cellbtn.multi::after { content: attr(data-multi); font-size: 10px; font-weight: 600; opacity: .8; }
+.cellbtn:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+.empty-cell { display: flex; align-items: center; justify-content: center; min-height: 48px; color: var(--ink-3); font-size: 12px; }
+.heat td.avg { padding: 6px 12px; min-width: 150px; border-left: 1px solid var(--line); }
+.avgbar { display: flex; align-items: center; gap: 8px; }
+.avgbar .bar { height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+.avgbar .val { font-family: var(--font-data); font-size: 13px; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; color: var(--ink-2); }
+.legend .sw { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw i { width: 18px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+
+/* Lists */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.msg { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; text-align: left; color: inherit; }
+.msg:hover { border-color: var(--accent); }
+.msg .rank { font-family: var(--font-data); font-size: 12px; color: var(--ink-3); }
+.msg .head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.msg .rate { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--accent); }
+.msg .preview { font-size: 13px; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.msg .meta { font-size: 12px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
+.list th, .list td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.list th { font-size: 12px; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface-2); }
+.list td.r, .list th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.list td.name { white-space: normal; min-width: 180px; }
+.list tr.click { cursor: pointer; }
+.list tr.click:hover td { background: var(--surface-2); }
+
+/* States */
+.state { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px 24px; display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+.state.err { border-color: var(--bad); }
+.skeleton { height: 14px; border-radius: 4px; background: var(--surface-2); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.howto { font-size: 13px; color: var(--ink-2); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.howto ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(5, 12, 9, .45); z-index: 20; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); z-index: 21; background: var(--surface);
+  border-left: 1px solid var(--line); overflow-y: auto;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.drawer .close { align-self: flex-end; }
+.kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kv div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.kv .k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 600; }
+.kv .v { font-family: var(--font-data); font-size: 15px; }
+.bubble { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-weight: 600; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+@media (max-width: 640px) {
+  .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+  .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .heat th.slot { min-width: 150px; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Webinar Broadcast Scorecard</h1>
+      <p class="sub muted">Which WhatsApp messages to resend, use more, fix or stop, with the best times to send. Built from every broadcast in the AiSensy Broadcast Analytics sheet.</p>
+    </div>
+    <div class="sync" id="sync"><span><span class="dot" id="syncDot"></span> <span id="syncText">Connecting to Google Sheets…</span></span>
+      <button class="btn" id="refreshBtn" type="button">Refresh</button></div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs" aria-label="Campaign"></nav>
+
+  <main id="main">
+    <div class="state" id="loadingState">
+      <h2>Loading your broadcasts</h2>
+      <p class="muted">Reading the “Broadcast Analysis” and “Broadcast Contents” tabs of the AiSensy Broadcast Analytics sheet.</p>
+      <div class="skeleton" style="width: 90%"></div><div class="skeleton" style="width: 70%"></div><div class="skeleton" style="width: 80%"></div>
+    </div>
+  </main>
+
+  <section class="howto">
+    <h3>How the numbers work</h3>
+    <ul>
+      <li><b>Click rate</b> = clicks ÷ delivered. <b>Read rate</b> = reads ÷ delivered. <b>Click-to-read</b> = clicks ÷ reads, which shows how persuasive the message is once opened. <b>Cost / click</b> = AiSensy cost ÷ clicks.</li>
+      <li><b>vs similar</b> compares a broadcast’s clicks with what similar broadcasts got: same campaign, same timing (1+ days before, webinar morning, 1–6 h before, final hour, during live, next day) and same list size (registered list vs 5,000+). +40% means 40% more clicks than expected.</li>
+      <li><b>Verdicts</b> are per message (all sends of nearly the same text). Use more: 25%+ above similar with solid evidence. Keep sending: within 10% of similar or better. Improve: below similar, with the likely reason (opened less, or read but not clicked). Remove: 40%+ below similar with solid evidence, or no clicks where some were expected. Not enough data: under 300 delivered or too few expected clicks.</li>
+      <li><b>Confidence</b> reflects how far the result is from chance, based on the number of clicks expected. High = the gap is very unlikely to be luck.</li>
+      <li>Campaigns are recognised from the message text. Webinar sessions are found from the bursts of live-time sends. Each broadcast is matched to the nearest slot in the Tuesday, Wednesday or Sunday schedule (within 15 minutes around live time, 90 minutes otherwise).</li>
+    </ul>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="drawerTitle"></aside>
+
+<script>
+/*LOGIC-START*/
+var SCHEDULES = (function () {
+  function slot(offset, time, name, extra) { return Object.assign({ offset: offset, time: time, name: name }, extra || {}); }
+  function fmt(t) { var p = t.split(':').map(Number); var h = p[0] % 12 || 12; return h + (p[1] ? ':' + String(p[1]).padStart(2, '0') : '') + (p[0] < 12 ? ' AM' : ' PM'); }
+  function day(o, t, label) { return slot(o, t, (label || 'Webinar day') + ' · ' + fmt(t)); }
+  var evening = [day(0, '19:00'), day(0, '19:25'), slot(0, '19:30', 'Reg + missed · 7:30 PM', { missed: true }),
+    day(0, '19:35'), day(0, '19:40'), day(0, '19:50'), day(0, '20:00')];
+  var nextDay = slot(1, '10:30', 'Next day · before 11 AM', { missed: true, window: 120 });
+  return {
+    tue: {
+      label: 'Tuesday webinar', short: 'Tuesday',
+      slots: [day(-1, '10:00', '1 day before'), day(-1, '14:00', '1 day before'), day(-1, '18:00', '1 day before'),
+        day(0, '10:00'), day(0, '14:30'), slot(0, '17:30', 'Tool access · 5:30 PM')].concat(evening, [nextDay])
+    },
+    wed: {
+      label: 'Wednesday webinar', short: 'Wednesday',
+      slots: [day(0, '10:00'), slot(0, '10:00', 'Missed audience · 10 AM', { missed: true }), day(0, '14:00'),
+        day(0, '17:30')].concat(evening, [nextDay])
+    },
+    sun: {
+      label: 'Sunday webinar + encore', short: 'Sunday',
+      slots: [day(-2, '10:00', '2 days before'), day(-2, '18:00', '2 days before'),
+        day(-1, '10:00', '1 day before'), day(-1, '14:00', '1 day before'), day(-1, '18:00', '1 day before')]
+        .concat(['08:00', '09:00', '10:00', '10:30', '10:55', '11:05', '11:10', '11:15', '11:25', '11:35'].map(function (t) { return day(0, t, 'Morning'); }))
+        .concat(['14:30', '16:30', '17:30', '19:00', '19:25'].map(function (t) { return day(0, t, 'Encore reminder'); }))
+        .concat([slot(0, '19:30', 'Encore reg + missed · 7:30 PM', { missed: true }), day(0, '19:35', 'Encore'), day(0, '19:40', 'Encore'),
+          day(0, '19:50', 'Encore'), day(0, '20:00', 'Encore')])
+    }
+  };
+})();
+
+var FAMILIES = [
+  { key: 'qa', label: 'Live Q&A', test: function (b) { return /Q&A/.test(b.content); } },
+  { key: '15days', label: '15 Days First Sale Challenge', test: function (b) { return /15 Days First Sale/i.test(b.content) || /^15 ?days?/i.test(b.name); } },
+  { key: 'community', label: 'Community workshop', test: function (b) { return /paid community|community-special|Community Platform|true fans/i.test(b.content) || /comm.?feat|communnity feature/i.test(b.name); } },
+  { key: 'renewal', label: 'Membership renewals', test: function (b) { return /is expiring|expiring (soon|tonight|tomorrow|in)/i.test(b.content) || /^(re?new|rew|renw|\d+days?left)/i.test(b.name); } },
+  { key: 'faceless', label: 'Faceless webinar', test: function (b) { return /faceless/i.test(b.content) && !/10 Minutes/i.test(b.content); } },
+  { key: 'closing', label: 'Genie launch offer (closing)', test: function (b) { return /closing/i.test(b.name) || /Launch Special|vanishes forever|become a member today|If fear is the only thing/i.test(b.content); } },
+  { key: 'genie', label: 'Flexi Genie webinar', test: function (b) { return /10 Minutes|Flexi Genie|funnel-agent|genie/i.test(b.content) || /10 ?min|liv|rem|miss|reg|7\d\dpm|\d{3}en/i.test(b.name); } },
+  { key: 'other', label: 'Other broadcasts', test: function () { return true; } }
+];
+
+function parseIst(s) {
+  var m = /(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i.exec(String(s || ''));
+  if (!m) return null;
+  var h = Number(m[4]);
+  if (m[7]) { var pm = m[7].toUpperCase() === 'PM'; if (h === 12) h = pm ? 12 : 0; else if (pm) h += 12; }
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], h, +m[5]) / 60000; // minutes, IST wall clock
+}
+function toNum(v) { if (v === undefined || v === null) return null; var s = String(v).replace(/[₹,%\s]/g, ''); if (s === '') return null; var n = Number(s); return isFinite(n) ? n : null; }
+function dateKey(t) { return new Date(t * 60000).toISOString().slice(0, 10); }
+function dayStart(t) { return Math.floor(t / 1440) * 1440; }
+function minutesOf(hhmm) { var p = hhmm.split(':').map(Number); return p[0] * 60 + p[1]; }
+function weekday(t) { return new Date(t * 60000).getUTCDay(); }
+
+function rowsToObjects(values) {
+  if (!values || !values.length) return [];
+  var h = values[0].map(function (x) { return String(x).trim(); });
+  return values.slice(1).map(function (r) { var o = {}; h.forEach(function (k, i) { o[k] = r[i] === undefined ? '' : r[i]; }); return o; });
+}
+
+/** Builds broadcasts from the two sheet tabs. */
+function buildBroadcasts(analysisValues, contentValues) {
+  var content = {};
+  rowsToObjects(contentValues).forEach(function (r) { if (r['Campaign ID']) content[r['Campaign ID']] = String(r['Message Content'] || ''); });
+  return rowsToObjects(analysisValues).filter(function (r) { return r['Campaign ID'] && r['Campaign Name']; }).map(function (r) {
+    var b = {
+      id: String(r['Campaign ID']), name: String(r['Campaign Name']).trim(),
+      t: parseIst(r['Sent At (IST)']), audience: toNum(r['Audience Size']), sent: toNum(r['Sent']),
+      delivered: toNum(r['Delivered']), read: toNum(r['Read']), failed: toNum(r['Failed']),
+      cost: toNum(r['Actual Cost']), clicks: toNum(r['Clicked']), replies: toNum(r['Replied']),
+      status: String(r['Data Status'] || ''), check: String(r['Data Check'] || ''),
+      inferredStart: parseIst(r['Webinar Start (inferred)']), updated: String(r['Last Updated'] || ''),
+      content: content[r['Campaign ID']] || ''
+    };
+    b.family = FAMILIES.filter(function (f) { return f.test(b); })[0].key;
+    b.missedFollowUp = /missed (yesterday|today)|Missed today|you missed/i.test(b.content);
+    b.missedish = b.missedFollowUp || /miss/i.test(b.name);
+    return b;
+  }).filter(function (b) { return b.t !== null; });
+}
+
+/** Finds Flexi Genie sessions from live-time bursts of sends. */
+function detectSessions(genie) {
+  var byDay = {};
+  genie.forEach(function (b) {
+    var d = dayStart(b.t), m = b.t - d, k = String(d);
+    byDay[k] = byDay[k] || { evening: 0, morning: 0, d: d };
+    if (m >= minutesOf('19:20') && m <= minutesOf('20:05')) byDay[k].evening++;
+    if (m >= minutesOf('10:50') && m <= minutesOf('11:40') && weekday(d) === 0) byDay[k].morning++;
+  });
+  var sessions = [];
+  Object.keys(byDay).forEach(function (k) {
+    var x = byDay[k];
+    if (x.morning >= 2) sessions.push({ t: x.d + minutesOf('11:00'), date: x.d });
+    if (x.evening >= 2) sessions.push({ t: x.d + minutesOf('19:30'), date: x.d });
+  });
+  return sessions.sort(function (a, b) { return a.t - b.t; });
+}
+
+function templateFor(dayT) { var w = weekday(dayT); return w === 0 ? 'sun' : (w === 3 ? 'wed' : 'tue'); }
+
+/** Assigns every Flexi Genie broadcast to a webinar instance and a schedule slot. */
+function analyse(broadcasts) {
+  var genie = broadcasts.filter(function (b) { return b.family === 'genie'; });
+  var sessions = detectSessions(genie);
+  var lastSend = broadcasts.reduce(function (m, b) { return Math.max(m, b.t); }, 0);
+  genie.forEach(function (b) {
+    var s = null;
+    if (b.missedFollowUp) {
+      s = sessions.filter(function (x) { return x.date === dayStart(b.t) && x.t > b.t; })[0] || null;
+      if (!s) {
+        var prev = sessions.filter(function (x) { return x.t < b.t && b.t - x.t < 36 * 60; }).pop();
+        if (prev) { s = prev; b.nextDay = true; }
+      }
+    }
+    if (!s) s = sessions.filter(function (x) { return b.t <= x.t + 45; })[0] || null;
+    if (!s && b.inferredStart && b.inferredStart > b.t) {
+      s = { t: b.inferredStart, date: dayStart(b.inferredStart), upcoming: true };
+      if (!sessions.some(function (x) { return x.t === s.t; })) sessions.push(s);
+      s = sessions.filter(function (x) { return x.t === b.inferredStart; })[0];
+    }
+    b.session = s;
+  });
+
+  var instances = {};
+  genie.forEach(function (b) {
+    if (!b.session) return;
+    var key = templateFor(b.session.date) + '|' + b.session.date;
+    var inst = instances[key] || (instances[key] = { key: key, template: templateFor(b.session.date), date: b.session.date, broadcasts: [], upcoming: true });
+    if (!b.session.upcoming) inst.upcoming = false;
+    inst.broadcasts.push(b);
+  });
+
+  Object.keys(instances).forEach(function (k) {
+    var inst = instances[k];
+    var slots = SCHEDULES[inst.template].slots.map(function (s, i) {
+      return Object.assign({}, s, { idx: i, at: inst.date + s.offset * 1440 + minutesOf(s.time), items: [] });
+    });
+    var pairs = [];
+    inst.broadcasts.forEach(function (b) {
+      slots.forEach(function (s) {
+        var diff = Math.abs(b.t - s.at);
+        var m = s.at - dayStart(s.at);
+        var dense = (m >= minutesOf('10:50') && m <= minutesOf('11:40')) || (m >= minutesOf('19:20') && m <= minutesOf('20:05'));
+        var tol = s.window || (dense ? 15 : 90);
+        if (s.offset === 1 && !b.nextDay) return;
+        if (diff > tol) return;
+        pairs.push({ b: b, s: s, diff: diff, cost: diff + (b.missedish !== !!s.missed ? 3 : 0) });
+      });
+    });
+    pairs.sort(function (a, b) { return a.cost - b.cost || a.diff - b.diff; });
+    pairs.forEach(function (p) { if (!p.b.slot && !p.s.items.length) { p.b.slot = p.s; p.s.items.push(p.b); } });
+    pairs.forEach(function (p) { if (!p.b.slot && p.diff <= 10) { p.b.slot = p.s; p.s.items.push(p.b); } });
+    inst.slots = slots;
+    inst.extras = inst.broadcasts.filter(function (b) { return !b.slot; }).sort(function (a, b) { return a.t - b.t; });
+  });
+
+  return {
+    sessions: sessions, instances: Object.keys(instances).map(function (k) { return instances[k]; }).sort(function (a, b) { return b.date - a.date; }),
+    unassignedGenie: genie.filter(function (b) { return !b.session; }), lastSend: lastSend
+  };
+}
+
+function totals(list) {
+  var t = { n: 0, sent: 0, delivered: 0, read: 0, clicks: 0, clickDelivered: 0, cost: 0 };
+  list.forEach(function (b) {
+    t.n++; t.sent += b.sent || 0; t.delivered += b.delivered || 0; t.read += b.read || 0; t.cost += b.cost || 0;
+    if (b.clicks !== null) { t.clicks += b.clicks; t.clickDelivered += b.delivered || 0; }
+  });
+  t.clickRate = t.clickDelivered > 0 ? t.clicks / t.clickDelivered : null;
+  t.readRate = t.delivered > 0 ? t.read / t.delivered : null;
+  t.cpc = t.clicks > 0 ? t.cost / t.clicks : null;
+  return t;
+}
+/* ---------- decision engine (pure functions, no DOM) ---------- */
+
+var STAGES = ['1+ days before', 'Webinar day, morning', 'Webinar day, 1–6 h before', 'Final hour before live', 'During live', 'Next-day follow-up'];
+
+function stageOf(b) {
+  if (b.family === 'genie' && b.session) {
+    if (b.nextDay) return 'Next-day follow-up';
+    var hb = (b.session.t - b.t) / 60;
+    if (hb >= 24) return '1+ days before';
+    if (hb >= 6) return 'Webinar day, morning';
+    if (hb >= 1) return 'Webinar day, 1–6 h before';
+    if (hb > 0) return 'Final hour before live';
+    return 'During live';
+  }
+  return familyLabel(b.family);
+}
+function isPreLive(stage) { return stage === '1+ days before' || stage === 'Webinar day, morning' || stage === 'Webinar day, 1–6 h before'; }
+function listBucket(b) { return (b.audience || 0) >= 5000 ? 'Big list (5,000+)' : 'Registered list'; }
+function familyLabel(key) { var f = FAMILIES.filter(function (x) { return x.key === key; })[0]; return f ? f.label : key; }
+
+function hasClicks(b) { return b.clicks !== null && (b.delivered || 0) > 0; }
+
+/* --- message grouping --- */
+var BOILERPLATE = /(this is a quick reminder that your|this is a reminder (for|regarding) your( upcoming)?( registered)? session|we look forward to having you in the session|team flexifunnels|reply stop to unsubscribe|please confirm here|confirm here|session details|session topic|join now|here is joining link|join community|this is a notification regarding your session|date and time|hello|dear)/g;
+var DATEWORDS = /\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?|mon(day)?|tue(sday)?|wed(nesday)?|thu(rsday)?|fri(day)?|sat(urday)?|sun(day)?|today|tomorrow|tonight|yesterday|am|pm|ist|et)\b/g;
+function messageTokens(content) {
+  var s = String(content || '').toLowerCase()
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/\[\$?firstname[^\]]*\]/g, ' ')
+    .replace(BOILERPLATE, ' ')
+    .replace(DATEWORDS, ' ')
+    .replace(/[0-9]+(st|nd|rd|th)?/g, ' ')
+    .replace(/[^a-zऀ-ॿ]+/g, ' ');
+  var words = s.split(/\s+/).filter(function (w) { return w.length > 2; });
+  var set = {}, n = 0;
+  for (var i = 0; i < words.length - 1; i++) { var k = words[i] + ' ' + words[i + 1]; if (!set[k]) { set[k] = 1; n++; } }
+  return { set: set, n: n };
+}
+function jaccard(a, b) {
+  if (!a.n || !b.n) return 0;
+  var inter = 0;
+  for (var k in a.set) if (b.set[k]) inter++;
+  return inter / (a.n + b.n - inter);
+}
+/** The message's headline: its first meaningful variable line. */
+function messageHook(content, fallback) {
+  var parts = [];
+  String(content || '').replace(/\[([^\]]+)\]/g, function (m, p) { parts.push(p); return m; });
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i].replace(/^\$?FirstName\s*,?\s*!?\s*/i, '').replace(/\s+/g, ' ').trim();
+    if (p.length >= 25 && !/^https?:/.test(p)) return p.length > 120 ? p.slice(0, 117) + '…' : p;
+  }
+  var line = String(content || '').split('\n').map(function (l) { return l.replace(/\[|\]|\$FirstName,?/g, '').trim(); })
+    .filter(function (l) { return l.length > 20 && !/^https?:/.test(l); })[0];
+  return line ? (line.length > 120 ? line.slice(0, 117) + '…' : line) : fallback;
+}
+function mediaKind(content) {
+  if (/cloudfront\.net\/VIDEO|\.mp4/i.test(content)) return 'Video';
+  if (/cloudfront\.net\/IMAGE|\.(png|jpe?g|webp)/i.test(content)) return 'Image';
+  return 'Text only';
+}
+
+function groupMessages(broadcasts) {
+  var groups = [];
+  broadcasts.slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (b) {
+    var tok = messageTokens(b.content);
+    var best = null, bestSim = 0;
+    if (tok.n >= 4) {
+      groups.forEach(function (g) {
+        if (g.family !== b.family) return;
+        var sim = jaccard(tok, g.tokens);
+        if (sim > bestSim) { bestSim = sim; best = g; }
+      });
+    }
+    if (!best || bestSim < 0.55) {
+      best = { id: 'm' + (groups.length + 1), tokens: tok, family: b.family, sends: [], content: b.content, hook: messageHook(b.content, b.name), media: mediaKind(b.content) };
+      groups.push(best);
+    }
+    best.sends.push(b);
+    b.message = best;
+  });
+  groups.forEach(function (g) {
+    var latest = g.sends[g.sends.length - 1];
+    g.content = latest.content || g.content;          // show the latest wording
+    g.hook = messageHook(g.content, latest.name);
+    g.media = mediaKind(g.content);
+  });
+  return groups;
+}
+
+/* --- peer baselines --- */
+function pool(list) {
+  var p = { del: 0, clicks: 0, reads: 0, readDel: 0, n: 0 };
+  list.forEach(function (b) {
+    if (hasClicks(b)) { p.del += b.delivered; p.clicks += b.clicks; p.n++; }
+    if ((b.delivered || 0) > 0 && b.read !== null) { p.readDel += b.delivered; p.reads += b.read; }
+  });
+  return p;
+}
+/** Attaches stage, peer click/read rates, expected clicks and an index to every broadcast. */
+function scoreBroadcasts(broadcasts) {
+  var keyed = {};
+  function add(k, b) { (keyed[k] = keyed[k] || []).push(b); }
+  broadcasts.forEach(function (b) {
+    b.stage = stageOf(b); b.list = listBucket(b);
+    add('A|' + b.family + '|' + b.stage + '|' + b.list, b);
+    add('B|' + b.family + '|' + b.stage, b);
+    add('C|' + b.family, b);
+    add('D|all', b);
+  });
+  var pools = {};
+  Object.keys(keyed).forEach(function (k) { pools[k] = pool(keyed[k]); });
+  broadcasts.forEach(function (b) {
+    var keys = ['A|' + b.family + '|' + b.stage + '|' + b.list, 'B|' + b.family + '|' + b.stage, 'C|' + b.family, 'D|all'];
+    for (var i = 0; i < keys.length; i++) {
+      var p = pools[keys[i]], own = hasClicks(b) ? 1 : 0;
+      var del = p.del - (own ? b.delivered : 0), clicks = p.clicks - (own ? b.clicks : 0), n = p.n - own;
+      if (n >= 3 && del >= 1500 && clicks > 0) {
+        b.peerRate = clicks / del; b.peerLevel = i;
+        var rDel = p.readDel - ((b.delivered || 0) > 0 && b.read !== null ? b.delivered : 0);
+        var reads = p.reads - ((b.delivered || 0) > 0 && b.read !== null ? b.read : 0);
+        b.peerRead = rDel > 0 ? reads / rDel : null;
+        b.peerCtor = reads > 0 ? clicks / reads : null;
+        break;
+      }
+    }
+    if (hasClicks(b) && b.peerRate) { b.expected = b.delivered * b.peerRate; b.index = b.clicks / b.expected; }
+    else { b.expected = null; b.index = null; }
+  });
+}
+
+/* --- verdicts --- */
+var VERDICTS = {
+  more: { label: 'Use more', rank: 0 },
+  keep: { label: 'Keep sending', rank: 1 },
+  improve: { label: 'Improve', rank: 2 },
+  remove: { label: 'Remove', rank: 3 },
+  data: { label: 'Not enough data', rank: 4 }
+};
+
+function judge(sends) {
+  var s = { sends: sends.length, sent: 0, delivered: 0, read: 0, clicks: 0, clickDel: 0, cost: 0, replies: 0, failed: 0, audience: 0, expected: 0, expReads: 0, readDelForExp: 0, ctorExpClicks: 0 };
+  sends.forEach(function (b) {
+    s.sent += b.sent || 0; s.delivered += b.delivered || 0; s.read += b.read || 0; s.cost += b.cost || 0;
+    s.replies += b.replies || 0; s.failed += b.failed || 0; s.audience += b.audience || 0;
+    if (hasClicks(b)) { s.clicks += b.clicks; s.clickDel += b.delivered; if (b.expected !== null) s.expected += b.expected; }
+    if (b.peerRead !== null && b.peerRead !== undefined && (b.delivered || 0) > 0) { s.expReads += b.delivered * b.peerRead; s.readDelForExp += b.delivered; }
+    if (b.peerCtor && b.read) s.ctorExpClicks += b.read * b.peerCtor;
+  });
+  s.ctr = s.clickDel > 0 ? s.clicks / s.clickDel : null;
+  s.readRate = s.delivered > 0 ? s.read / s.delivered : null;
+  s.ctor = s.read > 0 ? s.clicks / s.read : null;
+  s.deliveryRate = s.audience > 0 ? s.delivered / s.audience : null;
+  s.failRate = s.audience > 0 ? s.failed / s.audience : null;
+  s.replyRate = s.delivered > 0 ? s.replies / s.delivered : null;
+  s.cpc = s.clicks > 0 ? s.cost / s.clicks : null;
+  s.cpr = s.read > 0 ? s.cost / s.read : null;
+  s.index = s.expected > 0 ? s.clicks / s.expected : null;
+  s.readIndex = s.expReads > 0 ? s.read / s.expReads : null;
+  s.ctorIndex = s.ctorExpClicks > 0 ? s.clicks / s.ctorExpClicks : null;
+  s.z = s.expected > 0 ? (s.clicks - s.expected) / Math.sqrt(s.expected) : 0;
+  s.extraClicks = s.expected > 0 ? s.clicks - s.expected : 0;
+  s.confidence = Math.abs(s.z) >= 2 ? 'High' : Math.abs(s.z) >= 1 ? 'Medium' : 'Low';
+
+  var v, why;
+  if (s.clickDel < 300 || s.expected < 3) {
+    v = 'data';
+    why = 'Too few people reached (' + Math.round(s.clickDel) + ' delivered with click data) to judge it yet.';
+  } else if (s.index >= 1.25 && s.z >= 1.5) {
+    v = 'more';
+    why = 'Gets ' + Math.round((s.index - 1) * 100) + '% more clicks than similar sends. Use it in more slots and as the base for new versions.';
+  } else if (s.index >= 0.9) {
+    v = 'keep';
+    why = s.index >= 1.1 ? 'Slightly above similar sends. Keep it in rotation.' : 'In line with similar sends. Fine to repeat.';
+  } else if (s.index < 0.6 && (s.z <= -1.5 || (s.clicks === 0 && s.expected >= 5))) {
+    v = 'remove';
+    why = (s.clicks === 0 ? 'No clicks from ' + Math.round(s.clickDel) + ' delivered' : 'Gets ' + Math.round((1 - s.index) * 100) + '% fewer clicks than similar sends') + '. Stop sending it, or replace it with a better-performing message.';
+  } else {
+    v = 'improve';
+    if (s.readIndex !== null && s.readIndex < 0.85) why = 'Fewer people open it than similar sends (read rate ' + Math.round((1 - s.readIndex) * 100) + '% lower). Change the first line or the send time.';
+    else if (s.ctorIndex !== null && s.ctorIndex < 0.8) why = 'People read it but don’t click (click-to-read ' + Math.round((1 - s.ctorIndex) * 100) + '% below similar sends). Make the link and call to action clearer.';
+    else why = 'Below similar sends (' + Math.round((1 - s.index) * 100) + '% fewer clicks). Test a new version.';
+  }
+  s.verdict = v; s.why = why;
+  return s;
+}
+
+/* --- insights for the Suggestions tab --- */
+function rateBy(list, keyFn, minDel) {
+  var g = {};
+  list.forEach(function (b) {
+    if (!hasClicks(b)) return;
+    var k = keyFn(b); if (k === null || k === undefined) return;
+    var x = g[k] || (g[k] = { key: k, del: 0, clicks: 0, exp: 0, n: 0, cost: 0 });
+    x.del += b.delivered; x.clicks += b.clicks; x.n++; x.cost += b.cost || 0;
+    if (b.expected !== null) x.exp += b.expected;
+  });
+  return Object.keys(g).map(function (k) { var x = g[k]; x.ctr = x.clicks / x.del; x.index = x.exp > 0 ? x.clicks / x.exp : null; x.cpc = x.clicks ? x.cost / x.clicks : null; return x; })
+    .filter(function (x) { return x.del >= (minDel || 0); });
+}
+
+var FEATURES = [
+  { key: 'video', label: 'Has a video', test: function (c) { return /\/VIDEO\/|\.mp4/i.test(c); } },
+  { key: 'image', label: 'Has an image', test: function (c) { return /\/IMAGE\/|\.(png|jpe?g)/i.test(c); } },
+  { key: 'rupee', label: 'Mentions an income figure (₹)', test: function (c) { return /₹/.test(c); } },
+  { key: 'free', label: 'Says “free”', test: function (c) { return /\bfree\b/i.test(c); } },
+  { key: 'urgent', label: 'Urgency words (live now, last chance, hurry, final)', test: function (c) { return /live (right )?now|just started|last (chance|call)|hurry|final (chance|call)|housefull|almost full/i.test(c); } },
+  { key: 'question', label: 'Asks a question', test: function (c) { return /\?/.test(c.replace(/https?:\/\/\S+/g, '')); } },
+  { key: 'social', label: 'Social proof (people joined, customers)', test: function (c) { return /\d[\d,]*\+? (people|business people|members|customers)|have already joined|trusted us/i.test(c); } },
+  { key: 'short', label: 'Short message (under 450 characters)', test: function (c) { return c.replace(/https?:\/\/\S+/g, '').length < 450; } },
+  { key: 'emoji', label: 'Uses emoji', test: function (c) { return /[\u{1F300}-\u{1FAFF}☀-➿]/u.test(c); } }
+];
+
+function featureLifts(list) {
+  var scored = list.filter(function (b) { return hasClicks(b) && b.expected !== null && b.content; });
+  return FEATURES.map(function (f) {
+    var w = { c: 0, e: 0, n: 0 }, wo = { c: 0, e: 0, n: 0 };
+    scored.forEach(function (b) { var t = f.test(b.content) ? w : wo; t.c += b.clicks; t.e += b.expected; t.n++; });
+    return { f: f, withN: w.n, withoutN: wo.n, withIdx: w.e ? w.c / w.e : null, withoutIdx: wo.e ? wo.c / wo.e : null };
+  }).filter(function (x) { return x.withN >= 4 && x.withoutN >= 4 && x.withIdx !== null && x.withoutIdx !== null; })
+    .map(function (x) { x.lift = x.withIdx / x.withoutIdx - 1; return x; })
+    .sort(function (a, b) { return b.lift - a.lift; });
+}
+
+/** Clicks by time within the live burst (7:00–8:05 PM, 10:50–11:40 AM). */
+function liveBurst(list) {
+  var rows = rateBy(list.filter(function (b) { return b.family === 'genie' && (b.stage === 'Final hour before live' || b.stage === 'During live'); }), function (b) {
+    var m = b.t - dayStart(b.t), r = Math.round(m / 5) * 5;
+    return String(Math.floor(r / 60)).padStart(2, '0') + ':' + String(r % 60).padStart(2, '0');
+  }, 0);
+  return rows.sort(function (a, b) { return a.key.localeCompare(b.key); });
+}
+
+/*LOGIC-END*/
+
+(function () {
+  'use strict';
+  var SERVER = 'Google Sheets';
+  var SHEET_ID = '1jXnQPQngi-FbEBBHC0tvaOTXxmtE5_miv6Mq0rTbmLQ';
+  var RANGES = { analysis: "'Broadcast Analysis'!A1:AC5000", contents: "'Broadcast Contents'!A1:D5000" };
+  var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
+  var IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+
+  var state = {
+    raw: {}, cachedAt: {}, broadcasts: [], messages: [], result: null, tab: 'decisions', metric: 'clickRate', mcp: null,
+    dec: { verdict: '', family: '', sort: 'impact', q: '' },
+    filters: { from: '2026-08-01', to: '', preset: 'aug', family: '', q: '' }, sort: { key: 't', dir: -1 }, showAll: false
+  };
+  try { var saved = localStorage.getItem('wbs.tab2'); if (saved) state.tab = saved; } catch (e) { /* storage unavailable */ }
+
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var nf = new Intl.NumberFormat('en-IN');
+  function int(n) { return n === null || n === undefined || !isFinite(n) ? '—' : nf.format(Math.round(n)); }
+  function pct(n, d) { return n === null || n === undefined || !isFinite(n) ? '—' : (n * 100).toFixed(d === undefined ? 1 : d) + '%'; }
+  function inr(n) { return n === null || n === undefined || !isFinite(n) ? '—' : '₹' + (n < 10 ? n.toFixed(2) : nf.format(Math.round(n))); }
+  function vsSimilar(idx) { if (idx === null || idx === undefined || !isFinite(idx)) return '—'; var d = Math.round((idx - 1) * 100); return (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d) + '%'; }
+  function idxClass(idx) { return idx === null || idx === undefined ? '' : idx >= 1.2 ? 'up' : idx < 0.8 ? 'down' : ''; }
+  function when(t, opts) { return new Date(t * 60000).toLocaleString('en-IN', Object.assign({ timeZone: 'UTC' }, opts)); }
+  function dayLabel(t) { return when(t, { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function timeLabel(t) { return when(t, { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase(); }
+  function hourLabel(h) { return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
+  function rate(b) { return hasClicks(b) ? b.clicks / b.delivered : null; }
+  function cleanText(s) {
+    s = String(s || '');
+    if (/^\s*https?:\/\/\S+\s*$/.test(s)) return 'Image or video template (no text).';
+    return s.replace(/\s*\[\$?FirstName[^\]]*\]/g, '').replace(/^(\w+)\s*,/, '$1,').replace(/[\[\]]/g, '')
+      .replace(/~ Reply STOP to Unsubscribe|Please Confirm Here|Confirm Here/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function verdictPill(v) { return '<span class="verdict v-' + v + '">' + esc(VERDICTS[v].label) + '</span>'; }
+
+  // ---------- data loading ----------
+  function setSync(kind, text) { $('#syncDot').className = 'dot ' + (kind || ''); $('#syncText').textContent = text; }
+
+  function errorCopy(err) {
+    var code = err && err.code;
+    if (code === 'gas') return { title: 'Could not read the sheet', body: (err.message || '') + ' Make sure the account that deployed this dashboard can open the AiSensy Broadcast Analytics sheet.' };
+    if (code === 'server_not_connected' || code === 'selection_required') return { title: 'Connect Google Sheets', body: 'This page reads the AiSensy Broadcast Analytics sheet through the Google Sheets connector. Add or choose Google Sheets in claude.ai Settings → Connectors, then press Refresh.' };
+    if (code === 'needs_reauth') return { title: 'Reconnect Google Sheets', body: 'Your Google Sheets connection has expired. Reconnect it in claude.ai Settings → Connectors, then press Refresh.' };
+    if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') return { title: 'Allow Google Sheets for this page', body: 'The page needs your permission to read the sheet. Press “Allow and load” and approve Google Sheets when claude.ai asks.', allow: true };
+    if (code === 'blocked_by_policy') return { title: 'Blocked by your organization', body: 'Your organization’s policy blocks Google Sheets for this page. Ask an admin to allow it.' };
+    if (code === 'tool_error') return { title: 'Google Sheets could not read the sheet', body: (err.message || 'The connector reported an error.') + ' Check that your account can open the sheet: ' + SHEET_URL };
+    if (code === 'server_unavailable' || code === 'upstream_error' || code === 'rate_limited') return { title: 'Google Sheets did not answer', body: 'This is usually temporary. Press Refresh in a moment.' };
+    return { title: 'Could not load the sheet', body: (err && err.message) || 'Press Refresh to try again.' };
+  }
+
+  function renderNoSource() {
+    setSync('warn', 'Not connected');
+    $('#main').innerHTML = '<div class="state"><h2>Open the team dashboard link</h2><p class="muted">This page reads the <a href="' + SHEET_URL + '" target="_blank" rel="noopener">AiSensy Broadcast Analytics</a> sheet. Open it from the team’s Google web app link, or from claude.ai with Google Sheets connected.</p></div>';
+  }
+
+  function renderError(err) {
+    var c = errorCopy(err);
+    setSync('warn', c.title);
+    if (state.broadcasts.length) { render(); return; }
+    $('#main').innerHTML = '<div class="state err"><h2>' + esc(c.title) + '</h2><p class="muted">' + esc(c.body) + '</p>' +
+      (c.allow ? '<div><button class="btn primary" id="allowBtn" type="button">Allow and load</button></div>' : '') + '</div>';
+    var allow = $('#allowBtn');
+    if (allow) allow.addEventListener('click', function () { loadOnce(true); });
+  }
+
+  function onData(which, values, at) {
+    if (!Array.isArray(values)) { renderError({ code: 'tool_error', message: 'The sheet returned no rows for ' + RANGES[which] + '.' }); return; }
+    state.raw[which] = values;
+    state.cachedAt[which] = at || Date.now();
+    if (!state.raw.analysis || !state.raw.contents) return;
+    state.broadcasts = buildBroadcasts(state.raw.analysis, state.raw.contents);
+    state.result = analyse(state.broadcasts);
+    scoreBroadcasts(state.broadcasts);
+    state.messages = groupMessages(state.broadcasts);
+    state.messages.forEach(function (g) { g.s = judge(g.sends); });
+    var latestT = state.broadcasts.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
+    var read = new Date(Math.min(state.cachedAt.analysis, state.cachedAt.contents));
+    setSync('live', state.broadcasts.length + ' broadcasts · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
+      ' · read ' + read.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }));
+    render();
+  }
+
+  function loadGas() {
+    setSync('', 'Reading the sheet…');
+    google.script.run.withSuccessHandler(function (d) {
+      state.raw = {};
+      onData('analysis', d.analysis, Date.parse(d.fetchedAt));
+      onData('contents', d.contents, Date.parse(d.fetchedAt));
+    }).withFailureHandler(function (e) { renderError({ code: 'gas', message: e && e.message }); }).getDashboardData();
+  }
+
+  var unwatch = [];
+  function watch(mcp) {
+    unwatch.forEach(function (u) { u(); });
+    unwatch = Object.keys(RANGES).map(function (which) {
+      return mcp.watchTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[which] }, function (ev) {
+        if (ev.type === 'data') onData(which, ev.result && ev.result.payload && ev.result.payload.values, ev.result.cache ? ev.result.cache.storedAt : Date.now());
+        else {
+          var code = ev.error && ev.error.code;
+          if (['needs_reauth', 'server_not_connected', 'blocked_by_policy', 'approval_required', 'not_in_manifest'].indexOf(code) !== -1) {
+            state.raw = {}; state.broadcasts = []; state.result = null;
+          }
+          renderError(ev.error);
+        }
+      }, { cache: { staleTime: 5 * 60000, gcTime: 24 * 3600000 }, refetchInterval: 10 * 60000 });
+    });
+  }
+  function loadOnce(fresh) {
+    if (IS_GAS) { loadGas(); return; }
+    var mcp = state.mcp;
+    if (!mcp) return;
+    setSync('', 'Reading the sheet…');
+    Object.keys(RANGES).forEach(function (which) {
+      mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[which] }, { cache: { staleTime: 0, gcTime: 24 * 3600000, refresh: !!fresh } })
+        .then(function (res) { onData(which, res && res.payload && res.payload.values, res.cache ? res.cache.storedAt : Date.now()); })
+        .catch(renderError);
+    });
+  }
+
+  // ---------- tabs ----------
+  function tabsModel() {
+    var r = state.result;
+    var count = function (tpl) { return r.instances.filter(function (i) { return i.template === tpl; }).length; };
+    var decided = state.messages.filter(function (g) { return g.s.verdict !== 'data'; }).length;
+    return [
+      { key: 'decisions', label: 'Decisions', count: decided + ' messages' },
+      { key: 'suggest', label: 'Suggestions', count: '' },
+      { key: 'all', label: 'All broadcasts', count: String(state.broadcasts.length) },
+      { key: 'tue', label: 'Tuesday', count: count('tue') + ' sessions' },
+      { key: 'wed', label: 'Wednesday', count: count('wed') + ' sessions' },
+      { key: 'sun', label: 'Sunday', count: count('sun') + ' sessions' }
+    ];
+  }
+  function renderTabs() {
+    var tabs = tabsModel();
+    if (!tabs.some(function (t) { return t.key === state.tab; })) state.tab = 'decisions';
+    $('#tabs').innerHTML = tabs.map(function (t) {
+      return '<button class="tab" role="tab" type="button" data-tab="' + t.key + '" aria-selected="' + (t.key === state.tab) + '">' +
+        esc(t.label) + (t.count ? '<span class="count">' + esc(t.count) + '</span>' : '') + '</button>';
+    }).join('');
+  }
+  function render() {
+    if (!state.result) return;
+    renderTabs();
+    if (state.tab === 'decisions') renderDecisions();
+    else if (state.tab === 'suggest') renderSuggestions();
+    else if (state.tab === 'all') renderAll();
+    else renderWebinar(state.tab);
+  }
+
+  function stat(label, value, note) {
+    return '<div class="stat"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div>' + (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+  }
+
+  // ---------- Decisions ----------
+  function renderDecisions() {
+    var d = state.dec;
+    var counts = {};
+    state.messages.forEach(function (g) { counts[g.s.verdict] = (counts[g.s.verdict] || 0) + 1; });
+    var fams = FAMILIES.filter(function (x) { return state.messages.some(function (g) { return g.family === x.key; }); });
+    var html = '<div class="wrap" style="gap:16px">' +
+      '<div class="intro"><h2>What to resend, use more, fix or stop</h2><p class="muted">Each card is one message (all the times it was sent). It is scored against similar sends: same campaign, same timing (day before, webinar morning, final hour, live) and same list size. That way a live-time reminder is never compared with a day-before invite.</p></div>' +
+      '<div class="vchips" role="group" aria-label="Verdict">' +
+      [['', 'All', state.messages.length]].concat(Object.keys(VERDICTS).map(function (k) { return [k, VERDICTS[k].label, counts[k] || 0]; })).map(function (c) {
+        return '<button type="button" class="vchip' + (c[0] ? ' v-' + c[0] : '') + '" data-vfilter="' + c[0] + '" aria-pressed="' + (d.verdict === c[0]) + '"><b>' + c[2] + '</b> ' + esc(c[1]) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="filters">' +
+      '<label for="dFamily">Campaign<select id="dFamily"><option value="">All campaigns</option>' + fams.map(function (x) {
+        return '<option value="' + x.key + '"' + (d.family === x.key ? ' selected' : '') + '>' + esc(x.label) + '</option>';
+      }).join('') + '</select></label>' +
+      '<label for="dSort">Sort by<select id="dSort">' + [['impact', 'Strongest evidence first'], ['index', 'Best vs similar sends'], ['worst', 'Worst vs similar sends'], ['recent', 'Most recently sent'], ['sends', 'Most sent']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (d.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>' +
+      '<label for="dQ">Search<input type="search" id="dQ" placeholder="Words in the message or broadcast name" value="' + esc(d.q) + '"></label>' +
+      '</div><div id="decList" class="cards-col"></div></div>';
+    $('#main').innerHTML = html;
+    renderDecisionList();
+  }
+
+  function renderDecisionList() {
+    var d = state.dec, q = d.q.trim().toLowerCase();
+    var list = state.messages.filter(function (g) {
+      if (d.verdict && g.s.verdict !== d.verdict) return false;
+      if (d.family && g.family !== d.family) return false;
+      if (q && (g.content + ' ' + g.sends.map(function (b) { return b.name; }).join(' ')).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    var last = function (g) { return g.sends[g.sends.length - 1].t; };
+    list.sort(function (a, b) {
+      if (d.sort === 'index') return (b.s.index === null ? -1 : b.s.index) - (a.s.index === null ? -1 : a.s.index);
+      if (d.sort === 'worst') return (a.s.index === null ? 99 : a.s.index) - (b.s.index === null ? 99 : b.s.index);
+      if (d.sort === 'recent') return last(b) - last(a);
+      if (d.sort === 'sends') return b.s.sends - a.s.sends;
+      return VERDICTS[a.s.verdict].rank - VERDICTS[b.s.verdict].rank || Math.abs(b.s.z) - Math.abs(a.s.z);
+    });
+    if (!list.length) { $('#decList').innerHTML = '<div class="state"><h2>No messages match</h2><p class="muted">Clear a filter to see more.</p></div>'; return; }
+    $('#decList').innerHTML = list.map(messageCard).join('');
+  }
+
+  function messageCard(g) {
+    var s = g.s, first = g.sends[0], last = g.sends[g.sends.length - 1];
+    var slots = {};
+    g.sends.forEach(function (b) { var k = b.slot ? b.slot.name : b.stage; slots[k] = (slots[k] || 0) + 1; });
+    var zeroNote = s.clicks === 0 && s.clickDel >= 1000 && /https?:\/\//.test(g.content)
+      ? '<p class="small warnline">Zero clicks with a link in the message: check that the link is set up as a trackable button in AiSensy, or clicks are not counted.</p>' : '';
+    return '<article class="mcard v-' + s.verdict + '" data-id="' + g.id + '">' +
+      '<div class="mhead">' + verdictPill(s.verdict) +
+      (s.verdict !== 'data' ? '<span class="conf">' + esc(s.confidence) + ' confidence</span>' : '') +
+      '<span class="faint small">' + esc(familyLabel(g.family)) + ' · ' + esc(g.media) + '</span></div>' +
+      '<h3>' + esc(g.hook) + '</h3>' +
+      '<p class="why">' + esc(s.why) + '</p>' + zeroNote +
+      '<div class="mstats">' +
+      mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) +
+      mstat('Delivered', int(s.delivered)) +
+      mstat('Read rate', pct(s.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
+      mstat('Click rate', pct(s.ctr, 2), int(s.clicks) + ' clicks') +
+      mstat('Click-to-read', pct(s.ctor, 1), s.ctorIndex !== null ? vsSimilar(s.ctorIndex) + ' vs similar' : '', idxClass(s.ctorIndex)) +
+      mstat('Cost / click', inr(s.cpc), inr(s.cost) + ' spent') +
+      mstat('Clicks vs similar', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') +
+      '</div>' +
+      '<p class="meta small">First sent ' + esc(dayLabel(first.t)) + ', ' + esc(timeLabel(first.t)) + ' · last sent ' + esc(dayLabel(last.t)) + ', ' + esc(timeLabel(last.t)) +
+      ' · used as: ' + esc(Object.keys(slots).map(function (k) { return k + (slots[k] > 1 ? ' ×' + slots[k] : ''); }).join(', ')) + '</p>' +
+      '<details><summary>Send history and full message</summary>' + sendTable(g.sends) +
+      '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details>' +
+      '</article>';
+  }
+  function mstat(label, value, note, cls) {
+    return '<div class="ms"><div class="k">' + esc(label) + '</div><div class="v">' + value + '</div>' + (note ? '<div class="n ' + (cls || '') + '">' + esc(note) + '</div>' : '') + '</div>';
+  }
+  function sendTable(sends) {
+    return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th>Timing</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">vs similar</th></tr></thead><tbody>' +
+      sends.slice().sort(function (a, b) { return b.t - a.t; }).map(function (b) {
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + '</td><td>' +
+          esc(b.slot ? b.slot.name : b.stage) + ' <span class="faint small">' + esc(b.list) + '</span></td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) +
+          '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  // ---------- Suggestions ----------
+  function renderSuggestions() {
+    var all = state.broadcasts, genie = all.filter(function (b) { return b.family === 'genie'; });
+    var actions = [];
+
+    // 1. Remove
+    var removes = state.messages.filter(function (g) { return g.s.verdict === 'remove'; }).sort(function (a, b) { return b.s.clickDel - a.s.clickDel; });
+    removes.slice(0, 3).forEach(function (g) {
+      actions.push({ tone: 'bad', text: 'Stop sending “' + g.hook + '”', detail: g.s.sends + ' sends, ' + int(g.s.delivered) + ' delivered, ' + int(g.s.clicks) + ' clicks (' + pct(g.s.ctr, 2) + '), ' + inr(g.s.cost) + ' spent. ' + g.s.why, id: g.id });
+    });
+    // 2. Use more
+    state.messages.filter(function (g) { return g.s.verdict === 'more'; }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
+      actions.push({ tone: 'good', text: 'Use “' + g.hook + '” in more slots', detail: vsSimilar(g.s.index) + ' clicks vs similar sends across ' + g.s.sends + ' send' + (g.s.sends > 1 ? 's' : '') + ' (' + pct(g.s.ctr, 2) + ' click rate). Base new versions on it.', id: g.id });
+    });
+    // 3. Timing (registered list, before live)
+    var pre = genie.filter(function (b) { return isPreLive(b.stage) && b.list === 'Registered list'; });
+    var hours = rateBy(pre, function (b) { return Math.floor((b.t - dayStart(b.t)) / 60); }, 800).sort(function (a, b) { return b.ctr - a.ctr; });
+    if (hours.length >= 3) {
+      var top = hours.slice(0, 2), bottom = hours.slice(-2);
+      actions.push({ tone: 'good', text: 'Send pre-webinar reminders at ' + top.map(function (h) { return hourLabel(h.key); }).join(' or ') + ', not ' + bottom.map(function (h) { return hourLabel(h.key); }).join(' or '),
+        detail: top.map(function (h) { return hourLabel(h.key) + ' gets ' + pct(h.ctr, 2); }).join(', ') + ' click rate on your registered list; ' + bottom.map(function (h) { return hourLabel(h.key) + ' gets ' + pct(h.ctr, 2); }).join(', ') + '.' });
+    }
+    // 4. Big lists
+    var lists = rateBy(genie, function (b) { return b.list; }, 0);
+    var big = lists.filter(function (x) { return x.key === 'Big list (5,000+)'; })[0], reg = lists.filter(function (x) { return x.key === 'Registered list'; })[0];
+    if (big && reg && big.cpc && reg.cpc && big.cpc > reg.cpc * 1.5) {
+      actions.push({ tone: 'warn', text: 'Big cold-list blasts cost ' + Math.round(big.cpc / reg.cpc) + '× more per click', detail: 'Lists of 5,000+ get ' + pct(big.ctr, 2) + ' click rate at ' + inr(big.cpc) + ' per click, against ' + pct(reg.ctr, 2) + ' and ' + inr(reg.cpc) + ' on registered lists (' + inr(big.cost) + ' spent on ' + big.n + ' big sends). Send them less often, or only with a top-performing message.' });
+    }
+    // 5. Live burst
+    var burst = liveBurst(all).filter(function (x) { return x.n >= 2; });
+    if (burst.length >= 3) {
+      var bAvg = burst.reduce(function (m, x) { return m + x.clicks; }, 0) / burst.reduce(function (m, x) { return m + x.del; }, 0);
+      var weak = burst.filter(function (x) { return x.ctr < bAvg * 0.75; });
+      if (weak.length) actions.push({ tone: 'warn', text: 'Drop or rewrite the ' + weak.map(function (x) { return fmtHM(x.key); }).join(', ') + ' live reminder' + (weak.length > 1 ? 's' : ''),
+        detail: weak.map(function (x) { return fmtHM(x.key) + ' averages ' + pct(x.ctr, 2); }).join(', ') + ' against ' + pct(bAvg, 2) + ' for the whole live window. Fewer, stronger live reminders save cost without losing many clicks.' });
+    }
+    // 6. Failures
+    var fail = all.reduce(function (m, b) { return m + (b.failed || 0); }, 0), aud = all.reduce(function (m, b) { return m + (b.audience || 0); }, 0);
+    var badLists = all.filter(function (b) { return (b.audience || 0) >= 200 && b.failed / b.audience >= 0.1; });
+    if (badLists.length) actions.push({ tone: 'warn', text: badLists.length + ' broadcasts had 10%+ failed messages', detail: int(fail) + ' messages failed overall (' + pct(aud ? fail / aud : null) + ' of audience). Clean these lists first: ' + badLists.slice(0, 4).map(function (b) { return b.name + ' (' + pct(b.failed / b.audience, 0) + ')'; }).join(', ') + (badLists.length > 4 ? '…' : '') + '.' });
+
+    var html = '<div class="wrap" style="gap:20px">';
+    html += '<section class="section"><div class="section-head"><div><h2>Do these first</h2><p class="muted small">Generated from every broadcast in the sheet. Click an item to see its message.</p></div></div><ol class="actions">' +
+      actions.map(function (a) { return '<li class="action ' + a.tone + '"' + (a.id ? ' data-msg="' + a.id + '" tabindex="0"' : '') + '><b>' + esc(a.text) + '</b><span>' + esc(a.detail) + '</span></li>'; }).join('') + '</ol></section>';
+
+    // Timing charts
+    var hourRows = rateBy(pre, function (b) { return Math.floor((b.t - dayStart(b.t)) / 60); }, 0).sort(function (a, b) { return a.key - b.key; }).map(function (h) {
+      return { label: (h.key % 12 || 12) + (h.key < 12 ? 'a' : 'p'), v: h.ctr * 100, dim: h.del < 800, tip: hourLabel(h.key) + ': ' + pct(h.ctr, 2) + ' click rate, ' + h.n + ' broadcasts, ' + int(h.del) + ' delivered' };
+    });
+    var dow = rateBy(genie.filter(function (b) { return b.expected !== null; }), function (b) { return weekday(b.t); }, 0).sort(function (a, b) { return a.key - b.key; }).map(function (x) {
+      return { label: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][x.key], v: x.index === null ? 0 : x.index * 100, dim: x.del < 2000, tip: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][x.key] + ': ' + vsSimilar(x.index) + ' clicks vs similar sends, ' + x.n + ' broadcasts' };
+    });
+    var burstRows = liveBurst(all).map(function (x) { return { label: fmtHM(x.key).replace(' PM', 'p').replace(' AM', 'a'), v: x.ctr * 100, dim: x.n < 2, tip: fmtHM(x.key) + ': ' + pct(x.ctr, 2) + ' click rate across ' + x.n + ' sends' }; });
+    html += '<section class="section"><div class="section-head"><div><h2>When to send</h2><p class="muted small">Pale bars have little data behind them.</p></div></div><div class="charts">' +
+      '<div class="chart"><h3>Before the webinar: click rate by hour</h3><p class="faint small">Flexi Genie reminders to registered lists, sent before live time.</p>' + barChart(hourRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
+      '<div class="chart"><h3>Live window: click rate by send time</h3><p class="faint small">Reminders in the hour around live time.</p>' + barChart(burstRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
+      '<div class="chart"><h3>Day of the week</h3><p class="faint small">Clicks vs similar sends (100 = average), so timing and list size are already accounted for.</p>' + barChart(dow, function (v) { return Math.round(v); }) + '</div>' +
+      '</div></section>';
+
+    // Message style
+    var lifts = featureLifts(genie);
+    if (lifts.length) {
+      html += '<section class="section"><div class="section-head"><div><h2>What kind of message gets clicks</h2><p class="muted small">Flexi Genie messages with and without each element, compared on clicks vs similar sends. This shows patterns, not proof: test before changing everything.</p></div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Message element</th><th class="r">Sends with</th><th class="r">Clicks vs similar (with)</th><th class="r">(without)</th><th class="r">Effect</th></tr></thead><tbody>' +
+        lifts.map(function (x) {
+          var cls = x.lift >= 0.15 ? 'up' : x.lift <= -0.15 ? 'down' : '';
+          return '<tr><td class="name">' + esc(x.f.label) + '</td><td class="r num">' + x.withN + ' of ' + (x.withN + x.withoutN) + '</td><td class="r num">' + vsSimilar(x.withIdx) + '</td><td class="r num">' + vsSimilar(x.withoutIdx) +
+            '</td><td class="r num"><span class="idx ' + cls + '">' + (x.lift >= 0 ? '+' : '−') + Math.abs(Math.round(x.lift * 100)) + '%</span></td></tr>';
+        }).join('') + '</tbody></table></div></section>';
+    }
+
+    // Lists and campaign cost
+    var famRows = rateBy(all, function (b) { return b.family; }, 0).sort(function (a, b) { return (a.cpc || 1e9) - (b.cpc || 1e9); });
+    html += '<section class="section"><div class="section-head"><div><h2>Where the money goes</h2></div></div><div class="table-wrap"><table class="list"><thead><tr><th>Campaign / list</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Spend</th><th class="r">Cost / click</th></tr></thead><tbody>' +
+      famRows.map(function (x) { return costRow(familyLabel(x.key), x); }).join('') +
+      lists.map(function (x) { return costRow('Flexi Genie · ' + x.key, x); }).join('') + '</tbody></table></div></section>';
+
+    // Next webinar plan
+    html += '<section class="section"><div class="section-head"><div><h2>Plan for the next webinar</h2><p class="muted small">Each schedule slot, judged on every session so far, with the best message seen in that slot.</p></div></div>' +
+      ['tue', 'wed', 'sun'].map(planTable).join('') + '</section>';
+
+    html += '</div>';
+    $('#main').innerHTML = html;
+  }
+  function fmtHM(k) { var p = k.split(':').map(Number); return (p[0] % 12 || 12) + ':' + String(p[1]).padStart(2, '0') + (p[0] < 12 ? ' AM' : ' PM'); }
+  function costRow(label, x) {
+    return '<tr><td class="name">' + esc(label) + '</td><td class="r num">' + x.n + '</td><td class="r num">' + int(x.del) + '</td><td class="r num">' + int(x.clicks) + '</td><td class="r num">' + pct(x.ctr, 2) + '</td><td class="r num">' + inr(x.cost) + '</td><td class="r num">' + inr(x.cpc) + '</td></tr>';
+  }
+  function planTable(tpl) {
+    var insts = state.result.instances.filter(function (i) { return i.template === tpl && !i.upcoming; });
+    var sched = SCHEDULES[tpl];
+    if (!insts.length) return '';
+    var rows = sched.slots.map(function (s, idx) {
+      var sentItems = [].concat.apply([], insts.map(function (i) { return i.slots[idx].items; }));
+      var items = sentItems.filter(hasClicks);
+      var c = 0, e = 0, del = 0;
+      items.forEach(function (b) { c += b.clicks; del += b.delivered; if (b.expected !== null) e += b.expected; });
+      var index = e > 0 ? c / e : null;
+      var best = items.filter(function (b) { return b.index !== null && b.index >= 0.8 && b.delivered >= 200; }).sort(function (a, b) { return b.index - a.index; })[0];
+      var rec;
+      if (!sentItems.length) rec = ['', 'Not sent yet'];
+      else if (!items.length) rec = ['', 'Sent, but no click data'];
+      else if (e < 3) rec = ['data', 'Not enough data'];
+      else if (index >= 1.15) rec = ['more', 'Keep, it works'];
+      else if (index >= 0.8) rec = ['keep', 'Keep'];
+      else if (index >= 0.55) rec = ['improve', 'Use a stronger message'];
+      else rec = ['remove', 'Drop or move this slot'];
+      return '<tr><td class="name">' + esc(s.name) + '</td><td class="r num">' + (sentItems.length ? sentItems.length : '—') + '</td><td class="r num">' + pct(del ? c / del : null, 2) + '</td><td class="r num"><span class="idx ' + idxClass(index) + '">' + vsSimilar(index) + '</span></td>' +
+        '<td>' + (rec[0] ? '<span class="verdict v-' + rec[0] + '">' + esc(rec[1]) + '</span>' : '<span class="faint small">' + rec[1] + '</span>') + '</td>' +
+        '<td class="name">' + (best ? '<a href="#" data-msg="' + best.message.id + '">' + esc(best.message.hook.slice(0, 70)) + (best.message.hook.length > 70 ? '…' : '') + '</a> <span class="faint small">' + pct(rate(best), 2) + '</span>' : '<span class="faint small">' + (items.length ? 'None did well here yet' : '—') + '</span>') + '</td></tr>';
+    }).join('');
+    return '<h3 class="plan-h">' + esc(sched.label) + ' <span class="faint small">' + insts.length + ' sessions: ' + esc(insts.map(function (i) { return dayLabel(i.date); }).join(', ')) + '</span></h3>' +
+      '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">vs similar</th><th>Recommendation</th><th>Best message in this slot</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  // ---------- All broadcasts ----------
+  function renderAll() {
+    var f = state.filters;
+    var fams = FAMILIES.filter(function (x) { return state.broadcasts.some(function (b) { return b.family === x.key; }); });
+    var presets = [['aug', 'Since 1 Aug'], ['30', 'Last 30 days'], ['7', 'Last 7 days'], ['all', 'All time']];
+    $('#main').innerHTML = '<div class="wrap" style="gap:16px"><div class="filters">' +
+      '<label>Period<div class="presets" role="group" aria-label="Period">' + presets.map(function (p) {
+        return '<button type="button" data-preset="' + p[0] + '" aria-pressed="' + (f.preset === p[0]) + '">' + p[1] + '</button>';
+      }).join('') + '</div></label>' +
+      '<label for="fFrom">From<input type="date" id="fFrom" value="' + esc(f.from) + '"></label>' +
+      '<label for="fTo">To<input type="date" id="fTo" value="' + esc(f.to) + '"></label>' +
+      '<label for="fFamily">Campaign<select id="fFamily"><option value="">All campaigns</option>' + fams.map(function (x) {
+        return '<option value="' + x.key + '"' + (f.family === x.key ? ' selected' : '') + '>' + esc(x.label) + '</option>';
+      }).join('') + '</select></label>' +
+      '<label for="fQ">Search<input type="search" id="fQ" placeholder="Broadcast name or message text" value="' + esc(f.q) + '"></label>' +
+      '</div><div id="allResults" class="wrap" style="gap:16px"></div></div>';
+    renderAllResults();
+  }
+  function filteredBroadcasts() {
+    var f = state.filters, q = f.q.trim().toLowerCase();
+    return state.broadcasts.filter(function (b) {
+      var d = dateKey(b.t);
+      if (f.from && d < f.from) return false;
+      if (f.to && d > f.to) return false;
+      if (f.family && b.family !== f.family) return false;
+      if (q && (b.name + ' ' + b.content).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+  function renderAllResults() {
+    var list = filteredBroadcasts(), f = state.filters, html = '';
+    var earliest = state.broadcasts.reduce(function (m, b) { return m === null || b.t < m ? b.t : m; }, null);
+    if (earliest !== null && f.from && dateKey(earliest) > f.from) {
+      html += '<p class="notice"><b>The sheet has no broadcasts before ' + esc(dayLabel(earliest)) + '.</b> Earlier ones will show here as soon as they are added to the AiSensy Broadcast Analytics sheet.</p>';
+    }
+    var t = totals(list);
+    var ctorAll = t.read > 0 ? t.clicks / t.read : null;
+    var replies = list.reduce(function (m, b) { return m + (b.replies || 0); }, 0), failed = list.reduce(function (m, b) { return m + (b.failed || 0); }, 0), aud = list.reduce(function (m, b) { return m + (b.audience || 0); }, 0);
+    html += '<div class="strip">' +
+      stat('Broadcasts', int(t.n), list.length ? esc(dayLabel(list.reduce(function (m, b) { return Math.min(m, b.t); }, Infinity)) + ' – ' + dayLabel(list.reduce(function (m, b) { return Math.max(m, b.t); }, 0))) : '') +
+      stat('Delivered', int(t.delivered), pct(aud ? t.delivered / aud : null) + ' of audience · ' + int(failed) + ' failed') +
+      stat('Read rate', pct(t.readRate), int(t.read) + ' reads') +
+      stat('Clicks', int(t.clicks), pct(t.clickRate, 2) + ' click rate · ' + pct(ctorAll) + ' of readers') +
+      stat('Replies', int(replies), pct(t.delivered ? replies / t.delivered : null, 2) + ' reply rate') +
+      stat('Spend', inr(t.cost), (t.cpc === null ? '' : inr(t.cpc) + ' per click · ') + inr(t.read ? t.cost / t.read : null) + ' per read') +
+      '</div>';
+    if (!list.length) { html += '<div class="state"><h2>No broadcasts match</h2><p class="muted">Widen the period or clear the search.</p></div>'; $('#allResults').innerHTML = html; return; }
+
+    var weeks = {};
+    list.forEach(function (b) { var d = dayStart(b.t), wk = d - ((weekday(d) + 6) % 7) * 1440; (weeks[wk] = weeks[wk] || []).push(b); });
+    var wkRows = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
+      var tt = totals(weeks[k]); return { label: when(k, { day: 'numeric', month: 'short' }), v: tt.clicks, tip: 'Week of ' + dayLabel(k) + ': ' + int(tt.clicks) + ' clicks, ' + pct(tt.clickRate, 2) + ' click rate, ' + tt.n + ' broadcasts, ' + inr(tt.cost) };
+    });
+    var wkCost = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
+      var tt = totals(weeks[k]); return { label: when(k, { day: 'numeric', month: 'short' }), v: tt.cost, tip: 'Week of ' + dayLabel(k) + ': ' + inr(tt.cost) + ' spent, ' + inr(tt.cpc) + ' per click' };
+    });
+    html += '<div class="charts"><div class="chart"><h3>Clicks per week</h3>' + barChart(wkRows, function (v) { return int(v); }) + '</div>' +
+      '<div class="chart"><h3>Spend per week</h3>' + barChart(wkCost, function (v) { return '₹' + nf.format(Math.round(v)); }) + '</div></div>';
+
+    var byFam = {};
+    list.forEach(function (b) { (byFam[b.family] = byFam[b.family] || []).push(b); });
+    html += '<section class="section"><div class="section-head"><h2>By campaign</h2></div><div class="table-wrap"><table class="list"><thead><tr><th>Campaign</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Spend</th><th class="r">Cost / click</th></tr></thead><tbody>' +
+      Object.keys(byFam).map(function (k) { return { k: k, t: totals(byFam[k]) }; }).sort(function (a, b) { return b.t.delivered - a.t.delivered; }).map(function (r) {
+        return '<tr class="click" data-family="' + r.k + '" tabindex="0"><td class="name">' + esc(familyLabel(r.k)) + '</td><td class="r num">' + r.t.n + '</td><td class="r num">' + int(r.t.delivered) + '</td><td class="r num">' + pct(r.t.readRate) +
+          '</td><td class="r num">' + int(r.t.clicks) + '</td><td class="r num">' + pct(r.t.clickRate, 2) + '</td><td class="r num">' + inr(r.t.cost) + '</td><td class="r num">' + inr(r.t.cpc) + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+
+    var sort = state.sort;
+    var val = function (b) {
+      var small = (b.delivered || 0) < 100 ? (sort.dir < 0 ? -2 : 2) : 0;
+      if (sort.key === 'clickRate') return small || (rate(b) === null ? -1 : rate(b));
+      if (sort.key === 'readRate') return small || (b.delivered ? b.read / b.delivered : -1);
+      if (sort.key === 'ctor') return small || (b.read ? (b.clicks || 0) / b.read : -1);
+      if (sort.key === 'index') return b.index === null ? (sort.dir < 0 ? -9 : 9) : b.index;
+      if (sort.key === 'name') return b.name.toLowerCase();
+      if (sort.key === 'family') return familyLabel(b.family);
+      if (sort.key === 'verdict') return VERDICTS[b.message.s.verdict].rank;
+      var v = b[sort.key]; return v === null || v === undefined ? -1 : v;
+    };
+    var rows = list.slice().sort(function (a, b) { var x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sort.dir; });
+    var shown = state.showAll ? rows : rows.slice(0, 100);
+    var th = function (key, label, right) {
+      return '<th class="sort' + (right ? ' r' : '') + '" data-sort="' + key + '" aria-sort="' + (sort.key === key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + label +
+        (sort.key === key ? ' <span class="arrow">' + (sort.dir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
+    };
+    html += '<section class="section"><div class="section-head"><div><h2>Every broadcast</h2><p class="muted small">Click a column to sort, or a row for the message and full numbers.</p></div></div>' +
+      '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('name', 'Broadcast') + th('family', 'Campaign') + '<th>Timing</th>' + th('delivered', 'Delivered', 1) +
+      th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('ctor', 'Click-to-read', 1) + th('index', 'vs similar', 1) + th('cost', 'Cost', 1) + th('verdict', 'Message verdict') + '</tr></thead><tbody>' +
+      shown.map(function (b) {
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) +
+          (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</td><td>' + esc(familyLabel(b.family)) + '</td><td class="small">' + esc(b.slot ? b.slot.name : b.stage) + '</td>' +
+          '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) +
+          '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + pct(b.read && b.clicks !== null ? b.clicks / b.read : null) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) +
+          '</span></td><td class="r num">' + inr(b.cost) + '</td><td>' + verdictPill(b.message.s.verdict) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (rows.length > shown.length ? '<div><button class="btn" type="button" id="showAllBtn">Show all ' + rows.length + ' broadcasts</button></div>' : '') + '</section>';
+    $('#allResults').innerHTML = html;
+  }
+
+  /** Vertical bar chart drawn to one scale; each bar has a hover tooltip. */
+  function barChart(rows, fmt) {
+    if (!rows.length) return '<p class="faint small">No data yet.</p>';
+    var W = 560, H = 190, padL = 48, padB = 22, padT = 8;
+    var max = Math.max.apply(null, rows.map(function (r) { return r.v; }).concat([0]));
+    if (max <= 0) max = 1;
+    var step = Math.pow(10, Math.floor(Math.log10(max))), nice = Math.ceil(max / step) * step;
+    var ticks = [0, nice / 2, nice];
+    var bw = (W - padL) / rows.length, gap = Math.min(6, bw * 0.25);
+    var y = function (v) { return padT + (H - padT - padB) * (1 - v / nice); };
+    var every = Math.ceil(rows.length / 10);
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">';
+    ticks.forEach(function (tk) { svg += '<line class="grid" x1="' + padL + '" x2="' + W + '" y1="' + y(tk) + '" y2="' + y(tk) + '"></line><text x="' + (padL - 6) + '" y="' + (y(tk) + 4) + '" text-anchor="end">' + esc(fmt(tk)) + '</text>'; });
+    rows.forEach(function (r, i) {
+      var x = padL + i * bw + gap / 2, h = Math.max(0, y(0) - y(r.v));
+      svg += '<g><title>' + esc(r.tip) + '</title><rect class="bar' + (r.dim ? ' dim' : '') + '" x="' + x.toFixed(1) + '" y="' + (y(0) - h).toFixed(1) + '" width="' + Math.max(1, bw - gap).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"></rect>' +
+        '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + (H - padT - padB) + '" fill="transparent"></rect></g>';
+      if (i % every === 0) svg += '<text class="lbl" x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(r.label) + '</text>';
+    });
+    return svg + '</svg>';
+  }
+
+  // ---------- Slot grids (Tuesday / Wednesday / Sunday) ----------
+  function metricValue(list) {
+    var t = totals(list);
+    if (state.metric === 'clicks') return { v: t.clicks, text: int(t.clicks), t: t };
+    if (state.metric === 'readRate') return { v: t.readRate, text: pct(t.readRate), t: t };
+    if (state.metric === 'index') {
+      var c = 0, e = 0; list.forEach(function (b) { if (hasClicks(b) && b.expected !== null) { c += b.clicks; e += b.expected; } });
+      var ix = e > 0 ? c / e : null; return { v: ix, text: vsSimilar(ix), t: t };
+    }
+    return { v: t.clickRate, text: pct(t.clickRate, 2), t: t };
+  }
+  function heatClass(v, max) {
+    if (v === null || !isFinite(v) || max <= 0) return '';
+    var r = v / max;
+    return r >= 0.85 ? 'h5' : r >= 0.65 ? 'h4' : r >= 0.45 ? 'h3' : r >= 0.25 ? 'h2' : r > 0 ? 'h1' : '';
+  }
+  function renderWebinar(tpl) {
+    var sched = SCHEDULES[tpl];
+    var insts = state.result.instances.filter(function (i) { return i.template === tpl; });
+    if (!insts.length) { $('#main').innerHTML = '<div class="state"><h2>No ' + esc(sched.label.toLowerCase()) + ' sessions found yet</h2><p class="muted">Sessions appear here once their broadcasts are in the sheet.</p></div>'; return; }
+    var all = [].concat.apply([], insts.map(function (i) { return i.broadcasts; }));
+    var t = totals(all);
+    var slotRows = sched.slots.map(function (s, idx) {
+      var items = [].concat.apply([], insts.map(function (i) { return i.slots[idx].items; }));
+      return { s: s, idx: idx, items: items, m: metricValue(items) };
+    });
+    var cellVals = [];
+    insts.forEach(function (i) { i.slots.forEach(function (s) { if (s.items.length) cellVals.push(metricValue(s.items).v); }); });
+    var max = Math.max.apply(null, cellVals.filter(function (v) { return v !== null && isFinite(v); }).concat([0]));
+    var avgMax = Math.max.apply(null, slotRows.map(function (r) { return r.m.v || 0; }).concat([0]));
+    var html = '<div class="wrap" style="gap:16px"><div class="strip">' +
+      stat('Sessions', insts.length, esc(insts.map(function (i) { return dayLabel(i.date) + (i.upcoming ? ' (upcoming)' : ''); }).join(' · '))) +
+      stat('Broadcasts', all.length, all.filter(function (b) { return b.slot; }).length + ' matched to a slot') +
+      stat('Delivered', int(t.delivered), pct(t.readRate) + ' read') +
+      stat('Clicks', int(t.clicks), pct(t.clickRate, 2) + ' of delivered') +
+      stat('Spend', inr(t.cost), t.cpc === null ? '' : inr(t.cpc) + ' per click') + '</div>';
+    html += '<section class="section"><div class="section-head"><div><h2>' + esc(sched.label) + ', slot by slot</h2><p class="muted small">Each column is one session. Click a cell for the broadcast and its message. See Suggestions for what to keep or drop.</p></div>' +
+      '<div class="metric-switch" role="group" aria-label="Metric">' + [['clickRate', 'Click rate'], ['index', 'vs similar'], ['clicks', 'Clicks'], ['readRate', 'Read rate']].map(function (m) {
+        return '<button type="button" data-metric="' + m[0] + '" aria-pressed="' + (state.metric === m[0]) + '">' + m[1] + '</button>';
+      }).join('') + '</div></div>';
+    html += '<div class="grid-wrap"><table class="heat"><thead><tr><th class="slot">Schedule slot</th>' +
+      insts.map(function (i) { return '<th>' + esc(dayLabel(i.date)) + '<span class="d">' + (i.upcoming ? 'upcoming' : i.broadcasts.length + ' sends') + '</span></th>'; }).join('') + '<th>All sessions</th></tr></thead><tbody>';
+    var lastOffset = null;
+    slotRows.forEach(function (r) {
+      if (r.s.offset !== lastOffset) {
+        lastOffset = r.s.offset;
+        var dl = r.s.offset === 0 ? 'Webinar day' : r.s.offset === -1 ? '1 day before' : r.s.offset === 1 ? 'Next day' : (-r.s.offset) + ' days before';
+        html += '<tr class="day"><th colspan="' + (insts.length + 2) + '">' + dl + '</th></tr>';
+      }
+      html += '<tr><th class="slot" scope="row">' + esc(r.s.name) + '</th>';
+      insts.forEach(function (i) {
+        var items = i.slots[r.idx].items;
+        if (!items.length) { html += '<td class="cell"><div class="empty-cell">' + (i.upcoming ? '' : 'not sent') + '</div></td>'; return; }
+        var mv = metricValue(items), small = (mv.t.delivered || 0) < 100;
+        html += '<td class="cell"><button type="button" class="cellbtn ' + heatClass(mv.v, max) + (items.length > 1 ? ' multi' : '') + '"' + (items.length > 1 ? ' data-multi="' + items.length + ' broadcasts"' : '') +
+          ' data-ids="' + esc(items.map(function (b) { return b.id; }).join(',')) + '"' + (small ? ' style="opacity:.55"' : '') + ' title="' + esc(items.map(function (b) { return b.name + ' at ' + timeLabel(b.t); }).join('; ')) + '">' +
+          '<span class="v">' + mv.text + '</span><span class="s">' + int(mv.t.clicks) + ' clicks · ' + int(mv.t.delivered) + ' dlv</span></button></td>';
+      });
+      var w = r.m.v === null || !avgMax ? 0 : Math.max(2, Math.round((r.m.v / avgMax) * 100));
+      html += '<td class="avg">' + (r.items.length ? '<div class="avgbar"><span class="bar" style="width:' + w + 'px"></span><span class="val">' + r.m.text + '</span></div>' : '<span class="faint small">—</span>') + '</td></tr>';
+    });
+    html += '</tbody></table></div><div class="legend"><span>Darker = higher value (relative to the best cell). Faded = delivered to fewer than 100 people.</span></div></section>';
+    var extras = [].concat.apply([], insts.map(function (i) { return i.extras; }));
+    if (extras.length) {
+      html += '<section class="section"><div class="section-head"><div><h2>Not in the schedule</h2><p class="muted small">Extra sends for these sessions that don’t sit on one of your slots.</p></div></div>' + sendTable(extras) + '</section>';
+    }
+    $('#main').innerHTML = html + '</div>';
+  }
+
+  // ---------- drawer ----------
+  function openDrawer(ids) {
+    var list = ids.split(',').map(function (id) { return state.broadcasts.filter(function (b) { return b.id === id; })[0]; }).filter(Boolean);
+    if (!list.length) return;
+    var html = '<button class="btn close" type="button" id="drawerClose">Close</button>';
+    list.forEach(function (b, n) {
+      var g = b.message;
+      html += (n ? '<hr class="sep">' : '') +
+        '<div><p class="faint small">' + esc(b.session ? SCHEDULES[templateFor(b.session.date)].label + ' · ' + dayLabel(b.session.date) : familyLabel(b.family)) + (b.slot ? ' · ' + esc(b.slot.name) : '') + '</p>' +
+        '<h2' + (n ? '' : ' id="drawerTitle"') + '>' + esc(b.name) + '</h2>' +
+        '<p class="muted small">Sent ' + esc(dayLabel(b.t)) + ' at ' + esc(timeLabel(b.t)) + ' · ' + esc(b.stage) + ' · ' + esc(b.list) + (b.check ? ' · <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</p>' +
+        '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + ' <a href="#" data-msg="' + g.id + '">See the message card</a></p></div>' +
+        '<div class="kv">' +
+        kv('Clicks', int(b.clicks)) + kv('Click rate', pct(rate(b), 2)) + kv('vs similar', '<span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>') +
+        kv('Audience', int(b.audience)) + kv('Delivered', int(b.delivered)) + kv('Failed', int(b.failed)) +
+        kv('Read rate', pct(b.delivered ? b.read / b.delivered : null)) + kv('Click-to-read', pct(b.read && b.clicks !== null ? b.clicks / b.read : null)) + kv('Replies', int(b.replies)) +
+        kv('Cost', inr(b.cost)) + kv('Cost / click', inr(b.clicks ? b.cost / b.clicks : null)) + kv('Cost / read', inr(b.read ? b.cost / b.read : null)) +
+        '</div><div class="bubble">' + esc(cleanText(b.content) || 'No message text in the sheet.') + '</div>';
+    });
+    var d = $('#drawer');
+    d.innerHTML = html; d.hidden = false; $('#scrim').hidden = false;
+    $('#drawerClose').focus();
+  }
+  function kv(k, v) { return '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
+  function closeDrawer() { $('#drawer').hidden = true; $('#scrim').hidden = true; }
+  function showMessage(id) {
+    closeDrawer();
+    state.tab = 'decisions'; state.dec = { verdict: '', family: '', sort: state.dec.sort, q: '' };
+    render();
+    var g = state.messages.filter(function (m) { return m.id === id; })[0];
+    if (!g) return;
+    var cards = document.querySelectorAll('#decList .mcard');
+    var target = null;
+    Array.prototype.forEach.call(cards, function (c) { if (c.dataset.id === id) target = c; });
+    if (target) { target.querySelector('details').open = true; target.scrollIntoView({ behavior: 'smooth', block: 'start' }); target.classList.add('flash'); }
+  }
+
+  // ---------- events ----------
+  function setTab(t) { state.tab = t; try { localStorage.setItem('wbs.tab2', t); } catch (x) { /* ignore */ } render(); window.scrollTo(0, 0); }
+  document.addEventListener('click', function (e) {
+    var el;
+    if ((el = e.target.closest('[data-tab]'))) { setTab(el.dataset.tab); return; }
+    if ((el = e.target.closest('[data-msg]'))) { e.preventDefault(); showMessage(el.dataset.msg); return; }
+    if ((el = e.target.closest('[data-vfilter]'))) { state.dec.verdict = el.dataset.vfilter; renderDecisions(); return; }
+    if ((el = e.target.closest('[data-preset]'))) {
+      var p = el.dataset.preset, today = dateKey(Date.now() / 60000 + 330);
+      state.filters.preset = p; state.filters.to = '';
+      state.filters.from = p === 'aug' ? '2026-08-01' : p === 'all' ? '' : dateKey(parseIst(today + ' 00:00') - (Number(p) - 1) * 1440);
+      renderAll(); return;
+    }
+    if ((el = e.target.closest('[data-sort]'))) { var k = el.dataset.sort; if (state.sort.key === k) state.sort.dir = -state.sort.dir; else { state.sort.key = k; state.sort.dir = (k === 'name' || k === 'family' || k === 'verdict') ? 1 : -1; } renderAllResults(); return; }
+    if ((el = e.target.closest('[data-family]'))) { state.filters.family = el.dataset.family; renderAll(); return; }
+    if (e.target.id === 'showAllBtn') { state.showAll = true; renderAllResults(); return; }
+    if ((el = e.target.closest('[data-metric]'))) { state.metric = el.dataset.metric; render(); return; }
+    if ((el = e.target.closest('[data-ids]')) && !e.target.closest('#drawer')) { openDrawer(el.dataset.ids); return; }
+    if (e.target.id === 'drawerClose' || e.target.id === 'scrim') closeDrawer();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDrawer();
+    if (e.key === 'Enter' && e.target.matches) {
+      if (e.target.matches('tr[data-ids]')) openDrawer(e.target.dataset.ids);
+      else if (e.target.matches('[data-msg]')) showMessage(e.target.dataset.msg);
+      else if (e.target.matches('tr[data-family]')) { state.filters.family = e.target.dataset.family; renderAll(); }
+    }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'fQ') { state.filters.q = e.target.value; renderAllResults(); }
+    if (e.target.id === 'dQ') { state.dec.q = e.target.value; renderDecisionList(); }
+  });
+  document.addEventListener('change', function (e) {
+    var id = e.target.id;
+    if (id === 'fFrom' || id === 'fTo') { state.filters[id === 'fFrom' ? 'from' : 'to'] = e.target.value; state.filters.preset = ''; renderAll(); }
+    if (id === 'fFamily') { state.filters.family = e.target.value; renderAllResults(); }
+    if (id === 'dFamily') { state.dec.family = e.target.value; renderDecisionList(); }
+    if (id === 'dSort') { state.dec.sort = e.target.value; renderDecisionList(); }
+  });
+  $('#refreshBtn').addEventListener('click', function () { loadOnce(true); });
+
+  // ---------- boot ----------
+  if (IS_GAS) {
+    loadGas();
+    setInterval(function () { if (!document.hidden) loadGas(); }, 15 * 60000);
+    return;
+  }
+  if (!window.claude || typeof window.claude.use !== 'function') { renderNoSource(); return; }
+  window.claude.use('mcp').then(function (mcp) {
+    if (!mcp) { renderNoSource(); return; }
+    state.mcp = mcp;
+    watch(mcp);
+  }).catch(renderNoSource);
+})();
+
+</script>
