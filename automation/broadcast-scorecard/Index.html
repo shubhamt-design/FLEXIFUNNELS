@@ -423,14 +423,6 @@ var PLAYBOOKS = {
       'Always check the date, time and link of the webinar against the webinar schedule.',
       'Check the template category (marketing or utility) before sending. Marketing templates need senior approval in utility first.'
     ],
-    docIssues: [
-      '8 AM webinar day says “TODAY • 11 PM IST”. The session is at 11 AM.',
-      '1 day before, 6 PM says “Tomorrow at 7:30 AM” and “your own AI tool tomorrow at 5:30 PM”. For Sunday that should be 11 AM and 9 AM.',
-      '11:25 AM: “Here is the link (Only last 50 spots left.❌): ]” has no link.',
-      '1 day before, 10 AM has a fixed date (“starting Sunday, 18 October at 9 AM”) that must be changed every week.',
-      '2 days before, 10 AM: the “join the session using this link” line points to the community link (genie-demo-comm), with no space before the closing bracket.',
-      '10 AM reminder says “just 60 mins away” but “Join on time at 10:45 AM”.'
-    ],
     slots: [
       { offset: -2, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
         text: 'entry for the session Launch Your Business Online in 10 Minutes, Directly From Your Phone has been successfully recorded. Join the exclusive community for major updates. Can you please confirm if you’ll be joining? If yes, you can join the session using this link on at. Your AI Business Launcher Tool access link will be available on at 9:00 AM, two hours before the live session' },
@@ -1348,25 +1340,17 @@ function liveBurst(list) {
       var sm = slot.at - dayStart(slot.at);
       var dense = (sm >= 650 && sm <= 700) || sm >= 1140;
       var lateBy = dense ? 3 : 20;
-      if ((b.planSim || 0) < 0.3) out.push({ cls: 'improve', text: 'Different message' });
       if (delay > lateBy) out.push({ cls: 'improve', text: (delay >= 60 ? Math.floor(delay / 60) + 'h ' + (delay % 60) + 'm' : delay + ' min') + ' late' });
       if (delay < -lateBy) out.push({ cls: 'improve', text: (-delay) + ' min early' });
       if (median && dense && (b.delivered || 0) < median * 0.3) out.push({ cls: 'remove', text: 'Small audience (' + int(b.delivered) + ' vs ~' + int(median) + ')' });
     });
-    if (!out.length) out.push({ cls: 'keep', text: 'As planned' });
+    if (!out.length) out.push({ cls: 'keep', text: 'Sent on time' });
     return out;
   }
 
   function renderPlan() {
-    var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Did each webinar go out as planned?</h2><p class="muted">Every session compared with its playbook: which planned messages were sent, on time, to the full list, with the planned copy. The team’s non-negotiable rules are also checked on every message that went out.</p></div>';
+    var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Did each webinar go out on schedule?</h2><p class="muted">Each session against its schedule: was every slot sent, on time, to the full list? The communication docs are only a reference (copy is edited and links are added at send time), so everything judged here is what AiSensy actually sent. The team’s non-negotiable rules are checked on those real messages.</p></div>';
     html += '<div class="rulebox"><b>Non-negotiables</b><ol><li>Always put a space before and after a link, or the link breaks.</li><li>Check the date, time and link against the webinar schedule.</li><li>Check the template category. Marketing templates need senior approval in utility before sending.</li></ol></div>';
-
-    var issues = [];
-    Object.keys(PLAYBOOKS).forEach(function (k) { (PLAYBOOKS[k].docIssues || []).forEach(function (t) { issues.push({ pb: PLAYBOOKS[k].label, t: t }); }); });
-    if (issues.length) {
-      html += '<section class="section"><div class="section-head"><div><h2>Mistakes in the playbook docs</h2><p class="muted small">Fix these in the docs so they aren’t copied into the next broadcast.</p></div></div><ul class="qa-list">' +
-        issues.map(function (x) { return '<li><span class="pill warn">' + esc(x.pb) + '</span> ' + esc(x.t) + '</li>'; }).join('') + '</ul></section>';
-    }
 
     var withQa = state.broadcasts.filter(function (b) { return b.qa && b.qa.length; }).sort(function (a, b) { return b.t - a.t; });
     html += '<section class="section"><div class="section-head"><div><h2>Rule checks on sent messages</h2><p class="muted small">' +
@@ -1384,9 +1368,9 @@ function liveBurst(list) {
       var ok = statuses.filter(function (st) { return st.length === 1 && st[0].cls === 'keep'; }).length;
       var missing = statuses.filter(function (st) { return st[0].text === 'Not sent'; }).length;
       html += '<section class="section"><div class="section-head"><div><h2>' + esc(sched.label) + ' · ' + esc(dayLabel(inst.date)) + '</h2><p class="muted small">' +
-        ok + ' of ' + inst.slots.length + ' planned messages went out as planned · ' + missing + ' not sent · ' + (inst.slots.length - ok - missing) + ' with a difference · ' +
+        ok + ' of ' + inst.slots.length + ' slots sent on time · ' + missing + ' not sent · ' + (inst.slots.length - ok - missing) + ' late, early or to a small list · ' +
         inst.extras.length + ' extra sends' + (missing >= 6 ? '. Many slots show “Not sent”: if they did go out, check that those broadcasts are in the sheet.' : '') + '</p></div></div>' +
-        '<div class="table-wrap"><table class="list plan"><thead><tr><th>Slot</th><th>Planned</th><th>Sent</th><th>Status</th><th class="r">Result</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="list plan"><thead><tr><th>Slot</th><th>Purpose (from the doc)</th><th>What was sent (AiSensy)</th><th>Status</th><th class="r">Result</th></tr></thead><tbody>' +
         inst.slots.map(function (s, i) {
           var b = s.items[0];
           var result = b ? (b.goal === 'reply' ? pct(hasReplies(b) ? b.replies / b.delivered : null, 1) + ' replies' : pct(rate(b), 2) + ' clicks') +
@@ -1394,11 +1378,11 @@ function liveBurst(list) {
           return '<tr' + (b ? ' class="click" data-ids="' + esc(s.items.map(function (x) { return x.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
             '<td class="name"><b>' + esc(s.name) + '</b><div class="faint small">' + esc(s.audience || '') + '</div></td>' +
             '<td class="name small">' + esc(messageHook(s.plan, '').slice(0, 90)) + '<div class="faint small">' + esc(s.template || '') + (s.goal === 'reply' ? ' · asks for a reply' : '') + '</div></td>' +
-            '<td class="small">' + (b ? esc(dayLabel(b.t)) + ', ' + esc(timeLabel(b.t)) + '<div class="faint small">' + esc(s.items.map(function (x) { return x.name; }).join(', ')) + ' · ' + int(b.delivered) + ' delivered</div>' : '<span class="faint">—</span>') + '</td>' +
+            '<td class="name small">' + (b ? esc(b.message ? b.message.hook.slice(0, 90) : b.name) + '<div class="faint small">' + esc(dayLabel(b.t)) + ', ' + esc(timeLabel(b.t)) + ' · ' + esc(s.items.map(function (x) { return x.name; }).join(', ')) + ' · ' + int(b.delivered) + ' delivered</div>' : '<span class="faint">—</span>') + '</td>' +
             '<td>' + statuses[i].map(function (st) { return '<span class="verdict v-' + st.cls + '">' + esc(st.text) + '</span>'; }).join(' ') + '</td>' +
             '<td class="r num small">' + result + '</td></tr>';
         }).join('') + '</tbody></table></div>' +
-        (inst.extras.length ? '<p class="small muted">Sent but not in the plan: ' + inst.extras.map(function (b) {
+        (inst.extras.length ? '<p class="small muted"> Also sent around this session: ' + inst.extras.map(function (b) {
           return '<a href="#" data-ids="' + esc(b.id) + '">' + esc(b.name) + '</a> (' + esc(dayLabel(b.t)) + ', ' + esc(timeLabel(b.t)) + ', ' + int(b.delivered) + ' delivered)';
         }).join(' · ') + '</p>' : '') + '</section>';
     });
@@ -1607,7 +1591,7 @@ function liveBurst(list) {
         '<h2' + (n ? '' : ' id="drawerTitle"') + '>' + esc(b.name) + '</h2>' +
         '<p class="muted small">Sent ' + esc(dayLabel(b.t)) + ' at ' + esc(timeLabel(b.t)) + ' · ' + esc(b.stage) + ' · ' + esc(b.list) + (b.check ? ' · <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</p>' +
         '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + ' <a href="#" data-msg="' + g.id + '">See the message card</a></p>' +
-        (b.slot && b.slot.template ? '<p class="small muted">Planned for this slot: template ' + esc(b.slot.template) + ' · ' + esc(b.slot.audience) + ((b.planSim || 0) < 0.3 ? ' · <b>a different message was sent</b>' : '') + '</p>' : '') +
+        (b.slot && b.slot.template ? '<p class="small muted">Schedule slot: ' + esc(b.slot.name) + ' · usual template ' + esc(b.slot.template) + ' · ' + esc(b.slot.audience) + '</p>' : '') +
         (b.qa && b.qa.length ? '<ul class="qa-list small">' + b.qa.map(function (q) { return '<li><span class="pill warn">Rule ' + q.rule + '</span> ' + esc(q.text) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
         '<div class="kv">' +
         kv('Clicks', int(b.clicks)) + kv('Click rate', pct(rate(b), 2)) + kv('vs similar', '<span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>') +

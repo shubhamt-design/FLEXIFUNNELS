@@ -1,7 +1,10 @@
-/* Planned broadcasts from the team's webinar communication docs.
+/* Reference content from the team's webinar communication docs.
+ * The team edits copy and adds links at send time; AiSensy holds what was
+ * actually sent. These are used for context (purpose, audience, goal) and to
+ * help match each send to its slot.
  * offset: days from webinar day (-1 = day before, 1 = next day).
  * goal: what the message asks people to do — 'click' (a link) or 'reply'.
- * text: the variable lines of the planned copy, used to match real sends. */
+ * text: the reference copy, used only to help match real sends to slots. */
 var PLAYBOOKS = {
   tue: {
     label: 'Tuesday webinar',
@@ -83,14 +86,6 @@ var PLAYBOOKS = {
       'Always give a space before and after the link; otherwise the link will be invalid.',
       'Always check the date, time and link of the webinar against the webinar schedule.',
       'Check the template category (marketing or utility) before sending. Marketing templates need senior approval in utility first.'
-    ],
-    docIssues: [
-      '8 AM webinar day says “TODAY • 11 PM IST”. The session is at 11 AM.',
-      '1 day before, 6 PM says “Tomorrow at 7:30 AM” and “your own AI tool tomorrow at 5:30 PM”. For Sunday that should be 11 AM and 9 AM.',
-      '11:25 AM: “Here is the link (Only last 50 spots left.❌): ]” has no link.',
-      '1 day before, 10 AM has a fixed date (“starting Sunday, 18 October at 9 AM”) that must be changed every week.',
-      '2 days before, 10 AM: the “join the session using this link” line points to the community link (genie-demo-comm), with no space before the closing bracket.',
-      '10 AM reminder says “just 60 mins away” but “Join on time at 10:45 AM”.'
     ],
     slots: [
       { offset: -2, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',

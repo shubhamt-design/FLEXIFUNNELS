@@ -18,7 +18,7 @@ sheet through the Google Sheets connector.
 | Tab | What it answers |
 |---|---|
 | **Decisions** | One card per message (all the times it was sent), with a verdict: **Use more**, **Keep sending**, **Improve** (with the reason: opened less, or read but not clicked) or **Remove**. Each card shows the send dates and times, delivered, read rate, click rate, click-to-read, cost per click, clicks vs similar sends, confidence and the full message text. |
-| **Plan check** | Each session against its playbook: which planned messages went out, on time, to the full list, with the planned copy (flags: not sent, different message, late, small audience). Also lists mistakes found in the playbook docs and checks every sent message against the team's non-negotiables (space around links, missing links, unfilled placeholders, wrong date or AM/PM). |
+| **Plan check** | Each session against its schedule: was every slot sent, on time, to the full list (flags: not sent, late/early, small audience). Shows each slot's purpose from the team's doc next to what AiSensy actually sent, and checks every sent message against the non-negotiables (space around links, missing links, unfilled placeholders, wrong date or AM/PM). |
 | **Suggestions** | A prioritised to-do list (messages to stop, messages to reuse, better send hours, cold-list cost, weak live reminders, failing lists). Also: click rate by hour before the webinar, the live window by minute, day of week, which message elements go with more clicks, cost per click by campaign and list, and a slot-by-slot plan for the next Tuesday, Wednesday and Sunday webinar. |
 | **All broadcasts** | Filters by date (Since 1 Aug, last 30/7 days, custom), campaign and text. Totals, clicks and spend per week, a by-campaign table and a sortable list of every broadcast. |
 | **Tuesday / Wednesday / Sunday** | Your schedule slots by session, as a heat grid (click rate, vs similar, clicks or read rate). |
@@ -74,9 +74,11 @@ The URL stays the same.
 ## Playbooks
 
 The Tuesday, Wednesday and Sunday communication docs are built into `Index.html`
-as `PLAYBOOKS` (the same data is in [`playbooks.js`](playbooks.js) for reference).
-Each slot has its time, template, audience, goal (click or reply) and planned
-copy. When a playbook changes, update that block and redeploy.
+as `PLAYBOOKS` (the same data is in [`playbooks.js`](playbooks.js)). They are a
+reference, not templates: the team edits copy and adds links at send time, and
+AiSensy is the record of what was sent. The dashboard uses them for each slot's
+time, purpose, audience and goal (click or reply), and to help match sends to
+slots. When the schedule changes, update that block and redeploy.
 
 ## Data it expects
 
