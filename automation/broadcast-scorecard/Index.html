@@ -1088,6 +1088,7 @@ function liveBurst(list) {
     return [
       { key: 'decisions', label: 'Decisions', count: decided + ' messages' },
       { key: 'suggest', label: 'Suggestions', count: '' },
+      { key: 'timing', label: 'Timing', count: '' },
       { key: 'plan', label: 'Plan check', count: state.qaCount ? state.qaCount + ' issues' : '' },
       { key: 'all', label: 'All broadcasts', count: String(state.broadcasts.length) },
       { key: 'tue', label: 'Tuesday', count: count('tue') + ' sessions' },
@@ -1110,6 +1111,7 @@ function liveBurst(list) {
     else if (state.tab === 'suggest') renderSuggestions();
     else if (state.tab === 'all') renderAll();
     else if (state.tab === 'plan') renderPlan();
+    else if (state.tab === 'timing') renderTiming();
     else renderWebinar(state.tab);
   }
 
@@ -1265,7 +1267,7 @@ function liveBurst(list) {
       return { label: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][x.key], v: x.index === null ? 0 : x.index * 100, dim: x.del < 2000, tip: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][x.key] + ': ' + vsSimilar(x.index) + ' clicks vs similar sends, ' + x.n + ' broadcasts' };
     });
     var burstRows = liveBurst(all).map(function (x) { return { label: fmtHM(x.key).replace(' PM', 'p').replace(' AM', 'a'), v: x.ctr * 100, dim: x.n < 2, tip: fmtHM(x.key) + ': ' + pct(x.ctr, 2) + ' click rate across ' + x.n + ' sends' }; });
-    html += '<section class="section"><div class="section-head"><div><h2>When to send</h2><p class="muted small">Pale bars have little data behind them.</p></div></div><div class="charts">' +
+    html += '<section class="section"><div class="section-head"><div><h2>When to send</h2><p class="muted small">Pale bars have little data behind them. The Timing tab shows the effect of sending late and the best hour for each stage.</p></div></div><div class="charts">' +
       '<div class="chart"><h3>Before the webinar: click rate by hour</h3><p class="faint small">Flexi Genie reminders to registered lists, sent before live time.</p>' + barChart(hourRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
       '<div class="chart"><h3>Live window: click rate by send time</h3><p class="faint small">Reminders in the hour around live time.</p>' + barChart(burstRows, function (v) { return v.toFixed(1) + '%'; }) + '</div>' +
       '<div class="chart"><h3>Day of the week</h3><p class="faint small">Clicks vs similar sends (100 = average), so timing and list size are already accounted for.</p>' + barChart(dow, function (v) { return Math.round(v); }) + '</div>' +
@@ -1325,6 +1327,128 @@ function liveBurst(list) {
     }).join('');
     return '<h3 class="plan-h">' + esc(sched.label) + ' <span class="faint small">' + insts.length + ' sessions: ' + esc(insts.map(function (i) { return dayLabel(i.date); }).join(', ')) + '</span></h3>' +
       '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">vs similar</th><th>Recommendation</th><th>Best message in this slot</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  // ---------- Timing ----------
+  var DELAY_BUCKETS = [
+    { key: 'early', label: 'More than 10 min early', test: function (d) { return d < -10; } },
+    { key: 'on', label: 'On time (within 10 min)', test: function (d) { return Math.abs(d) <= 10; } },
+    { key: 'l30', label: '11–30 min late', test: function (d) { return d > 10 && d <= 30; } },
+    { key: 'l90', label: '31–90 min late', test: function (d) { return d > 30 && d <= 90; } },
+    { key: 'l90p', label: 'More than 90 min late', test: function (d) { return d > 90; } }
+  ];
+  function liveSlot(slot) { var m = slot.at - dayStart(slot.at); return (m >= 650 && m <= 700) || m >= 1140; }
+  function sumUp(list) {
+    var c = 0, e = 0, del = 0;
+    list.forEach(function (b) { c += b.clicks; del += b.delivered; if (b.expected !== null) e += b.expected; });
+    return { n: list.length, clicks: c, del: del, ctr: del ? c / del : null, index: e > 0 ? c / e : null };
+  }
+  function renderTiming() {
+    var sched = state.broadcasts.filter(function (b) { return b.slot && b.goal !== 'reply' && hasClicks(b) && b.index !== null; })
+      .map(function (b) { return { b: b, delay: Math.round(b.t - b.slot.at), live: liveSlot(b.slot) }; });
+    var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Does timing change the result?</h2><p class="muted">Each broadcast’s actual send time compared with its schedule slot, and click rates by the hour they went out. “vs similar” already accounts for the message’s timing stage and list size, so it isolates the effect of being early or late. Messages that ask for replies are left out.</p></div>';
+
+    // 1. Late vs on time, before live and during live
+    ['pre', 'live'].forEach(function (kind) {
+      var rows = sched.filter(function (x) { return kind === 'live' ? x.live : !x.live; });
+      var res = DELAY_BUCKETS.map(function (bk) { return { bk: bk, s: sumUp(rows.filter(function (x) { return bk.test(x.delay); }).map(function (x) { return x.b; })) }; }).filter(function (r) { return r.s.n; });
+      var on = res.filter(function (r) { return r.bk.key === 'on'; })[0];
+      var late = sumUp(rows.filter(function (x) { return x.delay > 10; }).map(function (x) { return x.b; }));
+      var verdict = '';
+      if (on && late.n) {
+        var diff = late.index !== null && on.s.index !== null ? late.index / on.s.index - 1 : null;
+        var thin = late.n < 10 ? ' Only ' + late.n + ' late send' + (late.n > 1 ? 's' : '') + ' so far, so treat this as a first signal.' : '';
+        if (diff === null) verdict = '';
+        else if (diff <= -0.15) verdict = 'Late sends got ' + Math.round(-diff * 100) + '% fewer clicks than on-time sends (vs similar).' + thin;
+        else if (diff >= 0.15) verdict = 'Late sends did not lose clicks: they got ' + Math.round(diff * 100) + '% more than on-time sends (vs similar). The message itself mattered more than the exact minute.' + thin;
+        else verdict = 'Late and on-time sends performed about the same (within 15%).' + thin;
+      } else if (on && !late.n) verdict = 'Every send in this window has gone out on time so far.';
+      html += '<section class="section"><div class="section-head"><div><h2>' + (kind === 'live' ? 'Live-window reminders (around live time)' : 'Reminders before live time') + '</h2>' +
+        (verdict ? '<p class="small"><b>' + esc(verdict) + '</b></p>' : '') + '</div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Click rate</th><th class="r">Clicks vs similar</th></tr></thead><tbody>' +
+        res.map(function (r) { return '<tr><td class="name">' + esc(r.bk.label) + '</td><td class="r num">' + r.s.n + '</td><td class="r num">' + int(r.s.del) + '</td><td class="r num">' + pct(r.s.ctr, 2) + '</td><td class="r num"><span class="idx ' + idxClass(r.s.index) + '">' + vsSimilar(r.s.index) + '</span></td></tr>'; }).join('') +
+        '</tbody></table></div>' + (kind === 'live' ? '<p class="faint small">Live reminders are only 5–10 minutes apart. A reminder sent late lands on top of the next one and usually gets fewer clicks.</p>' : '') + '</section>';
+    });
+
+    // 2. Scatter: minutes late vs clicks vs similar
+    html += '<section class="section"><div class="section-head"><div><h2>Minutes late vs result</h2><p class="muted small">Each dot is one scheduled broadcast. Right = sent later than its slot; up = more clicks than similar sends. Hover a dot for details.</p></div></div>' +
+      '<div class="chart">' + scatter(sched) + '<div class="legend"><span class="sw"><i style="background:var(--accent)"></i> Before live time</span><span class="sw"><i style="background:var(--warn)"></i> Live window</span></div></div></section>';
+
+    // 3. Same slot, sent at different times
+    var bySlot = {};
+    sched.forEach(function (x) { var k = SCHEDULES[templateFor(x.b.session.date)].label + ' · ' + x.b.slot.name; (bySlot[k] = bySlot[k] || []).push(x); });
+    var cmp = Object.keys(bySlot).filter(function (k) {
+      var g = bySlot[k]; if (g.length < 2) return false;
+      var ds = g.map(function (x) { return x.delay; }); return Math.max.apply(null, ds) - Math.min.apply(null, ds) >= 15;
+    });
+    if (cmp.length) {
+      html += '<section class="section"><div class="section-head"><div><h2>Same slot, sent at different times</h2><p class="muted small">Slots that went out at noticeably different times in different weeks. Different weeks can use different copy, so read this together with the message cards.</p></div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th>Sent</th><th class="r">Minutes late</th><th class="r">Click rate</th><th class="r">vs similar</th></tr></thead><tbody>' +
+        cmp.map(function (k) {
+          var g = bySlot[k].slice().sort(function (a, b) { return a.delay - b.delay; });
+          var best = g.reduce(function (m, x) { return !m || x.b.index > m.b.index ? x : m; }, null);
+          return g.map(function (x, i) {
+            return '<tr class="click" data-ids="' + esc(x.b.id) + '" tabindex="0"><td class="name">' + (i ? '' : '<b>' + esc(k) + '</b>') + '</td><td>' + esc(dayLabel(x.b.t)) + ', ' + esc(timeLabel(x.b.t)) +
+              (x === best ? ' <span class="verdict v-more">best</span>' : '') + '</td><td class="r num">' + (x.delay > 0 ? '+' : '') + x.delay + '</td><td class="r num">' + pct(rate(x.b), 2) +
+              '</td><td class="r num"><span class="idx ' + idxClass(x.b.index) + '">' + vsSimilar(x.b.index) + '</span></td></tr>';
+          }).join('');
+        }).join('') + '</tbody></table></div></section>';
+    }
+
+    // 4. Best hour by timing stage (registered list, click messages)
+    var reg = state.broadcasts.filter(function (b) { return b.family === 'genie' && b.goal !== 'reply' && hasClicks(b) && b.list === 'Registered list' && isPreLive(b.stage); });
+    var hours = []; reg.forEach(function (b) { var h = Math.floor((b.t - dayStart(b.t)) / 60); if (hours.indexOf(h) === -1) hours.push(h); });
+    hours.sort(function (a, b) { return a - b; });
+    var stages = ['1+ days before', 'Webinar day, morning', 'Webinar day, 1–6 h before'];
+    html += '<section class="section"><div class="section-head"><div><h2>Best hour to send, by stage</h2><p class="muted small">Click rate by the hour a Flexi Genie reminder went out to a registered list. Darker = higher click rate within that row. The small number is how many broadcasts are behind each cell.</p></div></div>' +
+      '<div class="grid-wrap"><table class="heat"><thead><tr><th class="slot">Stage</th>' + hours.map(function (h) { return '<th>' + hourLabel(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      stages.map(function (st) {
+        var cells = hours.map(function (h) { return sumUp(reg.filter(function (b) { return b.stage === st && Math.floor((b.t - dayStart(b.t)) / 60) === h; })); });
+        var max = Math.max.apply(null, cells.map(function (c) { return c.ctr || 0; }).concat([0]));
+        return '<tr><th class="slot" scope="row">' + esc(st) + '</th>' + cells.map(function (c) {
+          return '<td class="cell">' + (c.n ? '<div class="cellbtn ' + heatClass(c.ctr, max) + '" style="cursor:default' + (c.del < 500 ? ';opacity:.55' : '') + '"><span class="v">' + pct(c.ctr, 1) + '</span><span class="s">' + c.n + ' sent · ' + int(c.del) + ' dlv</span></div>' : '<div class="empty-cell">—</div>') + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div></section>';
+
+    // 5. The "10 AM vs 12 PM" question
+    var morning = sumUp(reg.filter(function (b) { var m = b.t - dayStart(b.t); return m >= 570 && m < 660; }));
+    var noon = sumUp(reg.filter(function (b) { var m = b.t - dayStart(b.t); return m >= 690 && m < 780; }));
+    html += '<section class="section"><div class="section-head"><div><h2>What if a 10 AM message goes out at 12 PM?</h2></div></div><div class="insights">' +
+      '<div class="insight"><span class="tag good">9:30–11 AM</span><p><b class="num">' + pct(morning.ctr, 2) + '</b> click rate across ' + morning.n + ' broadcasts (' + int(morning.del) + ' delivered)</p></div>' +
+      '<div class="insight"><span class="tag low">11:30 AM–1 PM</span><p><b class="num">' + pct(noon.ctr, 2) + '</b> click rate across ' + noon.n + ' broadcasts (' + int(noon.del) + ' delivered)</p></div>' +
+      '<div class="insight"><p class="small">' + esc(noonVerdict(morning, noon)) + '</p></div></div></section>';
+
+    $('#main').innerHTML = html + '</div>';
+  }
+  function noonVerdict(m, n) {
+    if (!m.n || !n.n || m.ctr === null || n.ctr === null) return 'Not enough sends in one of these windows yet to compare.';
+    var d = n.ctr / m.ctr - 1;
+    var base = d <= -0.1 ? 'Reminders sent around noon got ' + Math.round(-d * 100) + '% fewer clicks than those sent around 10 AM. A 10 AM message that slips to 12 PM is likely to lose clicks, so send it before 11 AM.'
+      : d >= 0.1 ? 'Reminders sent around noon got ' + Math.round(d * 100) + '% more clicks than those sent around 10 AM, so a later send has not hurt so far.'
+      : 'Reminders around noon and around 10 AM performed about the same so far.';
+    return base + (n.n < 6 || m.n < 6 ? ' This is based on few broadcasts (registered lists only), and different messages went out at each time, so it will firm up as more data comes in.' : '');
+  }
+  function scatter(rows) {
+    if (!rows.length) return '<p class="faint small">No scheduled broadcasts yet.</p>';
+    var W = 1100, H = 340, padL = 48, padB = 28, padT = 10, padR = 10;
+    var xs = rows.map(function (r) { return r.delay; }), ys = rows.map(function (r) { return r.b.index * 100; });
+    var xmin = Math.min(-15, Math.min.apply(null, xs)), xmax = Math.max(30, Math.max.apply(null, xs));
+    var ymax = Math.max(200, Math.ceil(Math.max.apply(null, ys) / 50) * 50);
+    var x = function (v) { return padL + (W - padL - padR) * (v - xmin) / (xmax - xmin); };
+    var y = function (v) { return padT + (H - padT - padB) * (1 - v / ymax); };
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">';
+    [0, 100, ymax / 2 > 100 ? ymax / 2 : null, ymax].filter(function (v, i, a) { return v !== null && a.indexOf(v) === i; }).forEach(function (v) {
+      svg += '<line class="grid" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(v) + '" y2="' + y(v) + '"' + (v === 100 ? ' style="stroke:var(--ink-3);stroke-dasharray:4 3"' : '') + '></line><text x="' + (padL - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + (v === 100 ? 'avg' : Math.round(v)) + '</text>';
+    });
+    var step = (xmax - xmin) > 120 ? 30 : 15;
+    for (var t = Math.ceil(xmin / step) * step; t <= xmax; t += step) {
+      svg += '<line class="grid" x1="' + x(t) + '" x2="' + x(t) + '" y1="' + padT + '" y2="' + (H - padB) + '"' + (t === 0 ? ' style="stroke:var(--ink-3)"' : '') + '></line><text class="lbl" x="' + x(t) + '" y="' + (H - 10) + '" text-anchor="middle">' + (t > 0 ? '+' : '') + t + 'm</text>';
+    }
+    rows.forEach(function (r) {
+      svg += '<g><title>' + esc(r.b.name + ' · ' + r.b.slot.name + ' · sent ' + timeLabel(r.b.t) + ' (' + (r.delay > 0 ? '+' : '') + r.delay + ' min) · ' + pct(rate(r.b), 2) + ' click rate · ' + vsSimilar(r.b.index) + ' vs similar') + '</title>' +
+        '<circle cx="' + x(r.delay).toFixed(1) + '" cy="' + y(Math.min(r.b.index * 100, ymax)).toFixed(1) + '" r="6" style="fill:' + (r.live ? 'var(--warn)' : 'var(--accent)') + ';stroke:var(--surface);stroke-width:2;opacity:.85"></circle></g>';
+    });
+    return svg + '</svg>';
   }
 
   // ---------- Plan check ----------
