@@ -6,7 +6,7 @@ sheet. It shows which messages to send again, use more, fix or stop, and when
 to send them.
 
 ```
-Code.gs      Apps Script server: serves the page and reads the two sheet tabs
+Code.gs      Apps Script server: serves the page and reads the Broadcast History tab
 Alerts.gs    emails when a new broadcast breaks the rulebook (every 15 minutes)
 Index.html   the whole dashboard (analysis runs in the browser)
 ```
@@ -18,19 +18,25 @@ sheet through the Google Sheets connector.
 
 The dashboard is built around the **10-minute webinar campaign** (Flexi Genie
 “Launch Your Business Online in 10 Minutes”) for the Tuesday, Wednesday and
-Sunday webinars. Every broadcast is matched to its webinar session (including
-moved days), its schedule slot, and the doc message it came from, which gives
-its template name.
+Sunday webinars, from its first session on Sun 30 Aug. Every broadcast is
+matched to its webinar session (including moved days), its schedule slot, and
+the doc message it came from, which gives its template name. Flexi Genie sends
+before 26 Aug (the reveal and ₹80K-build webinars, a different pitch) are kept
+separately under Other campaigns.
+
+A **period switch** (Since Aug · Last 8 weeks · Last 4 weeks) reruns every
+verdict on just that period, so you can check whether a message that worked in
+September still works now.
 
 | Tab | What it answers |
 |---|---|
 | **Overview** | Campaign spend, clicks, cost per click and spend per session/week; how much was spent on clicks costing more than the campaign average; a ranked “What to change” list with the ₹ saved per webinar or per week; spend share vs click share for each part of the campaign (day before, webinar morning, 1–6 h before, final hour, live window, follow-ups, reply messages, big old-list pushes); and each session’s spend, clicks and cost per click. |
 | **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
-| **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. |
+| **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. Messages marked Improve or Remove carry a **suggested rewrite** on the same template (variables only, so no new approval), with what to change and why, and a Copy button. Filter with *Show → With a suggested rewrite*. |
 | **Timing** | The effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
 | **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message (the same checks the email alerts use). |
 | **Broadcasts** | Every campaign broadcast with session, slot, doc message and template, audience, delivered, read rate, clicks, click rate, cost, cost per click, spend above average and vs similar. Filter by webinar, session, part of the campaign or text; optionally include other campaigns. |
-| **Other campaigns** | Faceless, community workshop, 15 Days challenge, Genie launch offer, renewals and others, for reference. |
+| **Other campaigns** | TFP and PSP webinars, the Funnel Builder Agent launch, the 2-Day AI Income Blueprint, FlexiAgent/MCP sessions, Flexi Genie reveal webinars, faceless, community, 15 Days challenge, Q&A, sales offers, buyer onboarding, renewals and others, for reference. |
 
 ### How verdicts are worked out
 
@@ -52,8 +58,19 @@ its template name.
 - Confidence comes from how many clicks were expected. Few expected clicks
   means low confidence.
 
-The more history the sheet has, the sharper the verdicts get. Data from 1 Aug
-onwards shows up automatically once it is in the two tabs.
+The more history the sheet has, the sharper the verdicts get. New broadcasts
+show up automatically as the AiSensy sync adds them to the History tab.
+
+### Suggested rewrites
+
+The rewrites live in `Index.html` as `REWRITES` (next to `DOC_NAMES`), one per
+message, matched by the message's name. Each keeps the template's fixed text
+and only changes what goes in the [variables]. They follow what the data shows
+works in this campaign: short messages, one clear link, an image rather than a
+video, and a concrete reason to click (what is on screen, what is revealed
+next, the tool access) instead of general urgency. Once a rewrite goes out, its
+sends are scored against the same similar sends as the old version, so the
+Messages tab shows whether it did better.
 
 ## Set it up for the team (about 5 minutes, once)
 
@@ -104,7 +121,7 @@ breaks the rulebook:
 | 2. Date, time and link match the schedule | 11 PM for an 11 AM session, 7:30 AM for 7:30 PM, a date that isn't the session's, a weekday that doesn't match its date (“Saturday, 25 Oct”), “tomorrow” or “today” next to the wrong date, an empty “here is the link”, unfilled placeholders |
 | 3. Utility templates only | A cost of ₹0.40+ per delivered message: marketing templates cost about ₹1.09, utility about ₹0.15 |
 | 4. Change the genie-demo redirect after the webinar | Where genie-demo leads is noted during each live session and checked again an hour after the start; if it still leads to the same place, or to a Zoom/Meet room, an email goes out |
-| Delivery problems | 20%+ of the audience failed (at least 25 messages) |
+| Delivery problems | 20%+ of the audience failed (at least 100 messages) |
 
 Each broadcast is reported once. Rules 1 and 2 are checked as soon as the
 message text is in the sheet, rule 3 and failures once the row says *Final* (or
@@ -134,11 +151,8 @@ slots. When the schedule changes, update that block and redeploy.
 
 ## Data it expects
 
-The two tabs the AiSensy sync already fills:
-
-- **Broadcast Analysis:** Campaign ID, Campaign Name, Audience Size, Sent,
-  Delivered, Read, Failed, Actual Cost, Last Updated, Sent At (IST), Webinar
-  Start (inferred), Data Status, Data Check, Clicked, Replied. Columns are
-  matched by header name, so order doesn't matter.
-- **Broadcast Contents:** Campaign ID, Campaign Name, Date and Time (IST),
-  Message Content.
+The **Broadcast History** tab the AiSensy sync fills (every broadcast since
+7 Aug): Campaign ID, Campaign Name, Sent At (IST), Audience Size, Sent,
+Delivered, Read, Failed, Clicked, Replied, Actual Cost (INR), Data Status,
+Last Updated (IST) and Message Content. Columns are matched by header name, so
+order doesn't matter. The claude.ai page reads it 300 rows at a time.

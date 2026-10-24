@@ -177,7 +177,7 @@ function absoluteUrl_(loc, base) {
 
 function loadBroadcasts_(L) {
   var data = getDashboardData();
-  var broadcasts = L.buildBroadcasts(data.analysis, data.contents);
+  var broadcasts = L.buildBroadcasts(data.history);
   L.analyse(broadcasts);
   return broadcasts.sort(function (a, b) { return a.t - b.t; });
 }

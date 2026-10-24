@@ -198,6 +198,10 @@ table.slots td.vcell .faint { margin-top: 2px; }
 .plan-list li .t { font-weight: 600; min-width: 150px; }
 .plan-list li.drop { opacity: .6; text-decoration: line-through; border-style: dashed; }
 .filters label.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+.rewrite { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rewrite summary { color: var(--ink); }
+.rewrite ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.rewrite .bubble { background: var(--surface); }
 /* Plan check */
 .rulebox { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; }
 .rulebox ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
@@ -336,6 +340,7 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
       <p class="sub muted">The 10-minute webinar campaign (Tuesday, Wednesday and Sunday): which slots and messages to keep, change or cut, what each click costs, and where spend outruns results. Read live from the AiSensy Broadcast Analytics sheet.</p>
     </div>
     <div class="sync" id="sync"><span><span class="dot" id="syncDot"></span> <span id="syncText">Connecting to Google Sheets…</span></span>
+      <div class="seg" id="period" role="group" aria-label="Period"></div>
       <button class="btn" id="refreshBtn" type="button">Refresh</button></div>
   </header>
 
@@ -344,7 +349,7 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
   <main id="main">
     <div class="state" id="loadingState">
       <h2>Loading your broadcasts</h2>
-      <p class="muted">Reading the “Broadcast Analysis” and “Broadcast Contents” tabs of the AiSensy Broadcast Analytics sheet.</p>
+      <p class="muted">Reading the “Broadcast History” tab of the AiSensy Broadcast Analytics sheet (every broadcast since August, with its cost and message).</p>
       <div class="skeleton" style="width: 90%"></div><div class="skeleton" style="width: 70%"></div><div class="skeleton" style="width: 80%"></div>
     </div>
   </main>
@@ -528,16 +533,28 @@ var SCHEDULES = (function () {
   return out;
 })();
 
+// The 10-minute webinar ("Launch Your Business Online in 10 Minutes") began with the Sun 30 Aug session.
+// Flexi Genie sends before 26 Aug were the reveal and ₹80K-build webinars, a different pitch.
+var CAMPAIGN_START = Date.UTC(2026, 7, 26) / 60000;
 var FAMILIES = [
-  { key: 'qa', label: 'Live Q&A', test: function (b) { return /Q&A/.test(b.content); } },
-  { key: '15days', label: '15 Days First Sale Challenge', test: function (b) { return /15 Days First Sale/i.test(b.content) || /^15 ?days?/i.test(b.name); } },
+  { key: 'qa', label: 'Live Q&A', test: function (b) { return /Q&A|QnA/i.test(b.content) || /q&a|qna/i.test(b.name); } },
+  { key: '15days', label: '15 Days First Sale Challenge', test: function (b) { return /15 Days First Sale|first sale chall/i.test(b.content) || /^15 ?days?|15dc/i.test(b.name); } },
   { key: 'community', label: 'Community workshop', test: function (b) { return /paid community|community-special|Community Platform|true fans/i.test(b.content) || /comm.?feat|communnity feature/i.test(b.name); } },
   { key: 'renewal', label: 'Membership renewals', test: function (b) { return /is expiring|expiring (soon|tonight|tomorrow|in)/i.test(b.content) || /^(re?new|rew|renw|\d+days?left)/i.test(b.name); } },
+  { key: 'tfp', label: 'TFP Funnels masterclass', test: function (b) { return /TFP Funnels|\$3,815/i.test(b.content) || /^tfp|tfp\d|TFP(LIVE|MISS|REG)/i.test(b.name); } },
+  { key: 'psp', label: 'PSP course workshop', test: function (b) { return /PSP (System|Course)/i.test(b.content) || /^-?\d?psp|psp-?\d|pspmiss|psplive/i.test(b.name); } },
+  { key: 'aiincome', label: '2-Day AI Income Blueprint', test: function (b) { return /AI Income Blueprint|2.?Day AI|19.?20 Sep|12 & 13 September|custom ?GPT|30 days of social media content/i.test(b.content) || /19-?20|1920/.test(b.name); } },
+  { key: 'launch', label: 'Funnel Builder Agent launch and promos', test: function (b) { return /Launch Event|launch event|LIVE reveal|revealing the Funnel Builder|16 Aug|16 August|Funnel Builder Agent (session|event|DEMO|launch)|agenticflexifunnels|Automated (Online Business System|Income Blueprint)|4 Automated System|Beginner-Friendly/i.test(b.content) || /promo|agentic/i.test(b.name); } },
+  { key: 'flexiagent', label: 'FlexiAgent and MCP sessions', test: function (b) { return /FlexiAgent|Flexi Agent|FlexiFunnels MCP|\+ MCP/i.test(b.content) || /mcp|flexiagent/i.test(b.name); } },
+  { key: 'buyers', label: 'Buyer onboarding and challenges', test: function (b) { return /Onboarding|Ambassador Challenge|FlexiFunnels Member|Flexi ?Genie Challenge/i.test(b.content) || /^buyer/i.test(b.name); } },
   { key: 'faceless', label: 'Faceless webinar', test: function (b) { return /faceless/i.test(b.content) && !/10 Minutes/i.test(b.content); } },
-  { key: 'closing', label: 'Genie launch offer (closing)', test: function (b) { return /closing/i.test(b.name) || /Launch Special|vanishes forever|become a member today|If fear is the only thing/i.test(b.content); } },
-  { key: 'genie', label: 'Flexi Genie webinar', test: function (b) { return /10 Minutes|Flexi Genie|funnel-agent|genie/i.test(b.content) || /10 ?min|liv|rem|miss|reg|7\d\dpm|\d{3}en/i.test(b.name); } },
+  { key: 'followers', label: '1,000 Followers Income Blueprint', test: function (b) { return /1,?000 Followers? Income/i.test(b.content); } },
+  { key: 'closing', label: 'Sales offers (launch, anniversary, closing)', test: function (b) { return /clos/i.test(b.name) || /Launch Special|Anniversary Special|vanishes forever|become a member today|If fear is the only thing|enrollment (verification|status)|reserved your seat|before it closes|Gold Ticket/i.test(b.content); } },
+  { key: 'reveal', label: 'Flexi Genie reveal and ₹80K build webinars (before 26 Aug)', test: function (b) { return b.t < CAMPAIGN_START && GENIE_TEXT.test(b.content); } },
+  { key: 'genie', label: '10-minute webinar', test: function (b) { return GENIE_TEXT.test(b.content) || /10 ?min/i.test(b.name); } },
   { key: 'other', label: 'Other broadcasts', test: function () { return true; } }
 ];
+var GENIE_TEXT = /10 Minutes?\b|10-minute|Flexi ?Genie|genie-demo|funnel-agent|AI Business Launcher|Business Launch|Business Build|80,000/i;
 
 function parseIst(s) {
   var m = /(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i.exec(String(s || ''));
@@ -558,19 +575,22 @@ function rowsToObjects(values) {
   return values.slice(1).map(function (r) { var o = {}; h.forEach(function (k, i) { o[k] = r[i] === undefined ? '' : r[i]; }); return o; });
 }
 
-/** Builds broadcasts from the two sheet tabs. */
-function buildBroadcasts(analysisValues, contentValues) {
+/**
+ * Builds broadcasts from the "Broadcast History" tab (message text in the same row). The older
+ * two-tab layout (Broadcast Analysis + Broadcast Contents) still works: pass the contents tab second.
+ */
+function buildBroadcasts(values, contentValues) {
   var content = {};
   rowsToObjects(contentValues).forEach(function (r) { if (r['Campaign ID']) content[r['Campaign ID']] = String(r['Message Content'] || ''); });
-  return rowsToObjects(analysisValues).filter(function (r) { return r['Campaign ID'] && r['Campaign Name']; }).map(function (r) {
+  return rowsToObjects(values).filter(function (r) { return r['Campaign ID'] && r['Campaign Name']; }).map(function (r) {
     var b = {
       id: String(r['Campaign ID']), name: String(r['Campaign Name']).trim(),
       t: parseIst(r['Sent At (IST)']), audience: toNum(r['Audience Size']), sent: toNum(r['Sent']),
       delivered: toNum(r['Delivered']), read: toNum(r['Read']), failed: toNum(r['Failed']),
-      cost: toNum(r['Actual Cost']), clicks: toNum(r['Clicked']), replies: toNum(r['Replied']),
+      cost: toNum(r['Actual Cost (INR)'] !== undefined ? r['Actual Cost (INR)'] : r['Actual Cost']), clicks: toNum(r['Clicked']), replies: toNum(r['Replied']),
       status: String(r['Data Status'] || ''), check: String(r['Data Check'] || ''),
-      inferredStart: parseIst(r['Webinar Start (inferred)']), updated: String(r['Last Updated'] || ''),
-      content: content[r['Campaign ID']] || ''
+      inferredStart: parseIst(r['Webinar Start (inferred)']), updated: String(r['Last Updated (IST)'] || r['Last Updated'] || ''),
+      content: String(r['Message Content'] !== undefined ? r['Message Content'] : content[r['Campaign ID']] || '')
     };
     b.family = FAMILIES.filter(function (f) { return f.test(b); })[0].key;
     b.missedFollowUp = /missed (yesterday|today)|Missed today|you missed/i.test(b.content);
@@ -598,6 +618,16 @@ function detectSessions(genie) {
   return sessions.sort(function (a, b) { return a.t - b.t; });
 }
 
+/** The usual next webinar: Sunday 11 AM and 7:30 PM, Tuesday and Wednesday 7:30 PM. */
+function nextWebinarAfter(t) {
+  var d0 = dayStart(t);
+  for (var i = 0; i < 8; i++) {
+    var d = d0 + i * 1440, w = weekday(d);
+    var starts = w === 0 ? [660, 1170] : (w === 2 || w === 3) ? [1170] : [];
+    for (var k = 0; k < starts.length; k++) if (d + starts[k] > t) return d + starts[k];
+  }
+  return null;
+}
 function templateFor(dayT) { var w = weekday(dayT); return w === 0 ? 'sun' : (w === 3 ? 'wed' : 'tue'); }
 
 /** Assigns every Flexi Genie broadcast to a webinar instance and a schedule slot. */
@@ -605,6 +635,7 @@ function analyse(broadcasts) {
   var genie = broadcasts.filter(function (b) { return b.family === 'genie'; });
   var sessions = detectSessions(genie);
   var lastSend = broadcasts.reduce(function (m, b) { return Math.max(m, b.t); }, 0);
+  var lastSession = sessions.length ? sessions[sessions.length - 1].t : 0;
   genie.forEach(function (b) {
     var s = null;
     if (b.missedFollowUp) {
@@ -614,11 +645,13 @@ function analyse(broadcasts) {
         if (prev) { s = prev; b.nextDay = true; }
       }
     }
-    if (!s) s = sessions.filter(function (x) { return b.t <= x.t + 45; })[0] || null;
-    if (!s && b.inferredStart && b.inferredStart > b.t) {
-      s = { t: b.inferredStart, date: dayStart(b.inferredStart), upcoming: true };
-      if (!sessions.some(function (x) { return x.t === s.t; })) sessions.push(s);
-      s = sessions.filter(function (x) { return x.t === b.inferredStart; })[0];
+    // The next session, up to 3½ days ahead (the 2-days-before slots are ~50 hours out).
+    if (!s) s = sessions.filter(function (x) { return b.t <= x.t + 45 && x.t - b.t <= 5040; })[0] || null;
+    // Sends after the last session that took place are for one that hasn't happened yet.
+    var upcoming = !s && b.t > lastSession ? (b.inferredStart > b.t ? b.inferredStart : nextWebinarAfter(b.t)) : null;
+    if (upcoming) {
+      s = sessions.filter(function (x) { return x.t === upcoming; })[0];
+      if (!s) { s = { t: upcoming, date: dayStart(upcoming), upcoming: true }; sessions.push(s); }
     }
     b.session = s;
   });
@@ -918,11 +951,13 @@ function qaIssues(b) {
   var c = String(b.content || ''), out = [];
   var re = /https?:\/\/[^\s\]]+/g, m;
   while ((m = re.exec(c))) {
-    var url = m[0], after = c.charAt(m.index + url.length), before = m.index ? c.charAt(m.index - 1) : '';
-    var short = url.slice(0, 45) + (url.length > 45 ? '…' : '');
-    // A "]" before or after is the edge of an AiSensy variable; text glued to it, or a full stop or bracket stuck to the end, breaks the link.
-    if ((after && !/\s/.test(after)) || /[.,;:!*_~)]$/.test(url)) { out.push({ rule: 1, text: 'No space after the link ' + short }); break; }
-    if (before && !/[\s\[]/.test(before)) { out.push({ rule: 1, text: 'No space before the link ' + short }); break; }
+    var url = m[0], before = m.index ? c.charAt(m.index - 1) : '';
+    // "]" is the edge of an AiSensy variable, so look past it. Only glued letters or digits break a
+    // link on WhatsApp; an emoji or colon before it, or a full stop after it, still works.
+    var rest = c.slice(m.index + url.length).replace(/^\]/, '');
+    var short = url.replace(/[.,!?;:)]+$/, '').slice(0, 45) + (url.length > 45 ? '…' : '');
+    if (rest && !/^\s/.test(rest) && !/^[.,!?;:)]+(\s|$)/.test(rest)) { out.push({ rule: 1, text: 'No space after the link ' + short }); break; }
+    if (before && /[A-Za-z0-9]/.test(before)) { out.push({ rule: 1, text: 'No space before the link ' + short }); break; }
   }
   if (/(link|here)[^\n\]\[]{0,50}:\s*\]/i.test(c)) out.push({ rule: 2, text: 'A “here is the link” line with no link in it' });
   var ph = c.match(/\{\{[^}]*\}\}|\[(DATE|TIME)\]/i);
@@ -942,8 +977,14 @@ function qaIssues(b) {
     if (seen[dk]) continue;
     var ls = text.lastIndexOf('\n', dm.index) + 1, le = text.indexOf('\n', dm.index), end = dm.index + dm[0].length;
     var before = text.slice(Math.max(ls, dm.index - 25), dm.index), after = text.slice(end, Math.min(le < 0 ? text.length : le, end + 25));
+    // "19–20 Sept (Tomorrow)": a range starts on its first day.
+    var range = /(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|–|&|and|to)\s*$/i.exec(before);
+    if (range) { dt = Date.UTC(y, MONTHS[dm[2].toLowerCase().slice(0, 3)], Number(range[1])) / 60000; before = before.slice(0, range.index); }
+    // Missed-session and replay messages invite people to the next session, so a later date is expected there.
+    var invite = (b.missedish || b.nextDay || /replay|recording/i.test(c)) && dt > d0;
     var wd = nextToDate(before, after, '(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?)day'), issue = null;
-    if (sess && dk !== sess && dk !== sent) issue = 'Mentions ' + dm[0] + ', but this was for the ' + sess.slice(8) + ' ' + new Date(b.session.t * 60000).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }) + ' session';
+    if (invite) issue = null;
+    else if (sess && dk !== sess && dk !== sent) issue = 'Mentions ' + dm[0] + ', but this was for the ' + sess.slice(8) + ' ' + new Date(b.session.t * 60000).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }) + ' session';
     else if (wd && WEEKDAYS[weekday(dt)] !== wd.toLowerCase().slice(0, 3)) issue = 'Says ' + wd + ' next to ' + dm[0] + ', which is a ' + WEEKDAY_NAMES[weekday(dt)];
     else if (nextToDate(before, after, 'tomorrow') && dt !== d0 + 1440) issue = 'Says tomorrow next to ' + dm[0] + ', but it was sent on ' + Number(sent.slice(8)) + ' ' + MONTH_NAMES[Number(sent.slice(5, 7)) - 1];
     else if (nextToDate(before, after, 'today|tonight') && dt !== d0) issue = 'Says today next to ' + dm[0] + ', but it was sent on ' + Number(sent.slice(8)) + ' ' + MONTH_NAMES[Number(sent.slice(5, 7)) - 1];
@@ -960,11 +1001,13 @@ function nextToDate(before, after, word) {
   var a = new RegExp('^[\\s,.(\\[|:–-]*(?:\\d{4}[\\s,.(\\[|:–-]*)?(' + word + ')\\b', 'i').exec(after);
   if (a) return a[1];
   var b = new RegExp('\\b(' + word + ')[\\s,.()\\[\\]|:–-]*$', 'i').exec(before);
+  // In "19 Sept (Tomorrow) - 20 Sept", the word belongs to the earlier date.
+  if (b && /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i.test(before.slice(0, b.index))) return null;
   return b ? b[1] : null;
 }
 
 /* Rule 3 and failed sends, from the numbers. A marketing template costs about ₹1.09 per delivered message, utility about ₹0.15. */
-var MARKETING_COST = 0.4, FAILED_SHARE = 0.2, FAILED_MIN = 25;
+var MARKETING_COST = 0.4, FAILED_SHARE = 0.2, FAILED_MIN = 100;
 function deliveryIssues(b) {
   var out = [];
   if (b.delivered >= 20 && b.cost / b.delivered >= MARKETING_COST) {
@@ -1137,7 +1180,8 @@ function slotVerdicts(result, tpl, bench) {
     else if (((a.index < 0.6 && a.z <= -1.5) || (a.clicks === 0 && a.exp >= 5) || (bench && a.cpc && a.cpc >= 2.5 * bench && a.index < 0.8)) && (sessionsSent >= 2 || a.z <= -2.5)) {
       v = 'cut';
       why = 'Gets ' + Math.round((1 - a.index) * 100) + '% fewer clicks than similar sends at ' + (a.cpc ? '₹' + a.cpc.toFixed(1) : 'no clicks') + ' per click' + (bench ? ' (campaign average ₹' + bench.toFixed(1) + ')' : '') + '.';
-    } else if (a.index < 0.85 && best && best.index >= 1.0 && best.doc !== (items[0] && items[0].doc)) {
+    } else if (a.index < 0.85 && best && best.index >= 1.0 && best.doc !== (items[0] && items[0].doc) &&
+        !(best.cmsg && (best.cmsg.s.verdict === 'improve' || best.cmsg.s.verdict === 'remove'))) {
       v = 'swap';
       why = 'Below similar sends overall, but one week’s message here did well (' + Math.round((best.index - 1) * 100) + '% above similar). Use that message every week.';
     } else if (a.index < 0.85) {
@@ -1206,6 +1250,184 @@ function docName(text) {
   return docLabel(text);
 }
 
+/*
+ * Suggested rewrites for the campaign messages that get fewer clicks than similar sends.
+ * Text in [brackets] goes into the template's variables; everything outside them is the approved
+ * template text, unchanged, so none of these needs a new template approval.
+ */
+var REWRITES = [
+  {
+    match: /It happens once/,
+    templates: 'qsazazazdemolive',
+    when: 'Tue, Wed and Sun-encore 7:25 PM · Sun 10:55 AM',
+    changes: [
+      'Say what happens in the first 10 minutes instead of “It happens once. No rewind. No replay.” People read this message but don’t click: it warns them about missing out without saying what they would see.',
+      'Drop “you’re still out here reading this”. Telling the reader off doesn’t earn the click.',
+      'Put the tool-access link in its place. People who build along have a reason to be there on time.',
+      'Keep the image. Don’t switch to a video.'
+    ],
+    text: [
+      'Hello [$Name],',
+      '',
+      'Your registered session is now live: [Starting in 5 minutes: Launch Your Business Online in 10 Minutes 🔴]',
+      '',
+      'Session topic: [👉 JOIN NOW: https://sb.flexifunnels.com/genie-demo | Webinar ID: ‹this week’s ID›]',
+      '',
+      '[In the first 10 minutes we take one real business idea and put it online live: website, product, checkout and payments, built from a phone. 📱]',
+      '',
+      '[Want to build yours alongside us? Keep your AI tool open: https://sb.flexifunnels.com/funnel-agent-access ]',
+      '',
+      'Join the live session here: [https://sb.flexifunnels.com/genie-demo ]',
+      '',
+      'If you have any questions, please feel free to reach out to us.'
+    ]
+  },
+  {
+    match: /This is just insane|LIVE RIGHT NOW/,
+    templates: 'uisxuibxjabuixdemo_zr6in_dws7x, newbusinessmosxd_v9chjs',
+    when: 'Tue and Wed 7:35 PM · Sun 11:10 AM · Sun-encore 7:40 PM',
+    changes: [
+      'Replace the hype (“This is just insane… going crazy inside… Last and Final Call”) with a live update: what is already built and what comes next. Your best live message, “Revealing 5 Business Models…”, works because it says what is on screen.',
+      'It goes out 5 minutes after “Housefull”, which already says “it’s live, join now”. A new reason to join beats the same message again.',
+      'Change the first line every week to whatever is actually on screen at send time.',
+      'Use an image or no media instead of the video: video sends get fewer clicks than similar sends in this campaign.',
+      'In newbusinessmosxd_v9chjs (one variable fewer), leave out the tool-access line.'
+    ],
+    text: [
+      'Hi [$FirstName],',
+      '',
+      'This is a quick reminder that your [registered session is LIVE right now 🔴 The website is already built on screen. Next up: the product, checkout and payments.]',
+      '',
+      'Session Details: [Join now: https://sb.flexifunnels.com/genie-demo ]',
+      '',
+      '[You haven’t missed the main part. Watch the business go live, from a phone, in the next 10 minutes.]',
+      '',
+      '[Build yours alongside us: https://sb.flexifunnels.com/funnel-agent-access ]',
+      '',
+      '[See you inside 👇]',
+      '',
+      'We look forward to having you in the session!',
+      '',
+      '–Team FlexiFunnels'
+    ]
+  },
+  {
+    match: /Almost full/,
+    templates: 'uisxuibxjabuixdemo_zr6in_dws7x, livepspchallengefi, newbusinessmosxd_v9chjs',
+    when: 'Tue and Wed 7:50 PM (on Sunday, cut the 11:25 AM send instead)',
+    changes: [
+      'Drop “Only last 50 spots left”. It appears every week, 20 minutes into a free webinar, and people don’t believe it. “You haven’t missed out yet” also reminds them they’re late.',
+      'Lead with the one concrete reason to join now: the ₹1.5 lakh+ bonuses and the 5 business models are revealed at 8 PM, only for people in the room. That sets up your strongest live message, which goes out at 8 PM.',
+      'Swap the video for an image.',
+      'On Sunday the 11:25 AM send is the seventh reminder of the morning: cut it rather than rewrite it.'
+    ],
+    text: [
+      'Hi [$FirstName, 10 minutes to the bonus reveal 🎁],',
+      '',
+      'This is a quick reminder that your [registered session is live. At 8 PM we reveal the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool in 2026.]',
+      '',
+      'Session Details: [Join here: https://sb.flexifunnels.com/genie-demo ]',
+      '',
+      '[The bonuses are only for people in the room.]',
+      '',
+      '[The business is already live on screen, built from a phone.]',
+      '',
+      '[Get in before 8 PM 👇]',
+      '',
+      'We look forward to having you in the session!',
+      '',
+      '–Team FlexiFunnels'
+    ]
+  },
+  {
+    match: /Just 60 mins away/,
+    templates: '10mintoolaccesstemp (instead of uisxuibxjabuixdemo_zr6in)',
+    when: 'Sun 10 AM (and the 6:30 PM send before evening webinars)',
+    changes: [
+      'Stop sending it as it is. It repeats the 30-minute reminder almost word for word, 30 minutes earlier and an hour after the 9 AM tool message.',
+      'If you want one message between 9 and 10:30 AM, send a “log in to your tool now” nudge on the tool-access template instead. Tool-access messages get the cheapest clicks of the morning.',
+      'Test it on half the list for two Sundays before switching fully.'
+    ],
+    text: [
+      'Hi [$FirstName, ✅ is your AI tool open?],',
+      '',
+      'This is a reminder for your upcoming [Launch Your Business Online in 10 Minutes] session.',
+      '',
+      'Date and time: [Today at 11 AM IST, live in 60 minutes]',
+      '',
+      '[👉 Log in now so it’s ready when we start: https://sb.flexifunnels.com/funnel-agent-access ]',
+      '',
+      '[We build a business live and you build yours alongside us. Joining link: https://sb.flexifunnels.com/genie-demo ]',
+      '',
+      'If you have any questions or need assistance regarding the session, please reply to this message.',
+      '',
+      'Best regards,',
+      'Team FlexiFunnels'
+    ]
+  },
+  {
+    match: /waitlist” \(register for Sunday\)|turning your idea into an online business/,
+    templates: 'pspmissed_auidence111, pspmissed_auidence',
+    when: 'Old-list and missed-audience registration pushes, 1–2 days before Sunday',
+    changes: [
+      'Fix the list first. Only about half of these people even open the message, and pushes to lists of 5,000+ cost several times more per click than the registered list. Send only to people who registered or attended in the last 60 days.',
+      'Make it short: what they will see, the date, one link. Short messages get more clicks than similar sends in this campaign.',
+      'Drop “1,000+ people are on the waitlist” and “4,700+ mentees”. Your best registration message (“Your entry has been successfully recorded”) has neither: it gives the date, the link and the tool access.',
+      'Use an image instead of the video, and one link instead of two or three.',
+      'Leave out “FREE”: messages that say it get fewer clicks than similar sends here.'
+    ],
+    text: [
+      'Dear [$FirstName],',
+      '',
+      'This is a reminder regarding your session, which is scheduled on [Sunday ‹date› at 11 AM: Launch Your Business Online in 10 Minutes].',
+      '',
+      '[Register here: https://sb.flexifunnels.com/funnel-agent ]',
+      '',
+      'To confirm your attendance, click on "Please Confirm Here".',
+      '',
+      '[You’ll watch a real idea become a live business from a phone, then get 2 days of access to the AI Business Launcher Tool to build yours.]',
+      '',
+      '[Tool access opens Sunday at 9 AM, two hours before we go live.]',
+      '',
+      'If you have already confirmed, you may ignore this message.',
+      'For any assistance related to confirmation or joining the session, please reply to this message.',
+      '',
+      '—Team Saurabh Bhatnagar'
+    ]
+  },
+  {
+    match: /Missed today/,
+    templates: 'uisxuibxjabuixdemo',
+    when: 'Sun 4:30 PM, to people who missed the 11 AM session',
+    changes: [
+      'Put tonight’s joining link first. Right now the first link is the community link, and the one that matters tonight comes last.',
+      'Say “one more time tonight at 7:30 PM” in the opening line: it is the only new fact for someone who missed the morning.',
+      'Swap the community link for the tool-access link, which gives them a reason to show up live.'
+    ],
+    text: [
+      'Hi [$FirstName, missed this morning’s session?],',
+      '',
+      'This is a quick reminder that your [registered session runs one more time tonight at 7:30 PM: Launch Your Business Online in 10 Minutes.]',
+      '',
+      'Session Details: [Tonight’s joining link: https://sb.flexifunnels.com/genie-demo ]',
+      '',
+      '[💡 Same live build: a real idea becomes a live business from a phone in 10 minutes.]',
+      '',
+      '[Your AI tool access is still open, so you can build yours with us: https://sb.flexifunnels.com/funnel-agent-access ]',
+      '',
+      '[Set a reminder for 7:25 PM ⏰]',
+      '',
+      'We look forward to having you in the session!',
+      '',
+      '–Team FlexiFunnels'
+    ]
+  }
+];
+function rewriteFor(hook) {
+  for (var i = 0; i < REWRITES.length; i++) if (REWRITES[i].match.test(hook)) return REWRITES[i];
+  return null;
+}
+
 /** Campaign messages: sends grouped by the doc message they came from (or by text, if not in the docs). */
 function campaignMessages(C) {
   var groups = {};
@@ -1222,6 +1444,7 @@ function campaignMessages(C) {
     g.media = mediaKind(latest.content);
     g.s = judge(g.sends);
     g.a = aggregate(g.sends);
+    g.rewrite = rewriteFor(g.hook);
     g.sends.forEach(function (b) { b.cmsg = g; });
     return g;
   });
@@ -1233,16 +1456,21 @@ function campaignMessages(C) {
   'use strict';
   var SERVER = 'Google Sheets';
   var SHEET_ID = '1jXnQPQngi-FbEBBHC0tvaOTXxmtE5_miv6Mq0rTbmLQ';
-  var RANGES = { analysis: "'Broadcast Analysis'!A1:AC5000", contents: "'Broadcast Contents'!A1:D5000" };
+  var TAB = "'Broadcast History'";
+  var PAGE_ROWS = 300; // the History tab is read in pages; each row carries the full message text
+  var PERIODS = { all: { label: 'Since Aug', weeks: 0 }, '8w': { label: 'Last 8 weeks', weeks: 8 }, '4w': { label: 'Last 4 weeks', weeks: 4 } };
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
   var IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 
   var state = {
-    raw: {}, cachedAt: {}, broadcasts: [], messages: [], result: null, tab: 'overview', metric: 'clickRate', mcp: null,
+    raw: null, cachedAt: 0, period: 'all', broadcasts: [], messages: [], result: null, tab: 'overview', metric: 'clickRate', mcp: null,
     sched: 'tue', slotView: 'verdict', mfilter: { verdict: '', sort: 'impact', docs: '', q: '' },
     bfilter: { sched: '', session: '', area: '', q: '', others: false }, sort: { key: 't', dir: -1 }, showAll: false
   };
-  try { var saved = localStorage.getItem('wbs.tab3'); if (saved) state.tab = saved; } catch (e) { /* storage unavailable */ }
+  try {
+    var saved = localStorage.getItem('wbs.tab3'); if (saved) state.tab = saved;
+    var period = localStorage.getItem('wbs.period'); if (PERIODS[period]) state.period = period;
+  } catch (e) { /* storage unavailable */ }
 
   var $ = function (s) { return document.querySelector(s); };
   function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -1295,12 +1523,20 @@ function campaignMessages(C) {
     if (allow) allow.addEventListener('click', function () { loadOnce(true); });
   }
 
-  function onData(which, values, at) {
-    if (!Array.isArray(values)) { renderError({ code: 'tool_error', message: 'The sheet returned no rows for ' + RANGES[which] + '.' }); return; }
-    state.raw[which] = values;
-    state.cachedAt[which] = at || Date.now();
-    if (!state.raw.analysis || !state.raw.contents) return;
-    state.broadcasts = buildBroadcasts(state.raw.analysis, state.raw.contents);
+  function onData(values, at) {
+    if (!Array.isArray(values) || values.length < 2) { renderError({ code: 'tool_error', message: 'The “Broadcast History” tab returned no rows.' }); return; }
+    state.raw = values;
+    state.cachedAt = at || Date.now();
+    compute();
+    render();
+  }
+
+  /** Runs the whole analysis on the broadcasts inside the chosen period. */
+  function compute() {
+    var all = buildBroadcasts(state.raw);
+    var lastT = state.lastT = all.reduce(function (m, b) { return Math.max(m, b.t); }, 0);
+    var weeks = PERIODS[state.period].weeks;
+    state.broadcasts = weeks ? all.filter(function (b) { return b.t >= lastT - weeks * 7 * 1440; }) : all;
     state.result = analyse(state.broadcasts);
     scoreBroadcasts(state.broadcasts);
     state.messages = groupMessages(state.broadcasts);
@@ -1311,52 +1547,61 @@ function campaignMessages(C) {
     matchDocs(state.broadcasts, state.catalog);
     state.C = state.broadcasts.filter(function (b) { return b.family === 'genie'; });
     state.stats = campaignStats(state.C);
+    state.cmsgs = campaignMessages(state.C);
     state.slots = {}; state.live = {};
     ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k] = slotVerdicts(state.result, k, state.stats.bench); state.live[k] = liveCutPlan(state.slots[k]); });
-    state.cmsgs = campaignMessages(state.C);
-    var latestT = state.broadcasts.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
-    var read = new Date(Math.min(state.cachedAt.analysis, state.cachedAt.contents));
-    setSync('live', state.broadcasts.length + ' broadcasts · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
-      ' · read ' + read.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }));
-    render();
+    var latestT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
+    setSync('live', all.length + ' broadcasts since ' + dayLabel(all.reduce(function (m, b) { return Math.min(m, b.t); }, Infinity)) + ' · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
+      ' · read ' + new Date(state.cachedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }));
+    renderPeriod();
+  }
+
+  function renderPeriod() {
+    $('#period').innerHTML = Object.keys(PERIODS).map(function (k) {
+      return '<button type="button" data-period="' + k + '" aria-pressed="' + (state.period === k) + '">' + PERIODS[k].label + '</button>';
+    }).join('');
+  }
+  function setPeriod(k) {
+    state.period = k;
+    try { localStorage.setItem('wbs.period', k); } catch (e) { /* ignore */ }
+    if (state.raw) { compute(); render(); } else renderPeriod();
   }
 
   function loadGas() {
     setSync('', 'Reading the sheet…');
-    google.script.run.withSuccessHandler(function (d) {
-      state.raw = {};
-      onData('analysis', d.analysis, Date.parse(d.fetchedAt));
-      onData('contents', d.contents, Date.parse(d.fetchedAt));
-    }).withFailureHandler(function (e) { renderError({ code: 'gas', message: e && e.message }); }).getDashboardData();
+    google.script.run.withSuccessHandler(function (d) { onData(d.history, Date.parse(d.fetchedAt)); })
+      .withFailureHandler(function (e) { renderError({ code: 'gas', message: e && e.message }); }).getDashboardData();
   }
 
-  var unwatch = [];
-  function watch(mcp) {
-    unwatch.forEach(function (u) { u(); });
-    unwatch = Object.keys(RANGES).map(function (which) {
-      return mcp.watchTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[which] }, function (ev) {
-        if (ev.type === 'data') onData(which, ev.result && ev.result.payload && ev.result.payload.values, ev.result.cache ? ev.result.cache.storedAt : Date.now());
-        else {
-          var code = ev.error && ev.error.code;
-          if (['needs_reauth', 'server_not_connected', 'blocked_by_policy', 'approval_required', 'not_in_manifest'].indexOf(code) !== -1) {
-            state.raw = {}; state.broadcasts = []; state.result = null;
-          }
-          renderError(ev.error);
-        }
-      }, { cache: { staleTime: 5 * 60000, gcTime: 24 * 3600000 }, refetchInterval: 10 * 60000 });
-    });
-  }
-  function loadOnce(fresh) {
-    if (IS_GAS) { loadGas(); return; }
+  /** claude.ai: counts the rows, then reads the History tab in pages of PAGE_ROWS. */
+  var loading = false;
+  function loadMcp(fresh) {
     var mcp = state.mcp;
-    if (!mcp) return;
-    setSync('', 'Reading the sheet…');
-    Object.keys(RANGES).forEach(function (which) {
-      mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[which] }, { cache: { staleTime: 0, gcTime: 24 * 3600000, refresh: !!fresh } })
-        .then(function (res) { onData(which, res && res.payload && res.payload.values, res.cache ? res.cache.storedAt : Date.now()); })
-        .catch(renderError);
+    if (!mcp || loading) return;
+    loading = true;
+    if (!state.raw) setSync('', 'Reading the sheet…');
+    var opts = { cache: { staleTime: fresh ? 0 : 5 * 60000, gcTime: 24 * 3600000, refresh: !!fresh } };
+    function get(range) {
+      return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: TAB + '!' + range }, opts)
+        .then(function (res) { return { values: (res && res.payload && res.payload.values) || [], at: res && res.cache ? res.cache.storedAt : Date.now() }; });
+    }
+    get('A1:A20000').then(function (ids) {
+      var n = ids.values.length, pages = [];
+      for (var start = 1; start <= n; start += PAGE_ROWS) pages.push(get('A' + start + ':X' + Math.min(n, start + PAGE_ROWS - 1)));
+      return Promise.all(pages);
+    }).then(function (parts) {
+      loading = false;
+      var values = [], at = Date.now();
+      parts.forEach(function (p) { values = values.concat(p.values); at = Math.min(at, p.at); });
+      onData(values, at);
+    }).catch(function (err) {
+      loading = false;
+      var code = err && err.code;
+      if (['needs_reauth', 'server_not_connected', 'blocked_by_policy', 'approval_required', 'not_in_manifest'].indexOf(code) !== -1) { state.raw = null; state.broadcasts = []; state.result = null; }
+      renderError(err);
     });
   }
+  function loadOnce(fresh) { if (IS_GAS) loadGas(); else loadMcp(fresh); }
 
   // ---------- tabs ----------
   var SCHED_KEYS = ['tue', 'wed', 'sun'];
@@ -1427,10 +1672,14 @@ function campaignMessages(C) {
         acts.push({ tone: 'warn', save: r.costPerSession, lose: r.clicksPerSession, text: SCHED_SHORT[k] + ' webinar: cut or rewrite the ' + r.slot.name + ' slot', detail: r.why + ' Costs about ' + inr(r.costPerSession) + ' per webinar.', tab: 'slots', sched: k });
       });
     });
-    state.cmsgs.filter(function (g) { return g.s.verdict === 'remove'; }).sort(function (a, b) { return b.a.cost - a.a.cost; }).slice(0, 3).forEach(function (g) {
-      acts.push({ tone: 'bad', text: 'Replace the message ' + g.hook, detail: g.s.why + ' Used ' + g.s.sends + ' time' + (g.s.sends > 1 ? 's' : '') + ', ' + inr(g.a.cost) + ' spent, ' + inr(g.a.cpc) + ' per click.', msg: g.id });
+    var current = function (g) { return g.s.sends >= 2 || g.sends[g.sends.length - 1].t >= state.lastT - 28 * 1440; };
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'remove' && current(g); }).sort(function (a, b) { return b.a.cost - a.a.cost; }).slice(0, 3).forEach(function (g) {
+      acts.push({ tone: 'bad', text: 'Replace the message ' + g.hook, detail: g.s.why + ' Used ' + g.s.sends + ' time' + (g.s.sends > 1 ? 's' : '') + ', ' + inr(g.a.cost) + ' spent, ' + inr(g.a.cpc) + ' per click.' + (g.rewrite ? ' A rewrite is ready on its card.' : ''), msg: g.id });
     });
-    state.cmsgs.filter(function (g) { return g.s.verdict === 'more'; }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'improve' && g.rewrite; }).sort(function (a, b) { return b.a.cost - a.a.cost; }).forEach(function (g) {
+      acts.push({ tone: 'warn', text: 'Rewrite ' + g.hook, detail: g.s.why + ' ' + inr(g.a.cost) + ' spent across ' + g.s.sends + ' sends at ' + inr(g.a.cpc) + ' per click. A rewrite on template ' + g.rewrite.templates + ' is ready on its card.', msg: g.id });
+    });
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'more' && current(g); }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
       acts.push({ tone: 'good', text: 'Use ' + g.hook + ' in more slots', detail: g.s.why + ' ' + inr(g.a.cpc) + ' per click across ' + g.s.sends + ' send' + (g.s.sends > 1 ? 's' : '') + '.', msg: g.id });
     });
     SCHED_KEYS.forEach(function (k) {
@@ -1527,7 +1776,7 @@ function campaignMessages(C) {
       var perSend = r.items.length ? 1 / r.items.length : 0;
       html += '<tr' + (r.items.length ? ' class="click" data-ids="' + esc(r.items.map(function (b) { return b.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
         '<td class="name"><b>' + esc(r.slot.name) + '</b>' + (r.live ? ' <span class="pill">live window</span>' : '') + '<div class="faint small">' + esc(r.slot.audience || '') + ' · ' + esc(String(r.slot.template || '').split(',')[0]) + '</div></td>' +
-        '<td class="vcell">' + slotPill(r.verdict) + '<div class="small why2">' + esc(r.why) + '</div>' + (r.best && (r.verdict === 'swap' || r.verdict === 'improve' || r.verdict === 'top' || r.verdict === 'keep') ? '<div class="faint small">Best here: ' + esc(msgName(r.best)) + ' (' + esc(dayLabel(r.best.t)) + ', ' + pct(rate(r.best), 2) + ')</div>' : '') + '</td>' +
+        '<td class="vcell">' + slotPill(r.verdict) + '<div class="small why2">' + esc(r.why) + '</div>' + slotRewrite(r) + (r.best && (r.verdict === 'swap' || r.verdict === 'improve' || r.verdict === 'top' || r.verdict === 'keep') ? '<div class="faint small">Best here: ' + esc(msgName(r.best)) + ' (' + esc(dayLabel(r.best.t)) + ', ' + pct(rate(r.best), 2) + ')</div>' : '') + '</td>' +
         '<td class="r num">' + r.sessionsSent + ' of ' + r.sessions + '</td>' +
         '<td class="small">' + (r.items.length ? esc(avgClock) + (r.avgDelay !== null && Math.abs(r.avgDelay) >= 5 ? ' <span class="faint">(' + (r.avgDelay > 0 ? '+' : '−') + Math.round(Math.abs(r.avgDelay)) + 'm)</span>' : '') : '—') + '</td>' +
         '<td class="r num">' + inr(a.cost * perSend) + '</td>' +
@@ -1573,6 +1822,14 @@ function campaignMessages(C) {
     $('#main').innerHTML = html + '</div>';
   }
 
+  function slotRewrite(r) {
+    if (['improve', 'cut', 'swap', 'keep'].indexOf(r.verdict) === -1) return '';
+    var counts = {}, top = null;
+    r.items.forEach(function (b) { if (b.cmsg && b.cmsg.rewrite) { counts[b.cmsg.id] = (counts[b.cmsg.id] || 0) + 1; if (!top || counts[b.cmsg.id] > counts[top.id]) top = b.cmsg; } });
+    if (!top || (r.verdict === 'keep' && top.s.verdict !== 'improve' && top.s.verdict !== 'remove')) return '';
+    return '<div class="small"><a href="#" data-msg="' + esc(top.id) + '">See the suggested rewrite</a></div>';
+  }
+
   // ---------- Messages ----------
   function renderMessages() {
     var f = state.mfilter, counts = {};
@@ -1584,7 +1841,7 @@ function campaignMessages(C) {
       '<label for="mSort">Sort by<select id="mSort">' + [['impact', 'Strongest evidence first'], ['cost', 'Most spend'], ['cpc', 'Highest cost per click'], ['index', 'Best vs similar'], ['recent', 'Most recently sent']].map(function (o) {
         return '<option value="' + o[0] + '"' + (f.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></label>' +
-      '<label for="mDocs">Show<select id="mDocs"><option value="">All messages</option><option value="doc"' + (f.docs === 'doc' ? ' selected' : '') + '>Doc messages only</option><option value="x"' + (f.docs === 'x' ? ' selected' : '') + '>Not in the docs</option></select></label>' +
+      '<label for="mDocs">Show<select id="mDocs"><option value="">All messages</option><option value="doc"' + (f.docs === 'doc' ? ' selected' : '') + '>Doc messages only</option><option value="x"' + (f.docs === 'x' ? ' selected' : '') + '>Not in the docs</option><option value="rw"' + (f.docs === 'rw' ? ' selected' : '') + '>With a suggested rewrite</option></select></label>' +
       '<label for="mQ">Search<input type="search" id="mQ" placeholder="Words, template or broadcast name" value="' + esc(f.q) + '"></label></div><div id="msgList" class="cards-col"></div></div>';
     $('#main').innerHTML = html;
     renderMessageList();
@@ -1595,6 +1852,7 @@ function campaignMessages(C) {
       if (f.verdict && g.s.verdict !== f.verdict) return false;
       if (f.docs === 'doc' && !g.doc) return false;
       if (f.docs === 'x' && g.doc) return false;
+      if (f.docs === 'rw' && !g.rewrite) return false;
       if (q && (g.hook + ' ' + g.content + ' ' + (g.doc ? g.doc.templates.join(' ') : '') + ' ' + g.sends.map(function (b) { return b.name; }).join(' ')).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -1618,6 +1876,7 @@ function campaignMessages(C) {
       '<span class="faint small">' + esc(g.media) + (g.doc ? ' · template ' + esc(g.doc.templates.join(', ')) : '') + '</span></div>' +
       '<h3>' + esc(g.hook) + '</h3>' + (where ? '<p class="faint small">Doc slots: ' + esc(where) + '</p>' : '') +
       '<p class="why">' + esc(s.why) + '</p>' +
+      rewriteHtml(g) +
       (s.goal === 'reply' ? replyStats(s, a) : '<div class="mstats">' +
         mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) +
         mstat('Read rate', pct(a.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
@@ -1627,6 +1886,17 @@ function campaignMessages(C) {
       '<p class="meta small">First sent ' + esc(dayLabel(first.t)) + ', ' + esc(timeLabel(first.t)) + ' · last sent ' + esc(dayLabel(last.t)) + ', ' + esc(timeLabel(last.t)) +
       (best ? ' · best result: ' + esc(dayLabel(best.t)) + ', ' + esc(timeLabel(best.t)) + ' (' + pct(rate(best), 2) + ')' : '') + '</p>' +
       '<details><summary>Every send and the full message</summary>' + sendTable(g.sends) + '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details></article>';
+  }
+  /** The suggested rewrite: open on cards that need one, folded away as an alternative on the rest. */
+  function rewriteHtml(g) {
+    var r = g.rewrite;
+    if (!r) return '';
+    var needed = g.s.verdict === 'improve' || g.s.verdict === 'remove';
+    return '<details class="rewrite"' + (needed ? ' open' : '') + '><summary>' + (needed ? 'Suggested rewrite' : 'A rewrite to test') + ' · template ' + esc(r.templates) + '</summary>' +
+      '<p class="small muted">Used: ' + esc(r.when) + '. Text in [brackets] goes into the template’s variables; the rest is the approved template text, so no new approval is needed.</p>' +
+      '<ul class="small">' + r.changes.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>' +
+      '<div class="bubble">' + esc(r.text.join('\n')) + '</div>' +
+      '<div><button type="button" class="btn" data-copy="' + esc(g.id) + '">Copy message</button></div></details>';
   }
   function replyStats(s, a) {
     return '<div class="mstats">' + mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) + mstat('Read rate', pct(a.readRate)) +
@@ -2053,11 +2323,27 @@ function campaignMessages(C) {
   }
   function kv(k, v) { return '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
   function closeDrawer() { $('#drawer').hidden = true; $('#scrim').hidden = true; }
+  function copyRewrite(btn) {
+    var g = state.cmsgs.filter(function (x) { return x.id === btn.dataset.copy; })[0];
+    if (!g || !g.rewrite) return;
+    var text = g.rewrite.text.join('\n');
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy message'; }, 1500); };
+    var fallback = function () {
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (x) { btn.textContent = 'Select the text above to copy'; }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+
   // ---------- events ----------
   function setTab(t) { state.tab = t; try { localStorage.setItem('wbs.tab3', t); } catch (x) { /* ignore */ } render(); window.scrollTo(0, 0); }
   document.addEventListener('click', function (e) {
     var el;
     if ((el = e.target.closest('[data-tab]'))) { setTab(el.dataset.tab); return; }
+    if ((el = e.target.closest('[data-period]'))) { setPeriod(el.dataset.period); return; }
+    if ((el = e.target.closest('[data-copy]'))) { copyRewrite(el); return; }
     if ((el = e.target.closest('[data-msg]'))) { e.preventDefault(); showMessage(el.dataset.msg); return; }
     if ((el = e.target.closest('[data-goto]'))) {
       if (el.dataset.sched) state.sched = el.dataset.sched;
@@ -2098,6 +2384,7 @@ function campaignMessages(C) {
     if (id === 'mDocs') { state.mfilter.docs = e.target.value; renderMessageList(); }
   });
   $('#refreshBtn').addEventListener('click', function () { loadOnce(true); });
+  renderPeriod();
 
   // ---------- boot ----------
   if (IS_GAS) {
@@ -2109,7 +2396,8 @@ function campaignMessages(C) {
   window.claude.use('mcp').then(function (mcp) {
     if (!mcp) { renderNoSource(); return; }
     state.mcp = mcp;
-    watch(mcp);
+    loadMcp(false);
+    setInterval(function () { if (!document.hidden) loadMcp(false); }, 10 * 60000);
   }).catch(renderNoSource);
 })();
 

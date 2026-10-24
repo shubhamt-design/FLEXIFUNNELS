@@ -1,8 +1,9 @@
 /**
  * Webinar Broadcast Scorecard — team web app.
  *
- * Serves Index.html and hands it the two tabs of the AiSensy Broadcast
- * Analytics sheet. The page does all the analysis in the browser.
+ * Serves Index.html and hands it the "Broadcast History" tab of the AiSensy
+ * Broadcast Analytics sheet (every broadcast since August, with cost and
+ * message text). The page does all the analysis in the browser.
  *
  * Deploy: Deploy → New deployment → Web app, Execute as "Me",
  * Who has access "Anyone within FlexiFunnels". Viewers then need no
@@ -10,7 +11,7 @@
  */
 
 var SHEET_ID = '1jXnQPQngi-FbEBBHC0tvaOTXxmtE5_miv6Mq0rTbmLQ';
-var TABS = { analysis: 'Broadcast Analysis', contents: 'Broadcast Contents' };
+var TABS = { history: 'Broadcast History' };
 var CACHE_SECONDS = 300;
 
 function doGet() {
@@ -19,7 +20,7 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/** Called by the page. Returns both tabs as text, exactly as the sheet shows them. */
+/** Called by the page. Returns the tab as text, exactly as the sheet shows it. */
 function getDashboardData() {
   var cache = CacheService.getScriptCache();
   var cached = readCache_(cache);
@@ -39,10 +40,10 @@ function getDashboardData() {
 // The payload is larger than one cache entry (100 KB), so it is split into chunks.
 function readCache_(cache) {
   try {
-    var meta = cache.get('scorecard:n');
+    var meta = cache.get('history:n');
     if (!meta) return null;
     var keys = [];
-    for (var i = 0; i < Number(meta); i++) keys.push('scorecard:' + i);
+    for (var i = 0; i < Number(meta); i++) keys.push('history:' + i);
     var parts = cache.getAll(keys);
     var json = keys.map(function (k) { return parts[k]; });
     if (json.some(function (p) { return p === undefined || p === null; })) return null;
@@ -55,8 +56,8 @@ function readCache_(cache) {
 function writeCache_(cache, data) {
   try {
     var json = JSON.stringify(data), size = 90000, entries = {}, n = 0;
-    for (var i = 0; i < json.length; i += size) entries['scorecard:' + n++] = json.slice(i, i + size);
-    entries['scorecard:n'] = String(n);
+    for (var i = 0; i < json.length; i += size) entries['history:' + n++] = json.slice(i, i + size);
+    entries['history:n'] = String(n);
     cache.putAll(entries, CACHE_SECONDS);
   } catch (e) {
     // Caching is only a speed-up; ignore failures.
