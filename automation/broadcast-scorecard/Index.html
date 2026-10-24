@@ -918,8 +918,11 @@ function qaIssues(b) {
   var c = String(b.content || ''), out = [];
   var re = /https?:\/\/[^\s\]]+/g, m;
   while ((m = re.exec(c))) {
-    var after = c.charAt(m.index + m[0].length);
-    if (after && !/\s/.test(after)) { out.push({ rule: 1, text: 'No space after the link ' + m[0].slice(0, 45) + (m[0].length > 45 ? '…' : '') }); break; }
+    var url = m[0], after = c.charAt(m.index + url.length), before = m.index ? c.charAt(m.index - 1) : '';
+    var short = url.slice(0, 45) + (url.length > 45 ? '…' : '');
+    // A "]" before or after is the edge of an AiSensy variable; text glued to it, or a full stop or bracket stuck to the end, breaks the link.
+    if ((after && !/\s/.test(after)) || /[.,;:!*_~)]$/.test(url)) { out.push({ rule: 1, text: 'No space after the link ' + short }); break; }
+    if (before && !/[\s\[]/.test(before)) { out.push({ rule: 1, text: 'No space before the link ' + short }); break; }
   }
   if (/(link|here)[^\n\]\[]{0,50}:\s*\]/i.test(c)) out.push({ rule: 2, text: 'A “here is the link” line with no link in it' });
   var ph = c.match(/\{\{[^}]*\}\}|\[(DATE|TIME)\]/i);
@@ -928,12 +931,48 @@ function qaIssues(b) {
     var sm = b.session.t - dayStart(b.session.t);
     if (sm === 660 && /\b11(:00)?\s*PM\b/i.test(c)) out.push({ rule: 2, text: 'Says 11 PM, but the session is at 11 AM' });
     if (sm === 1170 && /\b7:30\s*AM\b/i.test(c)) out.push({ rule: 2, text: 'Says 7:30 AM, but the session is at 7:30 PM' });
-    var dre = /\b(\d{1,2})(?:st|nd|rd|th)?\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/gi, dm, seen = {};
-    var y = new Date(b.t * 60000).getUTCFullYear(), sess = dateKey(b.session.t), sent = dateKey(b.t);
-    while ((dm = dre.exec(c))) {
-      var dk = dateKey(Date.UTC(y, MONTHS[dm[2].toLowerCase().slice(0, 3)], Number(dm[1])) / 60000);
-      if (dk !== sess && dk !== sent && !seen[dk]) { seen[dk] = 1; out.push({ rule: 2, text: 'Mentions ' + dm[0] + ', but this was for the ' + sess.slice(8) + ' ' + new Date(b.session.t * 60000).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }) + ' session' }); }
-    }
+  }
+  // Dates: image and video URLs often carry dates ("Image%20Oct%2012"), so read the text without links.
+  var text = c.replace(/https?:\/\/\S+/g, ' ');
+  var dre = /\b(\d{1,2})(?:st|nd|rd|th)?\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/gi, dm, seen = {};
+  var y = new Date(b.t * 60000).getUTCFullYear(), sent = dateKey(b.t), d0 = dayStart(b.t);
+  var sess = b.session ? dateKey(b.session.t) : null;
+  while ((dm = dre.exec(text))) {
+    var dt = Date.UTC(y, MONTHS[dm[2].toLowerCase().slice(0, 3)], Number(dm[1])) / 60000, dk = dateKey(dt);
+    if (seen[dk]) continue;
+    var ls = text.lastIndexOf('\n', dm.index) + 1, le = text.indexOf('\n', dm.index), end = dm.index + dm[0].length;
+    var before = text.slice(Math.max(ls, dm.index - 25), dm.index), after = text.slice(end, Math.min(le < 0 ? text.length : le, end + 25));
+    var wd = nextToDate(before, after, '(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?)day'), issue = null;
+    if (sess && dk !== sess && dk !== sent) issue = 'Mentions ' + dm[0] + ', but this was for the ' + sess.slice(8) + ' ' + new Date(b.session.t * 60000).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }) + ' session';
+    else if (wd && WEEKDAYS[weekday(dt)] !== wd.toLowerCase().slice(0, 3)) issue = 'Says ' + wd + ' next to ' + dm[0] + ', which is a ' + WEEKDAY_NAMES[weekday(dt)];
+    else if (nextToDate(before, after, 'tomorrow') && dt !== d0 + 1440) issue = 'Says tomorrow next to ' + dm[0] + ', but it was sent on ' + Number(sent.slice(8)) + ' ' + MONTH_NAMES[Number(sent.slice(5, 7)) - 1];
+    else if (nextToDate(before, after, 'today|tonight') && dt !== d0) issue = 'Says today next to ' + dm[0] + ', but it was sent on ' + Number(sent.slice(8)) + ' ' + MONTH_NAMES[Number(sent.slice(5, 7)) - 1];
+    else if (!sess && dt < d0 - 1440 && !/expire|ended|missed|since|\bwas\b|\bwere\b/i.test(before)) issue = 'Mentions ' + dm[0] + ', a date that had already passed when this was sent';
+    if (issue) { seen[dk] = 1; out.push({ rule: 2, text: issue }); }
+  }
+  return out;
+}
+var WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** The word right beside a date, e.g. “11 Oct (Tomorrow)” or “Sunday, 18 October”, or null. */
+function nextToDate(before, after, word) {
+  var a = new RegExp('^[\\s,.(\\[|:–-]*(?:\\d{4}[\\s,.(\\[|:–-]*)?(' + word + ')\\b', 'i').exec(after);
+  if (a) return a[1];
+  var b = new RegExp('\\b(' + word + ')[\\s,.()\\[\\]|:–-]*$', 'i').exec(before);
+  return b ? b[1] : null;
+}
+
+/* Rule 3 and failed sends, from the numbers. A marketing template costs about ₹1.09 per delivered message, utility about ₹0.15. */
+var MARKETING_COST = 0.4, FAILED_SHARE = 0.2, FAILED_MIN = 25;
+function deliveryIssues(b) {
+  var out = [];
+  if (b.delivered >= 20 && b.cost / b.delivered >= MARKETING_COST) {
+    out.push({ rule: 3, text: 'Charged ₹' + (b.cost / b.delivered).toFixed(2) + ' per delivered message, so it went out as a marketing template (utility costs about ₹0.15)' });
+  }
+  var base = b.audience || (b.sent || 0) + (b.failed || 0);
+  if (b.failed >= FAILED_MIN && base && b.failed / base >= FAILED_SHARE) {
+    out.push({ rule: 0, text: b.failed.toLocaleString('en-IN') + ' of ' + base.toLocaleString('en-IN') + ' messages failed (' + Math.round(b.failed / base * 100) + '%)' });
   }
   return out;
 }
@@ -1267,7 +1306,7 @@ function campaignMessages(C) {
     state.messages = groupMessages(state.broadcasts);
     state.messages.forEach(function (g) { g.s = judge(g.sends); });
     state.qaCount = 0;
-    state.broadcasts.forEach(function (b) { b.qa = qaIssues(b); if (b.family === 'genie') state.qaCount += b.qa.length; });
+    state.broadcasts.forEach(function (b) { b.qa = qaIssues(b).concat(deliveryIssues(b)); if (b.family === 'genie') state.qaCount += b.qa.length; });
     state.catalog = buildDocCatalog();
     matchDocs(state.broadcasts, state.catalog);
     state.C = state.broadcasts.filter(function (b) { return b.family === 'genie'; });
@@ -1875,7 +1914,7 @@ function campaignMessages(C) {
 
   function renderPlan() {
     var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Did each webinar go out on schedule?</h2><p class="muted">Each session against its schedule: was every slot sent, on time, to the full list? The communication docs are only a reference (copy is edited and links are added at send time), so everything judged here is what AiSensy actually sent. The team’s non-negotiable rules are checked on those real messages.</p></div>';
-    html += '<div class="rulebox"><b>Non-negotiables</b><ol><li>Always put a space before and after a link, or the link breaks.</li><li>Check the date, time and link against the webinar schedule.</li><li>Check the template category. Marketing templates need senior approval in utility before sending.</li></ol></div>';
+    html += '<div class="rulebox"><b>Non-negotiables</b><ol><li>Always put a space before and after a link, or the link breaks.</li><li>Check the date, time and link against the webinar schedule.</li><li>Check the template category. Marketing templates need senior approval in utility before sending.</li><li>Right after the webinar, change the genie-demo redirect link.</li></ol><p class="small muted">The email alerts check every new broadcast against these rules.</p></div>';
 
     var withQa = state.broadcasts.filter(function (b) { return b.qa && b.qa.length; }).sort(function (a, b) { return b.t - a.t; });
     html += '<section class="section"><div class="section-head"><div><h2>Rule checks on sent messages</h2><p class="muted small">' +
@@ -1883,7 +1922,7 @@ function campaignMessages(C) {
       (withQa.length ? '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th class="r">Rule</th><th>Problem</th></tr></thead><tbody>' + withQa.map(function (b) {
         return b.qa.map(function (q, i) {
           return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + (i ? '' : esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t))) + '</td><td class="name">' + (i ? '' : esc(b.name)) +
-            '</td><td class="r num">' + q.rule + '</td><td class="name">' + esc(q.text) + '</td></tr>';
+            '</td><td class="r num">' + (q.rule || 'Delivery') + '</td><td class="name">' + esc(q.text) + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table></div>' : '') + '</section>';
 

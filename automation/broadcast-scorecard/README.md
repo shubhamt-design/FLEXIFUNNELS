@@ -7,6 +7,7 @@ to send them.
 
 ```
 Code.gs      Apps Script server: serves the page and reads the two sheet tabs
+Alerts.gs    emails when a new broadcast breaks the rulebook (every 15 minutes)
 Index.html   the whole dashboard (analysis runs in the browser)
 ```
 
@@ -27,7 +28,7 @@ its template name.
 | **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
 | **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. |
 | **Timing** | The effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
-| **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message. |
+| **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message (the same checks the email alerts use). |
 | **Broadcasts** | Every campaign broadcast with session, slot, doc message and template, audience, delivered, read rate, clicks, click rate, cost, cost per click, spend above average and vs similar. Filter by webinar, session, part of the campaign or text; optionally include other campaigns. |
 | **Other campaigns** | Faceless, community workshop, 15 Days challenge, Genie launch offer, renewals and others, for reference. |
 
@@ -70,16 +71,55 @@ that can open the AiSensy Broadcast Analytics sheet.
    - *Who has access:* **Anyone within FlexiFunnels**
 5. Click **Deploy**, approve the permissions (it asks to read your
    spreadsheets), and copy the **Web app URL**. That's the team link.
+6. For the email alerts: click **+** next to *Files* → **Script**, name it
+   `Alerts`, and paste the contents of [`Alerts.gs`](Alerts.gs). Save, pick
+   **setupAlerts** in the function menu at the top, and click **Run**. Approve
+   the permissions (send email as you, connect to an external service to check
+   the genie-demo link, run on a schedule). A “Broadcast alerts are on” email
+   arrives with what the checks would have caught over the last 7 days.
 
 Viewers only need a FlexiFunnels Google login. They don't need access to the
 sheet, because the script reads it as you.
 
+### Sharing it with the team
+
+Send the Web app URL (it looks like
+`https://script.google.com/a/macros/flexifunnels.com/s/…/exec`) to the team, or
+pin it in the team channel. Anyone signed in with a FlexiFunnels Google account
+can open it; nobody else can. It always shows the latest sheet data, so the
+same link works every day.
+
 The page reloads its data every 15 minutes while open, and has a **Refresh**
 button. The server caches the sheet for 5 minutes.
 
+## Email alerts
+
+Every 15 minutes `Alerts.gs` checks each new broadcast in the sheet and emails
+`ALERT_TO` (top of `Alerts.gs`; separate several addresses with commas) when it
+breaks the rulebook:
+
+| Rule | What is checked |
+|---|---|
+| 1. Space before and after every link | Text, a full stop or a bracket stuck to a link |
+| 2. Date, time and link match the schedule | 11 PM for an 11 AM session, 7:30 AM for 7:30 PM, a date that isn't the session's, a weekday that doesn't match its date (“Saturday, 25 Oct”), “tomorrow” or “today” next to the wrong date, an empty “here is the link”, unfilled placeholders |
+| 3. Utility templates only | A cost of ₹0.40+ per delivered message: marketing templates cost about ₹1.09, utility about ₹0.15 |
+| 4. Change the genie-demo redirect after the webinar | Where genie-demo leads is noted during each live session and checked again an hour after the start; if it still leads to the same place, or to a Zoom/Meet room, an email goes out |
+| Delivery problems | 20%+ of the audience failed (at least 25 messages) |
+
+Each broadcast is reported once. Rules 1 and 2 are checked as soon as the
+message text is in the sheet, rule 3 and failures once the row says *Final* (or
+3 hours after sending). The sheet only shows a broadcast after AiSensy has sent
+it, so alerts arrive after the send (within 15 minutes of the sync): use them to
+send a correction or fix the next send.
+
+- **Test:** run `previewAlerts` to get an email covering the last 7 days.
+- **Stop:** run `stopAlerts`. **Start again:** run `setupAlerts`.
+- The rules are the same code as the dashboard's Schedule check tab (read from
+  `Index.html`), so updating `Index.html` updates the alerts too.
+
 ### Updating the dashboard later
 
-Paste the new `Index.html` (and `Code.gs` if it changed), then
+Paste the new `Index.html` (and `Code.gs` / `Alerts.gs` if they changed), then
 **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**.
 The URL stays the same.
 
