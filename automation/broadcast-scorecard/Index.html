@@ -331,7 +331,7 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
       <li><b>vs similar</b> compares a broadcast’s clicks with what similar broadcasts got: same campaign, same timing (1+ days before, webinar morning, 1–6 h before, final hour, during live, next day) and same list size (registered list vs 5,000+). +40% means 40% more clicks than expected.</li>
       <li><b>Verdicts</b> are per message (all sends of nearly the same text). Use more: 25%+ above similar with solid evidence. Keep sending: within 10% of similar or better. Improve: below similar, with the likely reason (opened less, or read but not clicked). Remove: 40%+ below similar with solid evidence, or no clicks where some were expected. Not enough data: under 300 delivered or too few expected clicks.</li>
       <li><b>Confidence</b> reflects how far the result is from chance, based on the number of clicks expected. High = the gap is very unlikely to be luck.</li>
-      <li>Campaigns are recognised from the message text. Webinar sessions are found from the bursts of live-time sends. Each broadcast is matched to the nearest slot in the Tuesday, Wednesday or Sunday schedule (within 15 minutes around live time, 90 minutes otherwise).</li>
+      <li>Campaigns are recognised from the message text. Webinar sessions are found from the bursts of live-time sends, so a webinar moved to another day (e.g. the Tuesday webinar held on Monday 19 Oct) is picked up automatically and uses its usual schedule. Slots that fall on a day when another webinar ran are marked as skipped, not missed. Each broadcast is matched to the nearest slot in the Tuesday, Wednesday or Sunday schedule (within 15 minutes around live time, 90 minutes otherwise).</li>
     </ul>
   </section>
 </div>
@@ -1328,8 +1328,23 @@ function liveBurst(list) {
   }
 
   // ---------- Plan check ----------
+  var USUAL_DAY = { tue: 2, wed: 3, sun: 0 };
+  var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  /** “ (moved to Monday)” when a session ran on a different day than usual. */
+  function movedNote(inst) {
+    var w = weekday(inst.date), usual = USUAL_DAY[inst.template];
+    return w === usual ? '' : ' (held on ' + DAY_NAMES[w] + ' instead of ' + DAY_NAMES[usual] + ')';
+  }
+  /** Another webinar session on the day a slot falls on (e.g. a moved schedule). */
+  function clashWith(inst, slot) {
+    if (slot.offset === 0) return null;
+    var day = dayStart(slot.at);
+    return state.result.instances.filter(function (o) { return o !== inst && o.date === day; })[0] || null;
+  }
   function slotStatus(inst, slot) {
     var items = slot.items;
+    var clash = clashWith(inst, slot);
+    if (!items.length && clash) return [{ cls: 'data', text: 'Skipped: ' + SCHEDULES[clash.template].label.split(' ')[0] + ' webinar that day', skipped: true }];
     if (!items.length) return [{ cls: 'remove', text: 'Not sent' }];
     var live = inst.broadcasts.filter(function (b) { var m = b.t - dayStart(b.t); return (m >= 1140 && m <= 1205) || (m >= 650 && m <= 700); })
       .map(function (b) { return b.delivered || 0; }).sort(function (a, b) { return a - b; });
@@ -1367,8 +1382,10 @@ function liveBurst(list) {
       var statuses = inst.slots.map(function (s) { return slotStatus(inst, s); });
       var ok = statuses.filter(function (st) { return st.length === 1 && st[0].cls === 'keep'; }).length;
       var missing = statuses.filter(function (st) { return st[0].text === 'Not sent'; }).length;
-      html += '<section class="section"><div class="section-head"><div><h2>' + esc(sched.label) + ' · ' + esc(dayLabel(inst.date)) + '</h2><p class="muted small">' +
-        ok + ' of ' + inst.slots.length + ' slots sent on time · ' + missing + ' not sent · ' + (inst.slots.length - ok - missing) + ' late, early or to a small list · ' +
+      var skipped = statuses.filter(function (st) { return st[0].skipped; }).length;
+      html += '<section class="section"><div class="section-head"><div><h2>' + esc(sched.label) + ' · ' + esc(dayLabel(inst.date)) + esc(movedNote(inst)) + '</h2><p class="muted small">' +
+        ok + ' of ' + (inst.slots.length - skipped) + ' slots sent on time · ' + missing + ' not sent · ' + (inst.slots.length - skipped - ok - missing) + ' late, early or to a small list · ' +
+        (skipped ? skipped + ' skipped because another webinar ran that day · ' : '') +
         inst.extras.length + ' extra sends' + (missing >= 6 ? '. Many slots show “Not sent”: if they did go out, check that those broadcasts are in the sheet.' : '') + '</p></div></div>' +
         '<div class="table-wrap"><table class="list plan"><thead><tr><th>Slot</th><th>Purpose (from the doc)</th><th>What was sent (AiSensy)</th><th>Status</th><th class="r">Result</th></tr></thead><tbody>' +
         inst.slots.map(function (s, i) {
@@ -1551,7 +1568,7 @@ function liveBurst(list) {
         return '<button type="button" data-metric="' + m[0] + '" aria-pressed="' + (state.metric === m[0]) + '">' + m[1] + '</button>';
       }).join('') + '</div></div>';
     html += '<div class="grid-wrap"><table class="heat"><thead><tr><th class="slot">Schedule slot</th>' +
-      insts.map(function (i) { return '<th>' + esc(dayLabel(i.date)) + '<span class="d">' + (i.upcoming ? 'upcoming' : i.broadcasts.length + ' sends') + '</span></th>'; }).join('') + '<th>All sessions</th></tr></thead><tbody>';
+      insts.map(function (i) { return '<th>' + esc(dayLabel(i.date)) + '<span class="d">' + (i.upcoming ? 'upcoming' : i.broadcasts.length + ' sends') + (movedNote(i) ? ' · moved' : '') + '</span></th>'; }).join('') + '<th>All sessions</th></tr></thead><tbody>';
     var lastOffset = null;
     slotRows.forEach(function (r) {
       if (r.s.offset !== lastOffset) {
@@ -1562,7 +1579,7 @@ function liveBurst(list) {
       html += '<tr><th class="slot" scope="row">' + esc(r.s.name) + '</th>';
       insts.forEach(function (i) {
         var items = i.slots[r.idx].items;
-        if (!items.length) { html += '<td class="cell"><div class="empty-cell">' + (i.upcoming ? '' : 'not sent') + '</div></td>'; return; }
+        if (!items.length) { html += '<td class="cell"><div class="empty-cell">' + (i.upcoming ? '' : clashWith(i, i.slots[r.idx]) ? 'skipped' : 'not sent') + '</div></td>'; return; }
         var mv = metricValue(items), small = (mv.t.delivered || 0) < 100;
         html += '<td class="cell"><button type="button" class="cellbtn ' + heatClass(mv.v, max) + (items.length > 1 ? ' multi' : '') + '"' + (items.length > 1 ? ' data-multi="' + items.length + ' broadcasts"' : '') +
           ' data-ids="' + esc(items.map(function (b) { return b.id; }).join(',')) + '"' + (small ? ' style="opacity:.55"' : '') + ' title="' + esc(items.map(function (b) { return b.name + ' at ' + timeLabel(b.t); }).join('; ')) + '">' +
