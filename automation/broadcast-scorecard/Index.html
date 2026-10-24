@@ -173,6 +173,13 @@ button { font: inherit; cursor: pointer; }
 details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--accent); padding: 4px 0; }
 details[open] { display: flex; flex-direction: column; gap: 10px; }
 .sep { border: 0; border-top: 1px solid var(--line); width: 100%; }
+/* Plan check */
+.rulebox { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; }
+.rulebox ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
+.qa-list { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.qa-list li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+table.plan td { vertical-align: top; }
+table.plan td .verdict { margin: 0 4px 4px 0; }
 /* Suggestions */
 .actions { margin: 0; padding-left: 0; list-style: none; counter-reset: act; display: flex; flex-direction: column; gap: 8px; }
 .action { counter-increment: act; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px 12px 52px; position: relative; display: flex; flex-direction: column; gap: 3px; }
@@ -334,34 +341,171 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
 
 <script>
 /*LOGIC-START*/
+var PLAYBOOKS = {
+  tue: {
+    label: 'Tuesday webinar',
+    rules: [
+      'Always give a space before and after the link; otherwise the link will be invalid.',
+      'Always check the date, time and link of the webinar against the webinar schedule.',
+      'Check the template category (marketing or utility) before sending. Marketing templates need senior approval in utility first.',
+      'Right after the webinar, change the redirection link (https://sb.flexifunnels.com/genie-demo).'
+    ],
+    slots: [
+      { offset: -1, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: 'registered session on Flexi Genie Launch Your Business Online in 10 Minutes is happening on at. People inside the community are already discovering what happens when AI does the heavy lifting. Join the community here. Now it is your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. Plus get FREE 2-day access to your own AI Business Launcher Tool starting at 5:30 PM. Don’t miss the LIVE build. Join the community here' },
+      { offset: -1, time: '14:00', template: '10minreminder2pm_ftsrds', audience: 'Registered', goal: 'reply',
+        text: 'Launch where You can build your online Business in 10 Minutes Directly From Your Phone Live Build. Tomorrow at 7:30 PM. As part of your registration, session-related reference material is available. We’re giving you exclusive Zero to One Crore training Worth $497 for FREE. This alone has already helped 1,000+ beginners and creators generate real online income fast. Reply below INCOME to grab your access' },
+      { offset: -1, time: '18:00', template: '10minreminder2cccc_yfpvesss_nwz44', audience: 'Registered', goal: 'click',
+        text: 'Launch Your Business Online in 10 Minutes is happening tomorrow. Tomorrow at 7:30 PM. What if your landing page could tell you exactly why people aren’t converting and then actually fix it? That’s what Funnel Builder Agent is. And you get your own AI tool tomorrow at 5:30 PM for Free to build a business live in 10 Minutes under my guidance. Join the community so you don’t miss any updates' },
+      { offset: 0, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: 'At 5:30 PM today, you’ll unlock FREE access to our AI Business Builder Tool and build your own business LIVE with us, step by step. registered session on Flexi Genie Launch Your Business Online in 10 Minutes LIVE Today at 7:30 PM IST. Join the community for major updates. Now it’s your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. Don’t miss the LIVE build. Here is the Joining Link. Join on time to avoid any rush' },
+      { offset: 0, time: '14:30', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: '3 hours left before we send out logins! Make sure you’ve signed up with the same email you used for the workshop, so your access reaches you on time. Flexi Genie Webinar is happening TONIGHT! See how Mayank built a complete website in just 10 minutes and showed it to his client during the session. No designer. No developer. Just Flexi Genie. Want to build like this? Join us tonight and see what you can create in 10 minutes. Join our exclusive community for major updates' },
+      { offset: 0, time: '17:30', template: '10mintoolaccesstemp', audience: 'All registered', goal: 'click',
+        text: 'Your FREE AI Business-Building Tool is LIVE! Launch Your Business Online in 10 Minutes. Tonight at 7:30 PM Before we go LIVE in 2 hour, make sure you Claim your access. Claim your FREE access here. Sign up and log in. Keep the tool open and ready! Claim your access now and be ready to BUILD with us at 7:30 PM IST' },
+      { offset: 0, time: '19:00', template: 'uisxuibxjabuixdemo_zr6in', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'scheduled session is just 30 min away. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. If you haven’t got access to your AI tool yet here is the link. Here is the joining link. Webinar ID. No replay. No recording. It doesn’t run again' },
+      { offset: 0, time: '19:25', template: 'qsazazazdemolive', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. COME IN NOW. Webinar ID. It happens once. No rewind. No replay. Don’t be the one seeing it in somebody else’s screenshot tomorrow. It’s about to start. And you’re still out here reading this' },
+      { offset: 0, time: '19:30', template: 'uisxuibxjabuixdemo_zr6in, qsazazazdemolive', audience: 'All registered + missed', goal: 'click',
+        text: 'Don’t miss this. your registered session IS HOUSEFULL & The Live Flexi Genie Demo just started. You can join if you are not there. Showing it live, launching the business live in just 10 Minutes. 760+ business people have already joined. If you haven’t got access to your AI tool yet here is the link. If you haven’t joined yet, join now as seats might get full' },
+      { offset: 0, time: '19:35', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'registered session that is LIVE RIGHT NOW. This is just insane; all the freelancers, business owners, and solopreneurs are going crazy inside. The live 10 Minute Business Launch is happening, and don’t miss this out! If you haven’t got access to your AI tool yet here is the link. Join Now. Hurry Up! Last and Final Call!' },
+      { offset: 0, time: '19:40', template: 'qsazazazdemolive', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. One final chance to get in inside! Join Here Last Chance. Don’t miss it! ₹1.5 Lakhs+ worth of bonuses will be revealed now! Join in! Don’t wait!' },
+      { offset: 0, time: '19:50', template: 'livepspchallengefi, newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'you haven’t missed out on the Flexi Genie demo yet. your registered session is almost full. This Live Flexi Genie Demo has just made everyone go crazy. Here is the link Only last 50 spots left. Join now to also get ₹1.5+ lakhs worth of attendee-only bonuses' },
+      { offset: 0, time: '20:00', template: 'qsazazazdemolive, newbusinessmosxd_v9chjs (video), uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. Revealing 5 Business Models to make easy money in 2026 even as a beginner using AI. Final Chance to join. You can watch others build their success or start building yours. The choice is yours. Join LIVE right now' },
+      { offset: 1, time: '10:30', label: 'Next day · before 11 AM', template: 'Miss15', audience: 'Missed audience', goal: 'reply',
+        text: 'I can see that you missed yesterday’s session where we showed how to completely automate, build, and launch a business with phone in just 10 minutes. Could you please share the reason here? Once I have it, I’ll share the next session invite so you can get started. Schedule mismatch. Zoom app wasn’t installed. Link Wasn’t Working' }
+    ]
+  },
+  wed: {
+    label: 'Wednesday webinar',
+    rules: [
+      'Always give a space before and after the link; otherwise the link will be invalid.',
+      'Always check the date, time and link of the webinar against the webinar schedule.',
+      'Check the template category (marketing or utility) before sending. Marketing templates need senior approval in utility first.',
+      'Right after the webinar, change the redirection link (https://sb.flexifunnels.com/genie-demo).'
+    ],
+    slots: [
+      { offset: 0, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: 'At 5:30 PM today, you’ll unlock FREE access to our AI Business Builder Tool and build your own business LIVE with us, step by step. registered session on Flexi Genie Launch Your Business Online in 10 Minutes LIVE Today at 7:30 PM IST. Join the community for major updates. Now it’s your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. Don’t miss the LIVE build. Here is the Joining Link. Join on time to avoid any rush' },
+      { offset: 0, time: '10:00', label: 'Missed audience · 10 AM', template: 'pspmissed_auidence111, pspmissed_auidence', audience: 'Missed audience', goal: 'click',
+        text: 'This is a reminder regarding your missed session yesterday Launch Your Business Online in 10 Minutes Directly From Your Phone. 1,000+ people are on the waitlist to attend this session after missing it last time. If you are one of them, you can’t afford to miss out. In this workshop, we take a real business idea from someone attending live and put it online in 10 minutes. On a visible clock. From a phone. From an empty account. and how you can duplicate the same system in just 3 simple steps to launch your online journey to Lakhs & Crores just like our 4,500+ mentees! To confirm your attendance, click on Please Confirm Here' },
+      { offset: 0, time: '14:00', template: '10minreminder2pm_ftsrds', audience: 'Registered', goal: 'reply',
+        text: 'Launch where You can build your online Business in 10 Minutes Directly From Your Phone Live Build. As part of your registration, session-related reference material is available. We’re giving you exclusive Zero to One Crore training Worth $497 for FREE. This alone has already helped 1,000+ beginners and creators generate real online income fast. Reply below INCOME to grab your access' },
+      { offset: 0, time: '17:30', template: '10mintoolaccesstemp', audience: 'All registered', goal: 'click',
+        text: 'Your FREE AI Business-Building Tool is LIVE! Launch Your Business Online in 10 Minutes. Tonight at 7:30 PM Before we go LIVE in 2 hour, make sure you Claim your access. Claim your FREE access here. Sign up and log in. Keep the tool open and ready! Claim your access now and be ready to BUILD with us at 7:30 PM IST' },
+      { offset: 0, time: '19:00', template: 'uisxuibxjabuixdemo_zr6in', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'scheduled session is just 30 min away. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. If you haven’t got access to your AI tool yet here is the link. Here is the joining link. Webinar ID. No replay. No recording. It doesn’t run again' },
+      { offset: 0, time: '19:25', template: 'qsazazazdemolive', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. COME IN NOW. Webinar ID. It happens once. No rewind. No replay. Don’t be the one seeing it in somebody else’s screenshot tomorrow. It’s about to start. And you’re still out here reading this' },
+      { offset: 0, time: '19:30', template: 'uisxuibxjabuixdemo_zr6in, qsazazazdemolive', audience: 'All registered + missed', goal: 'click',
+        text: 'Don’t miss this. your registered session IS HOUSEFULL & The Live Flexi Genie Demo just started. You can join if you are not there. Showing it live, launching the business live in just 10 Minutes. 760+ business people have already joined. If you haven’t got access to your AI tool yet here is the link. If you haven’t joined yet, join now as seats might get full' },
+      { offset: 0, time: '19:35', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'registered session that is LIVE RIGHT NOW. This is just insane; all the freelancers, business owners, and solopreneurs are going crazy inside. The live 10 Minute Business Launch is happening, and don’t miss this out! If you haven’t got access to your AI tool yet here is the link. Join Now. Hurry Up! Last and Final Call!' },
+      { offset: 0, time: '19:40', template: 'qsazazazdemolive', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. One final chance to get in inside! Join Here Last Chance. Don’t miss it! ₹1.5 Lakhs+ worth of bonuses will be revealed now! Join in! Don’t wait!' },
+      { offset: 0, time: '19:50', template: 'livepspchallengefi, newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'you haven’t missed out on the Flexi Genie demo yet. your registered session is almost full. This Live Flexi Genie Demo has just made everyone go crazy. Here is the link Only last 50 spots left. Join now to also get ₹1.5+ lakhs worth of attendee-only bonuses' },
+      { offset: 0, time: '20:00', template: 'qsazazazdemolive, newbusinessmosxd_v9chjs (video), uisxuibxjabuixdemo_zr6in_dws7x', audience: 'All registered + missed of previous webinar', goal: 'click',
+        text: 'Your registered session is now live. Revealing 5 Business Models to make easy money in 2026 even as a beginner using AI. Final Chance to join. You can watch others build their success or start building yours. The choice is yours. Join LIVE right now' },
+      { offset: 1, time: '10:30', label: 'Next day · before 11 AM', template: 'Miss15', audience: 'Missed audience', goal: 'reply',
+        text: 'I can see that you missed yesterday’s session where we showed how to completely automate, build, and launch a business with phone in just 10 minutes. Could you please share the reason here? Once I have it, I’ll share the next session invite so you can get started. Schedule mismatch. Zoom app wasn’t installed. Link Wasn’t Working' }
+    ]
+  },
+  sun: {
+    label: 'Sunday webinar + 7:30 PM encore',
+    rules: [
+      'Always give a space before and after the link; otherwise the link will be invalid.',
+      'Always check the date, time and link of the webinar against the webinar schedule.',
+      'Check the template category (marketing or utility) before sending. Marketing templates need senior approval in utility first.'
+    ],
+    docIssues: [
+      '8 AM webinar day says “TODAY • 11 PM IST”. The session is at 11 AM.',
+      '1 day before, 6 PM says “Tomorrow at 7:30 AM” and “your own AI tool tomorrow at 5:30 PM”. For Sunday that should be 11 AM and 9 AM.',
+      '11:25 AM: “Here is the link (Only last 50 spots left.❌): ]” has no link.',
+      '1 day before, 10 AM has a fixed date (“starting Sunday, 18 October at 9 AM”) that must be changed every week.',
+      '2 days before, 10 AM: the “join the session using this link” line points to the community link (genie-demo-comm), with no space before the closing bracket.',
+      '10 AM reminder says “just 60 mins away” but “Join on time at 10:45 AM”.'
+    ],
+    slots: [
+      { offset: -2, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: 'entry for the session Launch Your Business Online in 10 Minutes, Directly From Your Phone has been successfully recorded. Join the exclusive community for major updates. Can you please confirm if you’ll be joining? If yes, you can join the session using this link on at. Your AI Business Launcher Tool access link will be available on at 9:00 AM, two hours before the live session' },
+      { offset: -2, time: '10:00', label: 'Missed audience · 10 AM', template: 'pspmissed_auidence111, pspmissed_auidence', audience: 'Missed audience', goal: 'click',
+        text: 'This is a reminder regarding your session, which is scheduled on Sunday Launch Your Business Online in 10 Minutes Directly From Your Phone. 1,000+ people are on the waitlist to attend this session after missing it last time. If you are one of them, you can’t afford to miss out. Register Here. To confirm your attendance, click on Please Confirm Here. Watch us launch a real online business in 10 minutes, then build your own with FREE 2-day access to the AI Business Launcher Tool starting Sunday at 9 AM! Discover how to duplicate the same system in just 3 simple steps and take your first steps towards building your online business, just like our 4,500+ mentees!' },
+      { offset: -2, time: '18:00', template: '10mintoolaccesstemp', audience: 'Registered', goal: 'click',
+        text: 'don’t forget to claim your Special Exclusive access to Live AI business launcher tool for 2 days. 10 Minutes Business Launch Workshop is scheduled to go live on Sunday. at 11:00 AM. Step-by-step live implementation with me in live. Are you ready and excited to build your business in 10 minutes? Don’t miss the LIVE build. Join the community here' },
+      { offset: -1, time: '10:00', template: 'uisxuibxjabuixdemo', audience: 'Registered', goal: 'click',
+        text: 'registered session on Flexi Genie Launch Your Business Online in 10 Minutes is happening on at. People inside the community are already discovering what happens when AI does the heavy lifting. Join the community here. Now it’s your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. Plus, get FREE 2-day access to your own AI Business Launcher Tool, starting Sunday at 9 AM! Don’t miss the LIVE build. Join the community here' },
+      { offset: -1, time: '14:00', template: '10minreminder2pm_ftsrds', audience: 'Registered', goal: 'reply',
+        text: 'Launch where You can build your online Business in 10 Minutes Directly From Your Phone Live Build. As part of your registration, session-related reference material is available. We’re giving you exclusive Zero to One Crore training Worth $497 for FREE. This alone has already helped 1,000+ beginners and creators generate real online income fast. Reply below INCOME to grab your access' },
+      { offset: -1, time: '18:00', template: '10minreminder2cccc_yfpvesss_nwz44', audience: 'Registered', goal: 'click',
+        text: 'Launch Your Business Online in 10 Minutes is happening tomorrow. Tomorrow at 7:30 AM. What if your landing page could tell you exactly why people aren’t converting and then actually fix it? That’s what Funnel Builder Agent is. And you get your own AI tool tomorrow at 5:30 PM for Free to build a business live in 10 Minutes under my guidance. Join the community so you don’t miss any updates' },
+      { offset: 0, time: '08:00', template: 'aipromoremindernew2334_9ke4q', audience: 'Registered', goal: 'click',
+        text: 'session on how Flexi Genie can launch a business live in 10 MINUTES is starting SOON. HURRY! 2000 PEOPLE ARE ALREADY IN. TODAY 11 PM IST Joining Link Webinar ID. Today, you’ll see how fast a business can go from an idea to something real and ready to launch. 10-minute live business build. Built directly from a phone. Get your own AI Business Launcher Tool access link at 9 AM IST, two hours before the session, so you can build alongside us! Set your alarm and join early - seats are filling fast. Don’t wait until the last minute!' },
+      { offset: 0, time: '09:00', label: 'Tool access · 9 AM', template: '10mintoolaccesstemp', audience: 'Registered', goal: 'click',
+        text: 'Your FREE AI Business-Building Tool access is LIVE! exact tool you’ll be using to build alongside us and launch a business in 10 minutes. Before we go LIVE in 2 hour, make sure you Claim your access. Sign up and login. Keep the tool open and ready! Claim your access now and be ready to BUILD with us at 11 AM IST. Claim your FREE access here. As I teach you how to build your offer, website, funnel, product, checkout and more, you’ll be building your own version alongside us' },
+      { offset: 0, time: '10:00', template: 'uisxuibxjabuixdemo_zr6in', audience: 'Registered', goal: 'click',
+        text: 'scheduled session is just 60 mins away. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. Here is the joining link. Webinar ID. If you haven’t got access to your AI tool yet here is the link. No replay. No recording. It doesn’t run again. Join on time at 10:45 AM' },
+      { offset: 0, time: '10:30', template: 'uisxuibxjabuixdemo_zr6in', audience: 'Registered', goal: 'click',
+        text: 'scheduled session is just 30 min away. Launch Your Business Online in 10 Minutes Directly From Your Phone LIVE Step-by-Step Implementation. If you haven’t got access to your AI tool yet here is the link. Joining Link Webinar ID. No replay. No recording. It doesn’t run again' },
+      { offset: 0, time: '10:55', template: 'qsazazazdemolive', audience: 'Registered', goal: 'click',
+        text: 'Your registered session is now live. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. COME IN NOW. Webinar ID. It happens once. No rewind. No replay. Don’t be the one seeing it in somebody else’s screenshot tomorrow. It’s about to start. And you’re still out here reading this' },
+      { offset: 0, time: '11:05', template: 'uisxuibxjabuixdemo_zr6in, qsazazazdemolive', audience: 'Registered', goal: 'click',
+        text: 'Don’t miss this. your registered session IT’S HOUSEFULL & The Live Flexi Genie Demo just started. You can join if you are not there. Showing it live: launching the business live in just 10 Minutes. 760+ business people have already joined. If you haven’t got access to your AI tool yet here is the link. If you haven’t joined yet, join now as seats might get full' },
+      { offset: 0, time: '11:10', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'Registered', goal: 'click',
+        text: 'Your registered session is now live. This is just insane; all the freelancers, business owners, and solopreneurs are going crazy inside. The live 10 Minute Business Launch is happening and don’t miss this out! Join Now. Hurry Up! Last and Final Call!' },
+      { offset: 0, time: '11:15', template: 'qsazazazdemolive', audience: 'Registered', goal: 'click',
+        text: 'Your registered session is now live. One final chance to get in inside! Join Here Last Chance. Don’t miss it! ₹1.5 Lakhs+ worth of bonuses will be revealed now! Join in! Don’t wait!' },
+      { offset: 0, time: '11:25', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'Registered', goal: 'click',
+        text: 'you haven’t missed out the Flexi Genie demo yet. your registered session is almost full. This Live Flexi Genie Demo has just made everyone go crazy. Here is the link Only last 50 spots left. Join now to also get ₹1.5+ lakhs worth of attendees only bonuses' },
+      { offset: 0, time: '11:35', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'Registered', goal: 'click',
+        text: 'Your registered session is now live. Revealing 5 Business Models to make easy money in 2026 even as a beginner using AI. Final Chance to join. You can watch others build their success or start building yours. The choice is yours. Join LIVE right now' },
+      { offset: 0, time: '14:30', label: 'Encore reminder · 2:30 PM', template: 'remindersnd_faavod_nh77xz', audience: 'Registered', goal: 'click',
+        text: 'registered session on Flexi Genie Launch Your Business Online in 10 Minutes is happening Today at 7:30 PM. We are giving you free 2-day access to the AI Business Launcher Tool inside our community! Your tool access will be available at 5:30 PM today, two hours before the session, so you can build your business alongside us. Now it’s your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. Don’t miss the LIVE build. Join the community here' },
+      { offset: 0, time: '16:30', label: 'Encore · 4:30 PM to new registrations', template: 'uisxuibxjabuixdemo', audience: 'New registrations', goal: 'click',
+        text: 'registered session on Flexi Genie Launch Your Business Online in 10 Minutes! is Happening TONIGHT. Get your access to FREE AI 10 Minutes Business Launcher tool inside the community. Join the community here. Now it’s your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business, that too with me in a live interactive implementation. You have your own tool and build with me live. Tonight at 7:30 PM. Don’t miss the LIVE build. Live Joining Link Here. Join on time to avoid any rush' },
+      { offset: 0, time: '16:30', label: 'Encore · 4:30 PM to morning missed', template: 'uisxuibxjabuixdemo', audience: 'Morning missed audience', goal: 'click',
+        text: 'Missed today’s session? registered session on Flexi Genie Launch Your Business Online in 10 Minutes! is Happening Tonight. Get your access to FREE AI 10 Minutes Business Launcher tool inside the community. Join the community here. You have ONE more chance to see how a simple chat with Flexi Genie can turn an idea into a real online business. Build with me live tonight at 7:30 PM. Don’t miss the LIVE build. Live Joining Link Here. Join on time to avoid any rush' },
+      { offset: 0, time: '17:30', label: 'Encore · tool access 5:30 PM', template: '10mintoolaccesstemp', audience: 'Registered', goal: 'click',
+        text: 'Your FREE AI Business-Building Tool is LIVE! Launch Your Business Online in 10 Minutes. Tonight at 7:30 PM Before we go LIVE in 1 hour, make sure you Claim your access. Claim your FREE access here. Sign up and login. Keep the tool open and ready! Claim your access now and be ready to BUILD with us at 7:30 PM IST' },
+      { offset: 0, time: '19:00', template: 'uisxuibxjabuixdemo_zr6in', audience: 'Registered + missed', goal: 'click',
+        text: 'scheduled session is just 30 min away. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. Here is the joining link. Webinar ID. If you haven’t got access to your AI tool yet here is the link. No replay. No recording. It doesn’t run again' },
+      { offset: 0, time: '19:25', template: 'qsazazazdemolive', audience: 'Registered + missed', goal: 'click',
+        text: 'Your registered session is now live. Launch Your Business Online in 10 Minutes Directly From Your Phone Live Build. COME IN NOW. Webinar ID. It happens once. No rewind. No replay. Don’t be the one seeing it in somebody else’s screenshot tomorrow. It’s about to start. And you’re still out here reading this' },
+      { offset: 0, time: '19:30', label: 'Encore reg + missed · 7:30 PM', template: 'qsazazazdemolive', audience: 'Registered + missed', goal: 'click',
+        text: 'Don’t miss this! Your registered session is now live IS HOUSEFULL & The Live Flexi Genie Demo just started. You can join if you are not there. Showing it live, launching the business live in just 10 Minutes. 760+ business people have already joined. If you haven’t got access to your AI tool yet here is the link. If you haven’t joined yet, join now as seats might get full you will miss the chance to see the live business building implementation' },
+      { offset: 0, time: '19:40', template: 'newbusinessmosxd_v9chjs, uisxuibxjabuixdemo_zr6in_dws7x', audience: 'Registered + missed', goal: 'click',
+        text: 'registered session that is LIVE RIGHT NOW. This is just insane; all the freelancers, business owners, and solopreneurs are going crazy inside. The live 10 Minute Business Launch is happening and don’t miss this out. If you haven’t got access to your AI tool yet here is the link. Join Now. Hurry Up! Last and Final Call!' },
+      { offset: 0, time: '19:50', template: 'qsazazazdemolive, newbusinessmosxd_v9chjs (video), uisxuibxjabuixdemo_zr6in_dws7x', audience: 'Registered + missed', goal: 'click',
+        text: 'Your registered session is now live. Revealing 5 Business Models to make easy money in 2026 even as a beginner using AI. Final Chance to join. You can watch others build their success or start building yours. The choice is yours. Join LIVE right now' }
+    ]
+  }
+};
+
+/** Schedule slots for matching, built from the playbooks above. */
 var SCHEDULES = (function () {
-  function slot(offset, time, name, extra) { return Object.assign({ offset: offset, time: time, name: name }, extra || {}); }
   function fmt(t) { var p = t.split(':').map(Number); var h = p[0] % 12 || 12; return h + (p[1] ? ':' + String(p[1]).padStart(2, '0') : '') + (p[0] < 12 ? ' AM' : ' PM'); }
-  function day(o, t, label) { return slot(o, t, (label || 'Webinar day') + ' · ' + fmt(t)); }
-  var evening = [day(0, '19:00'), day(0, '19:25'), slot(0, '19:30', 'Reg + missed · 7:30 PM', { missed: true }),
-    day(0, '19:35'), day(0, '19:40'), day(0, '19:50'), day(0, '20:00')];
-  var nextDay = slot(1, '10:30', 'Next day · before 11 AM', { missed: true, window: 120 });
-  return {
-    tue: {
-      label: 'Tuesday webinar', short: 'Tuesday',
-      slots: [day(-1, '10:00', '1 day before'), day(-1, '14:00', '1 day before'), day(-1, '18:00', '1 day before'),
-        day(0, '10:00'), day(0, '14:30'), slot(0, '17:30', 'Tool access · 5:30 PM')].concat(evening, [nextDay])
-    },
-    wed: {
-      label: 'Wednesday webinar', short: 'Wednesday',
-      slots: [day(0, '10:00'), slot(0, '10:00', 'Missed audience · 10 AM', { missed: true }), day(0, '14:00'),
-        day(0, '17:30')].concat(evening, [nextDay])
-    },
-    sun: {
-      label: 'Sunday webinar + encore', short: 'Sunday',
-      slots: [day(-2, '10:00', '2 days before'), day(-2, '18:00', '2 days before'),
-        day(-1, '10:00', '1 day before'), day(-1, '14:00', '1 day before'), day(-1, '18:00', '1 day before')]
-        .concat(['08:00', '09:00', '10:00', '10:30', '10:55', '11:05', '11:10', '11:15', '11:25', '11:35'].map(function (t) { return day(0, t, 'Morning'); }))
-        .concat(['14:30', '16:30', '17:30', '19:00', '19:25'].map(function (t) { return day(0, t, 'Encore reminder'); }))
-        .concat([slot(0, '19:30', 'Encore reg + missed · 7:30 PM', { missed: true }), day(0, '19:35', 'Encore'), day(0, '19:40', 'Encore'),
-          day(0, '19:50', 'Encore'), day(0, '20:00', 'Encore')])
-    }
-  };
+  var out = {};
+  Object.keys(PLAYBOOKS).forEach(function (k) {
+    var pbk = PLAYBOOKS[k];
+    out[k] = {
+      label: pbk.label,
+      slots: pbk.slots.map(function (s) {
+        var prefix = s.offset === -2 ? '2 days before' : s.offset === -1 ? '1 day before' : s.offset === 1 ? 'Next day' :
+          (k === 'sun' ? (s.time < '12:00' ? 'Morning' : 'Encore') : 'Webinar day');
+        return {
+          offset: s.offset, time: s.time, name: s.label || (prefix + ' · ' + fmt(s.time)), template: s.template, audience: s.audience,
+          goal: s.goal, plan: s.text, missed: /missed/i.test(s.label || '') || /^(missed|morning missed)/i.test(s.audience),
+          window: s.offset === 1 ? 120 : undefined
+        };
+      })
+    };
+  });
+  return out;
 })();
 
 var FAMILIES = [
@@ -410,6 +554,7 @@ function buildBroadcasts(analysisValues, contentValues) {
     };
     b.family = FAMILIES.filter(function (f) { return f.test(b); })[0].key;
     b.missedFollowUp = /missed (yesterday|today)|Missed today|you missed/i.test(b.content);
+    b.goal = /reply below|reply .{0,12}["“]?income|share the reason|reply with/i.test(b.content) ? 'reply' : 'click';
     b.missedish = b.missedFollowUp || /miss/i.test(b.name);
     return b;
   }).filter(function (b) { return b.t !== null; });
@@ -473,7 +618,9 @@ function analyse(broadcasts) {
       return Object.assign({}, s, { idx: i, at: inst.date + s.offset * 1440 + minutesOf(s.time), items: [] });
     });
     var pairs = [];
+    slots.forEach(function (s) { s.planTokens = s.plan ? messageTokens(s.plan) : null; });
     inst.broadcasts.forEach(function (b) {
+      var bt = messageTokens(b.content);
       slots.forEach(function (s) {
         var diff = Math.abs(b.t - s.at);
         var m = s.at - dayStart(s.at);
@@ -481,12 +628,14 @@ function analyse(broadcasts) {
         var tol = s.window || (dense ? 15 : 90);
         if (s.offset === 1 && !b.nextDay) return;
         if (diff > tol) return;
-        pairs.push({ b: b, s: s, diff: diff, cost: diff + (b.missedish !== !!s.missed ? 3 : 0) });
+        var sim = s.planTokens ? jaccard(bt, s.planTokens) : 0;
+        pairs.push({ b: b, s: s, diff: diff, sim: sim, cost: diff + (b.missedish !== !!s.missed ? 3 : 0) - (sim >= 0.3 ? 25 * sim : 0) });
       });
     });
     pairs.sort(function (a, b) { return a.cost - b.cost || a.diff - b.diff; });
-    pairs.forEach(function (p) { if (!p.b.slot && !p.s.items.length) { p.b.slot = p.s; p.s.items.push(p.b); } });
-    pairs.forEach(function (p) { if (!p.b.slot && p.diff <= 10) { p.b.slot = p.s; p.s.items.push(p.b); } });
+    pairs.forEach(function (p) { if (!p.b.slot && !p.s.items.length) { p.b.slot = p.s; p.b.planSim = p.sim; p.s.items.push(p.b); } });
+    pairs.forEach(function (p) { if (!p.b.slot && p.diff <= 10 && (!p.s.plan || p.sim >= 0.3)) { p.b.slot = p.s; p.b.planSim = p.sim; p.s.items.push(p.b); } });
+    inst.broadcasts.forEach(function (b) { if (b.slot && b.slot.goal === 'reply') b.goal = 'reply'; });
     inst.slots = slots;
     inst.extras = inst.broadcasts.filter(function (b) { return !b.slot; }).sort(function (a, b) { return a.t - b.t; });
   });
@@ -602,6 +751,7 @@ function groupMessages(broadcasts) {
 function pool(list) {
   var p = { del: 0, clicks: 0, reads: 0, readDel: 0, n: 0 };
   list.forEach(function (b) {
+    if (b.goal === 'reply') return;
     if (hasClicks(b)) { p.del += b.delivered; p.clicks += b.clicks; p.n++; }
     if ((b.delivered || 0) > 0 && b.read !== null) { p.readDel += b.delivered; p.reads += b.read; }
   });
@@ -634,10 +784,22 @@ function scoreBroadcasts(broadcasts) {
         break;
       }
     }
-    if (hasClicks(b) && b.peerRate) { b.expected = b.delivered * b.peerRate; b.index = b.clicks / b.expected; }
+    if (hasClicks(b) && b.peerRate && b.goal !== 'reply') { b.expected = b.delivered * b.peerRate; b.index = b.clicks / b.expected; }
     else { b.expected = null; b.index = null; }
   });
+  // Messages that ask for a reply are judged on replies, against other reply messages.
+  var replyPool = broadcasts.filter(function (b) { return b.goal === 'reply' && hasReplies(b); });
+  var rDel = 0, rRep = 0;
+  replyPool.forEach(function (b) { rDel += b.delivered; rRep += b.replies; });
+  broadcasts.forEach(function (b) {
+    b.replyExpected = null; b.replyIndex = null;
+    if (b.goal !== 'reply' || !hasReplies(b)) return;
+    var d = rDel - b.delivered, r = rRep - b.replies;
+    if (replyPool.length >= 3 && d >= 500 && r > 0) { b.peerReply = r / d; b.replyExpected = b.delivered * b.peerReply; b.replyIndex = b.replies / b.replyExpected; }
+  });
+  broadcasts.forEach(function (b) { if (b.goal === 'reply') { b.index = b.replyIndex; } });
 }
+function hasReplies(b) { return b.replies !== null && (b.delivered || 0) > 0; }
 
 /* --- verdicts --- */
 var VERDICTS = {
@@ -672,6 +834,9 @@ function judge(sends) {
   s.extraClicks = s.expected > 0 ? s.clicks - s.expected : 0;
   s.confidence = Math.abs(s.z) >= 2 ? 'High' : Math.abs(s.z) >= 1 ? 'Medium' : 'Low';
 
+  var replyGoal = sends.filter(function (b) { return b.goal === 'reply'; }).length * 2 > sends.length;
+  if (replyGoal) return judgeReplies(s, sends);
+  s.goal = 'click';
   var v, why;
   if (s.clickDel < 300 || s.expected < 3) {
     v = 'data';
@@ -695,11 +860,69 @@ function judge(sends) {
   return s;
 }
 
+/** Verdict for messages that ask people to reply (e.g. “Reply INCOME”, “share the reason”). */
+function judgeReplies(s, sends) {
+  s.goal = 'reply';
+  var rep = 0, repDel = 0, exp = 0;
+  sends.forEach(function (b) { if (hasReplies(b)) { rep += b.replies; repDel += b.delivered; if (b.replyExpected) exp += b.replyExpected; } });
+  s.replyKnown = repDel; s.repliesCounted = rep;
+  s.replyRate = repDel > 0 ? rep / repDel : null;
+  s.index = exp > 0 ? rep / exp : null;
+  s.expected = exp;
+  s.z = exp > 0 ? (rep - exp) / Math.sqrt(exp) : 0;
+  s.confidence = Math.abs(s.z) >= 2 ? 'High' : Math.abs(s.z) >= 1 ? 'Medium' : 'Low';
+  s.cpReply = rep > 0 ? s.cost / rep : null;
+  var v, why;
+  if (repDel < 300) {
+    v = 'data';
+    why = 'This message asks for replies, but the sheet has reply counts for only ' + Math.round(repDel) + ' of ' + Math.round(s.delivered) + ' delivered. Check that the AiSensy sync fills the Replied column.';
+  } else if (exp < 3) {
+    v = s.replyRate >= 0.02 ? 'keep' : 'data';
+    why = 'Gets a ' + (s.replyRate * 100).toFixed(1) + '% reply rate. Too few other reply messages to compare against yet.';
+  } else if (s.index >= 1.25 && s.z >= 1.5) {
+    v = 'more'; why = 'Gets ' + Math.round((s.index - 1) * 100) + '% more replies than your other reply messages (' + (s.replyRate * 100).toFixed(1) + '% reply rate). Use it more.';
+  } else if (s.index >= 0.8) {
+    v = 'keep'; why = 'A reply message: ' + (s.replyRate * 100).toFixed(1) + '% reply rate, in line with your other reply messages. It isn’t meant to get clicks, so judge it on replies.';
+  } else if (s.index < 0.6 && s.z <= -1.5) {
+    v = 'remove'; why = 'Gets ' + Math.round((1 - s.index) * 100) + '% fewer replies than your other reply messages. Replace it.';
+  } else {
+    v = 'improve'; why = 'Fewer replies than your other reply messages (' + (s.replyRate * 100).toFixed(1) + '% reply rate). Make the reply ask clearer.';
+  }
+  s.verdict = v; s.why = why;
+  return s;
+}
+
+/* --- rule checks (from the team's non-negotiables) --- */
+var MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+function qaIssues(b) {
+  var c = String(b.content || ''), out = [];
+  var re = /https?:\/\/[^\s\]]+/g, m;
+  while ((m = re.exec(c))) {
+    var after = c.charAt(m.index + m[0].length);
+    if (after && !/\s/.test(after)) { out.push({ rule: 1, text: 'No space after the link ' + m[0].slice(0, 45) + (m[0].length > 45 ? '…' : '') }); break; }
+  }
+  if (/(link|here)[^\n\]\[]{0,50}:\s*\]/i.test(c)) out.push({ rule: 2, text: 'A “here is the link” line with no link in it' });
+  var ph = c.match(/\{\{[^}]*\}\}|\[(DATE|TIME)\]/i);
+  if (ph) out.push({ rule: 2, text: 'Placeholder not filled in: ' + ph[0] });
+  if (b.session) {
+    var sm = b.session.t - dayStart(b.session.t);
+    if (sm === 660 && /\b11(:00)?\s*PM\b/i.test(c)) out.push({ rule: 2, text: 'Says 11 PM, but the session is at 11 AM' });
+    if (sm === 1170 && /\b7:30\s*AM\b/i.test(c)) out.push({ rule: 2, text: 'Says 7:30 AM, but the session is at 7:30 PM' });
+    var dre = /\b(\d{1,2})(?:st|nd|rd|th)?\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/gi, dm, seen = {};
+    var y = new Date(b.t * 60000).getUTCFullYear(), sess = dateKey(b.session.t), sent = dateKey(b.t);
+    while ((dm = dre.exec(c))) {
+      var dk = dateKey(Date.UTC(y, MONTHS[dm[2].toLowerCase().slice(0, 3)], Number(dm[1])) / 60000);
+      if (dk !== sess && dk !== sent && !seen[dk]) { seen[dk] = 1; out.push({ rule: 2, text: 'Mentions ' + dm[0] + ', but this was for the ' + sess.slice(8) + ' ' + new Date(b.session.t * 60000).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }) + ' session' }); }
+    }
+  }
+  return out;
+}
+
 /* --- insights for the Suggestions tab --- */
 function rateBy(list, keyFn, minDel) {
   var g = {};
   list.forEach(function (b) {
-    if (!hasClicks(b)) return;
+    if (!hasClicks(b) || b.goal === 'reply') return;
     var k = keyFn(b); if (k === null || k === undefined) return;
     var x = g[k] || (g[k] = { key: k, del: 0, clicks: 0, exp: 0, n: 0, cost: 0 });
     x.del += b.delivered; x.clicks += b.clicks; x.n++; x.cost += b.cost || 0;
@@ -819,6 +1042,8 @@ function liveBurst(list) {
     scoreBroadcasts(state.broadcasts);
     state.messages = groupMessages(state.broadcasts);
     state.messages.forEach(function (g) { g.s = judge(g.sends); });
+    state.qaCount = 0;
+    state.broadcasts.forEach(function (b) { b.qa = qaIssues(b); state.qaCount += b.qa.length; });
     var latestT = state.broadcasts.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
     var read = new Date(Math.min(state.cachedAt.analysis, state.cachedAt.contents));
     setSync('live', state.broadcasts.length + ' broadcasts · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
@@ -871,6 +1096,7 @@ function liveBurst(list) {
     return [
       { key: 'decisions', label: 'Decisions', count: decided + ' messages' },
       { key: 'suggest', label: 'Suggestions', count: '' },
+      { key: 'plan', label: 'Plan check', count: state.qaCount ? state.qaCount + ' issues' : '' },
       { key: 'all', label: 'All broadcasts', count: String(state.broadcasts.length) },
       { key: 'tue', label: 'Tuesday', count: count('tue') + ' sessions' },
       { key: 'wed', label: 'Wednesday', count: count('wed') + ' sessions' },
@@ -891,6 +1117,7 @@ function liveBurst(list) {
     if (state.tab === 'decisions') renderDecisions();
     else if (state.tab === 'suggest') renderSuggestions();
     else if (state.tab === 'all') renderAll();
+    else if (state.tab === 'plan') renderPlan();
     else renderWebinar(state.tab);
   }
 
@@ -952,10 +1179,11 @@ function liveBurst(list) {
     return '<article class="mcard v-' + s.verdict + '" data-id="' + g.id + '">' +
       '<div class="mhead">' + verdictPill(s.verdict) +
       (s.verdict !== 'data' ? '<span class="conf">' + esc(s.confidence) + ' confidence</span>' : '') +
+      (s.goal === 'reply' ? '<span class="pill">Asks for a reply</span>' : '') +
       '<span class="faint small">' + esc(familyLabel(g.family)) + ' · ' + esc(g.media) + '</span></div>' +
       '<h3>' + esc(g.hook) + '</h3>' +
       '<p class="why">' + esc(s.why) + '</p>' + zeroNote +
-      '<div class="mstats">' +
+      (s.goal === 'reply' ? replyStats(s) : '<div class="mstats">' +
       mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) +
       mstat('Delivered', int(s.delivered)) +
       mstat('Read rate', pct(s.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
@@ -963,22 +1191,32 @@ function liveBurst(list) {
       mstat('Click-to-read', pct(s.ctor, 1), s.ctorIndex !== null ? vsSimilar(s.ctorIndex) + ' vs similar' : '', idxClass(s.ctorIndex)) +
       mstat('Cost / click', inr(s.cpc), inr(s.cost) + ' spent') +
       mstat('Clicks vs similar', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') +
-      '</div>' +
+      '</div>') +
       '<p class="meta small">First sent ' + esc(dayLabel(first.t)) + ', ' + esc(timeLabel(first.t)) + ' · last sent ' + esc(dayLabel(last.t)) + ', ' + esc(timeLabel(last.t)) +
       ' · used as: ' + esc(Object.keys(slots).map(function (k) { return k + (slots[k] > 1 ? ' ×' + slots[k] : ''); }).join(', ')) + '</p>' +
       '<details><summary>Send history and full message</summary>' + sendTable(g.sends) +
       '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details>' +
       '</article>';
   }
+  function replyStats(s) {
+    return '<div class="mstats">' +
+      mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) +
+      mstat('Delivered', int(s.delivered)) +
+      mstat('Read rate', pct(s.readRate)) +
+      mstat('Reply rate', pct(s.replyRate, 1), int(s.repliesCounted) + ' replies' + (s.replyKnown < s.delivered ? ' (counted on ' + int(s.replyKnown) + ' delivered)' : '')) +
+      mstat('Cost / reply', inr(s.cpReply), inr(s.cost) + ' spent') +
+      mstat('Replies vs other reply messages', '<span class="idx ' + idxClass(s.index) + '">' + vsSimilar(s.index) + '</span>', s.expected ? int(s.expected) + ' expected' : '') +
+      '</div>';
+  }
   function mstat(label, value, note, cls) {
     return '<div class="ms"><div class="k">' + esc(label) + '</div><div class="v">' + value + '</div>' + (note ? '<div class="n ' + (cls || '') + '">' + esc(note) + '</div>' : '') + '</div>';
   }
   function sendTable(sends) {
-    return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th>Timing</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">vs similar</th></tr></thead><tbody>' +
+    return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th>Timing</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Replies</th><th class="r">vs similar</th></tr></thead><tbody>' +
       sends.slice().sort(function (a, b) { return b.t - a.t; }).map(function (b) {
         return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + '</td><td>' +
           esc(b.slot ? b.slot.name : b.stage) + ' <span class="faint small">' + esc(b.list) + '</span></td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) +
-          '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
+          '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + int(b.replies) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>';
   }
 
@@ -1097,6 +1335,76 @@ function liveBurst(list) {
       '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">vs similar</th><th>Recommendation</th><th>Best message in this slot</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
   }
 
+  // ---------- Plan check ----------
+  function slotStatus(inst, slot) {
+    var items = slot.items;
+    if (!items.length) return [{ cls: 'remove', text: 'Not sent' }];
+    var live = inst.broadcasts.filter(function (b) { var m = b.t - dayStart(b.t); return (m >= 1140 && m <= 1205) || (m >= 650 && m <= 700); })
+      .map(function (b) { return b.delivered || 0; }).sort(function (a, b) { return a - b; });
+    var median = live.length ? live[Math.floor(live.length / 2)] : 0;
+    var out = [];
+    items.forEach(function (b) {
+      var delay = Math.round(b.t - slot.at);
+      var sm = slot.at - dayStart(slot.at);
+      var dense = (sm >= 650 && sm <= 700) || sm >= 1140;
+      var lateBy = dense ? 3 : 20;
+      if ((b.planSim || 0) < 0.3) out.push({ cls: 'improve', text: 'Different message' });
+      if (delay > lateBy) out.push({ cls: 'improve', text: (delay >= 60 ? Math.floor(delay / 60) + 'h ' + (delay % 60) + 'm' : delay + ' min') + ' late' });
+      if (delay < -lateBy) out.push({ cls: 'improve', text: (-delay) + ' min early' });
+      if (median && dense && (b.delivered || 0) < median * 0.3) out.push({ cls: 'remove', text: 'Small audience (' + int(b.delivered) + ' vs ~' + int(median) + ')' });
+    });
+    if (!out.length) out.push({ cls: 'keep', text: 'As planned' });
+    return out;
+  }
+
+  function renderPlan() {
+    var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Did each webinar go out as planned?</h2><p class="muted">Every session compared with its playbook: which planned messages were sent, on time, to the full list, with the planned copy. The team’s non-negotiable rules are also checked on every message that went out.</p></div>';
+    html += '<div class="rulebox"><b>Non-negotiables</b><ol><li>Always put a space before and after a link, or the link breaks.</li><li>Check the date, time and link against the webinar schedule.</li><li>Check the template category. Marketing templates need senior approval in utility before sending.</li></ol></div>';
+
+    var issues = [];
+    Object.keys(PLAYBOOKS).forEach(function (k) { (PLAYBOOKS[k].docIssues || []).forEach(function (t) { issues.push({ pb: PLAYBOOKS[k].label, t: t }); }); });
+    if (issues.length) {
+      html += '<section class="section"><div class="section-head"><div><h2>Mistakes in the playbook docs</h2><p class="muted small">Fix these in the docs so they aren’t copied into the next broadcast.</p></div></div><ul class="qa-list">' +
+        issues.map(function (x) { return '<li><span class="pill warn">' + esc(x.pb) + '</span> ' + esc(x.t) + '</li>'; }).join('') + '</ul></section>';
+    }
+
+    var withQa = state.broadcasts.filter(function (b) { return b.qa && b.qa.length; }).sort(function (a, b) { return b.t - a.t; });
+    html += '<section class="section"><div class="section-head"><div><h2>Rule checks on sent messages</h2><p class="muted small">' +
+      (withQa.length ? withQa.length + ' broadcasts need a look. Click a row to see the message.' : 'No problems found in the messages that went out.') + '</p></div></div>' +
+      (withQa.length ? '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th class="r">Rule</th><th>Problem</th></tr></thead><tbody>' + withQa.map(function (b) {
+        return b.qa.map(function (q, i) {
+          return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + (i ? '' : esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t))) + '</td><td class="name">' + (i ? '' : esc(b.name)) +
+            '</td><td class="r num">' + q.rule + '</td><td class="name">' + esc(q.text) + '</td></tr>';
+        }).join('');
+      }).join('') + '</tbody></table></div>' : '') + '</section>';
+
+    state.result.instances.filter(function (i) { return !i.upcoming; }).forEach(function (inst) {
+      var sched = SCHEDULES[inst.template];
+      var statuses = inst.slots.map(function (s) { return slotStatus(inst, s); });
+      var ok = statuses.filter(function (st) { return st.length === 1 && st[0].cls === 'keep'; }).length;
+      var missing = statuses.filter(function (st) { return st[0].text === 'Not sent'; }).length;
+      html += '<section class="section"><div class="section-head"><div><h2>' + esc(sched.label) + ' · ' + esc(dayLabel(inst.date)) + '</h2><p class="muted small">' +
+        ok + ' of ' + inst.slots.length + ' planned messages went out as planned · ' + missing + ' not sent · ' + (inst.slots.length - ok - missing) + ' with a difference · ' +
+        inst.extras.length + ' extra sends' + (missing >= 6 ? '. Many slots show “Not sent”: if they did go out, check that those broadcasts are in the sheet.' : '') + '</p></div></div>' +
+        '<div class="table-wrap"><table class="list plan"><thead><tr><th>Slot</th><th>Planned</th><th>Sent</th><th>Status</th><th class="r">Result</th></tr></thead><tbody>' +
+        inst.slots.map(function (s, i) {
+          var b = s.items[0];
+          var result = b ? (b.goal === 'reply' ? pct(hasReplies(b) ? b.replies / b.delivered : null, 1) + ' replies' : pct(rate(b), 2) + ' clicks') +
+            ' <span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>' : '—';
+          return '<tr' + (b ? ' class="click" data-ids="' + esc(s.items.map(function (x) { return x.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
+            '<td class="name"><b>' + esc(s.name) + '</b><div class="faint small">' + esc(s.audience || '') + '</div></td>' +
+            '<td class="name small">' + esc(messageHook(s.plan, '').slice(0, 90)) + '<div class="faint small">' + esc(s.template || '') + (s.goal === 'reply' ? ' · asks for a reply' : '') + '</div></td>' +
+            '<td class="small">' + (b ? esc(dayLabel(b.t)) + ', ' + esc(timeLabel(b.t)) + '<div class="faint small">' + esc(s.items.map(function (x) { return x.name; }).join(', ')) + ' · ' + int(b.delivered) + ' delivered</div>' : '<span class="faint">—</span>') + '</td>' +
+            '<td>' + statuses[i].map(function (st) { return '<span class="verdict v-' + st.cls + '">' + esc(st.text) + '</span>'; }).join(' ') + '</td>' +
+            '<td class="r num small">' + result + '</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        (inst.extras.length ? '<p class="small muted">Sent but not in the plan: ' + inst.extras.map(function (b) {
+          return '<a href="#" data-ids="' + esc(b.id) + '">' + esc(b.name) + '</a> (' + esc(dayLabel(b.t)) + ', ' + esc(timeLabel(b.t)) + ', ' + int(b.delivered) + ' delivered)';
+        }).join(' · ') + '</p>' : '') + '</section>';
+    });
+    $('#main').innerHTML = html + '</div>';
+  }
+
   // ---------- All broadcasts ----------
   function renderAll() {
     var f = state.filters;
@@ -1186,7 +1494,7 @@ function liveBurst(list) {
       '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('name', 'Broadcast') + th('family', 'Campaign') + '<th>Timing</th>' + th('delivered', 'Delivered', 1) +
       th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('ctor', 'Click-to-read', 1) + th('index', 'vs similar', 1) + th('cost', 'Cost', 1) + th('verdict', 'Message verdict') + '</tr></thead><tbody>' +
       shown.map(function (b) {
-        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) +
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') +
           (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</td><td>' + esc(familyLabel(b.family)) + '</td><td class="small">' + esc(b.slot ? b.slot.name : b.stage) + '</td>' +
           '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) +
           '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + pct(b.read && b.clicks !== null ? b.clicks / b.read : null) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) +
@@ -1298,11 +1606,13 @@ function liveBurst(list) {
         '<div><p class="faint small">' + esc(b.session ? SCHEDULES[templateFor(b.session.date)].label + ' · ' + dayLabel(b.session.date) : familyLabel(b.family)) + (b.slot ? ' · ' + esc(b.slot.name) : '') + '</p>' +
         '<h2' + (n ? '' : ' id="drawerTitle"') + '>' + esc(b.name) + '</h2>' +
         '<p class="muted small">Sent ' + esc(dayLabel(b.t)) + ' at ' + esc(timeLabel(b.t)) + ' · ' + esc(b.stage) + ' · ' + esc(b.list) + (b.check ? ' · <span class="pill warn">' + esc(b.check) + '</span>' : '') + '</p>' +
-        '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + ' <a href="#" data-msg="' + g.id + '">See the message card</a></p></div>' +
+        '<p class="small">Message verdict: ' + verdictPill(g.s.verdict) + ' <a href="#" data-msg="' + g.id + '">See the message card</a></p>' +
+        (b.slot && b.slot.template ? '<p class="small muted">Planned for this slot: template ' + esc(b.slot.template) + ' · ' + esc(b.slot.audience) + ((b.planSim || 0) < 0.3 ? ' · <b>a different message was sent</b>' : '') + '</p>' : '') +
+        (b.qa && b.qa.length ? '<ul class="qa-list small">' + b.qa.map(function (q) { return '<li><span class="pill warn">Rule ' + q.rule + '</span> ' + esc(q.text) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
         '<div class="kv">' +
         kv('Clicks', int(b.clicks)) + kv('Click rate', pct(rate(b), 2)) + kv('vs similar', '<span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>') +
         kv('Audience', int(b.audience)) + kv('Delivered', int(b.delivered)) + kv('Failed', int(b.failed)) +
-        kv('Read rate', pct(b.delivered ? b.read / b.delivered : null)) + kv('Click-to-read', pct(b.read && b.clicks !== null ? b.clicks / b.read : null)) + kv('Replies', int(b.replies)) +
+        kv('Read rate', pct(b.delivered ? b.read / b.delivered : null)) + kv('Click-to-read', pct(b.read && b.clicks !== null ? b.clicks / b.read : null)) + kv('Replies', int(b.replies) + (hasReplies(b) ? ' (' + pct(b.replies / b.delivered, 1) + ')' : '')) +
         kv('Cost', inr(b.cost)) + kv('Cost / click', inr(b.clicks ? b.cost / b.clicks : null)) + kv('Cost / read', inr(b.read ? b.cost / b.read : null)) +
         '</div><div class="bubble">' + esc(cleanText(b.content) || 'No message text in the sheet.') + '</div>';
     });

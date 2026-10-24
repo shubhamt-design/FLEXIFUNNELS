@@ -18,11 +18,14 @@ sheet through the Google Sheets connector.
 | Tab | What it answers |
 |---|---|
 | **Decisions** | One card per message (all the times it was sent), with a verdict: **Use more**, **Keep sending**, **Improve** (with the reason: opened less, or read but not clicked) or **Remove**. Each card shows the send dates and times, delivered, read rate, click rate, click-to-read, cost per click, clicks vs similar sends, confidence and the full message text. |
+| **Plan check** | Each session against its playbook: which planned messages went out, on time, to the full list, with the planned copy (flags: not sent, different message, late, small audience). Also lists mistakes found in the playbook docs and checks every sent message against the team's non-negotiables (space around links, missing links, unfilled placeholders, wrong date or AM/PM). |
 | **Suggestions** | A prioritised to-do list (messages to stop, messages to reuse, better send hours, cold-list cost, weak live reminders, failing lists). Also: click rate by hour before the webinar, the live window by minute, day of week, which message elements go with more clicks, cost per click by campaign and list, and a slot-by-slot plan for the next Tuesday, Wednesday and Sunday webinar. |
 | **All broadcasts** | Filters by date (Since 1 Aug, last 30/7 days, custom), campaign and text. Totals, clicks and spend per week, a by-campaign table and a sortable list of every broadcast. |
 | **Tuesday / Wednesday / Sunday** | Your schedule slots by session, as a heat grid (click rate, vs similar, clicks or read rate). |
 
 ### How verdicts are worked out
+
+- Messages that ask people to **reply** (the 2 PM “Reply INCOME” message, the next-day “share the reason” message) are judged on reply rate against other reply messages, not on clicks.
 
 - Sends of nearly the same text (dates and names ignored) are grouped as one message.
 - Each send is compared with **similar sends**: same campaign, same timing
@@ -67,6 +70,13 @@ button. The server caches the sheet for 5 minutes.
 Paste the new `Index.html` (and `Code.gs` if it changed), then
 **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**.
 The URL stays the same.
+
+## Playbooks
+
+The Tuesday, Wednesday and Sunday communication docs are built into `Index.html`
+as `PLAYBOOKS` (the same data is in [`playbooks.js`](playbooks.js) for reference).
+Each slot has its time, template, audience, goal (click or reply) and planned
+copy. When a playbook changes, update that block and redeploy.
 
 ## Data it expects
 
