@@ -11,7 +11,8 @@
  */
 
 var SHEET_ID = '1jXnQPQngi-FbEBBHC0tvaOTXxmtE5_miv6Mq0rTbmLQ';
-var TABS = { history: 'Broadcast History' };
+// History has every broadcast since August; Analysis and Contents get the newest sends a few hours sooner.
+var TABS = { history: 'Broadcast History', analysis: 'Broadcast Analysis', contents: 'Broadcast Contents' };
 var CACHE_SECONDS = 300;
 
 function doGet() {
@@ -20,7 +21,7 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/** Called by the page. Returns the tab as text, exactly as the sheet shows it. */
+/** Called by the page. Returns the tabs as text, exactly as the sheet shows them. */
 function getDashboardData() {
   var cache = CacheService.getScriptCache();
   var cached = readCache_(cache);
@@ -30,8 +31,8 @@ function getDashboardData() {
   var data = { fetchedAt: new Date().toISOString() };
   Object.keys(TABS).forEach(function (key) {
     var sheet = ss.getSheetByName(TABS[key]);
-    if (!sheet) throw new Error('The sheet has no tab called "' + TABS[key] + '".');
-    data[key] = sheet.getDataRange().getDisplayValues();
+    if (!sheet && key === 'history') throw new Error('The sheet has no tab called "' + TABS[key] + '".');
+    data[key] = sheet ? sheet.getDataRange().getDisplayValues() : [];
   });
   writeCache_(cache, data);
   return data;

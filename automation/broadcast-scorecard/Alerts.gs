@@ -177,7 +177,8 @@ function absoluteUrl_(loc, base) {
 
 function loadBroadcasts_(L) {
   var data = getDashboardData();
-  var broadcasts = L.buildBroadcasts(data.history);
+  var fresh = data.analysis && data.analysis.length > 1 ? L.buildBroadcasts(data.analysis, data.contents) : [];
+  var broadcasts = L.mergeBroadcasts(L.buildBroadcasts(data.history), fresh);
   L.analyse(broadcasts);
   return broadcasts.sort(function (a, b) { return a.t - b.t; });
 }
@@ -191,7 +192,7 @@ function logic_() {
   if (LOGIC_) return LOGIC_;
   var html = HtmlService.createHtmlOutputFromFile('Index').getContent();
   var src = html.slice(html.indexOf('/*LOGIC-START*/'), html.indexOf('/*LOGIC-END*/'));
-  LOGIC_ = new Function(src + '\nreturn { buildBroadcasts: buildBroadcasts, analyse: analyse, qaIssues: qaIssues, deliveryIssues: deliveryIssues };')();
+  LOGIC_ = new Function(src + '\nreturn { buildBroadcasts: buildBroadcasts, mergeBroadcasts: mergeBroadcasts, analyse: analyse, qaIssues: qaIssues, deliveryIssues: deliveryIssues };')();
   return LOGIC_;
 }
 

@@ -75,8 +75,25 @@ templates, which do need approval (as Utility).
 The suggestions follow what the data shows works in this campaign: short
 messages, one clear link, an image rather than a video, and a concrete reason
 to click (what is on screen, what is revealed next, the tool access) instead of
-general urgency. Once a change goes out, its sends are scored against the same
-similar sends as before, so the Messages tab shows whether it did better.
+general urgency.
+
+**Tracking the changes.** From 24 Oct on, every send in a fix's slot is checked
+against the suggestion. A changed bracket counts as used when it shares at least
+half its words with the suggestion and is closer to it than to the old text, so
+light edits still count. Once most of a fix's changed brackets go out, the card
+shows **Change detected** with a before/after table (sends, click rate, cost per
+click, clicks vs similar sends, read rate) and a verdict: *Early sign* after one
+send, then *Working* (15%+ more clicks than before, against similar sends),
+*About the same* or *Worse*. For slots marked Drop, sessions where nothing went
+out in that slot show up as **Not sent**, with the session's spend and clicks
+against the sessions before. The Overview lists every change detected.
+
+**Everything else.** Wherever a message or slot is marked Improve or Remove and
+has no fix written for it, its card or slot row shows **What to improve**,
+worked out from the data: whether people don't open it or open it but don't
+click, list size, video vs image, length, number of links, the word “free” and
+urgency words without a concrete reason, using this campaign's own measured
+effect of each.
 
 ## Set it up for the team (about 5 minutes, once)
 
@@ -158,7 +175,9 @@ slots. When the schedule changes, update that block and redeploy.
 ## Data it expects
 
 The **Broadcast History** tab the AiSensy sync fills (every broadcast since
-7 Aug): Campaign ID, Campaign Name, Sent At (IST), Audience Size, Sent,
+7 Aug), plus **Broadcast Analysis** and **Broadcast Contents** when present,
+which get the newest sends a few hours sooner (the most recently updated row
+wins). History columns: Campaign ID, Campaign Name, Sent At (IST), Audience Size, Sent,
 Delivered, Read, Failed, Clicked, Replied, Actual Cost (INR), Data Status,
 Last Updated (IST) and Message Content. Columns are matched by header name, so
 order doesn't matter. The claude.ai page reads it 300 rows at a time.

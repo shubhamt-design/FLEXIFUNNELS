@@ -213,6 +213,10 @@ table.brackets tr.change td:last-child { background: var(--accent-soft); }
 .bubble.preview .fixed { color: var(--ink-3); }
 .bubble.preview mark { background: var(--accent-soft); color: var(--ink); border-radius: 3px; padding: 0 2px; }
 .fixlinks a { margin-right: 2px; }
+.testbox { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.testbox .table-wrap { background: var(--surface); }
+.advice { background: var(--warn-soft); border-radius: 8px; padding: 8px 12px; margin-top: 4px; white-space: normal; }
+.advice ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
 /* Plan check */
 .rulebox { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; }
 .rulebox ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
@@ -580,6 +584,19 @@ function dayStart(t) { return Math.floor(t / 1440) * 1440; }
 function minutesOf(hhmm) { var p = hhmm.split(':').map(Number); return p[0] * 60 + p[1]; }
 function weekday(t) { return new Date(t * 60000).getUTCDay(); }
 
+/** History plus the fresher Analysis tab: one broadcast per Campaign ID, keeping the most recently updated row. */
+function mergeBroadcasts(a, b) {
+  var by = {};
+  a.concat(b || []).forEach(function (x) {
+    var cur = by[x.id];
+    if (!cur) { by[x.id] = x; return; }
+    var keep = (parseIst(x.updated) || 0) > (parseIst(cur.updated) || 0) ? x : cur, other = keep === x ? cur : x;
+    if (!keep.content) keep.content = other.content;
+    by[x.id] = keep;
+  });
+  return Object.keys(by).map(function (k) { return by[k]; });
+}
+
 function rowsToObjects(values) {
   if (!values || !values.length) return [];
   var h = values[0].map(function (x) { return String(x).trim(); });
@@ -698,7 +715,11 @@ function analyse(broadcasts) {
     });
     pairs.sort(function (a, b) { return a.cost - b.cost || a.diff - b.diff; });
     pairs.forEach(function (p) { if (!p.b.slot && !p.s.items.length) { p.b.slot = p.s; p.b.planSim = p.sim; p.s.items.push(p.b); } });
-    pairs.forEach(function (p) { if (!p.b.slot && p.diff <= 10 && (!p.s.plan || p.sim >= 0.3)) { p.b.slot = p.s; p.b.planSim = p.sim; p.s.items.push(p.b); } });
+    // Second pass: extra sends near a slot join it if they match its copy, or went out alongside its send (another list, same minute).
+    pairs.forEach(function (p) {
+      var alongside = p.s.items.some(function (x) { return Math.abs(x.t - p.b.t) <= 2; });
+      if (!p.b.slot && p.diff <= 10 && (!p.s.plan || p.sim >= 0.3 || alongside)) { p.b.slot = p.s; p.b.planSim = p.sim; p.s.items.push(p.b); }
+    });
     inst.broadcasts.forEach(function (b) { if (b.slot && b.slot.goal === 'reply') b.goal = 'reply'; });
     inst.slots = slots;
     inst.extras = inst.broadcasts.filter(function (b) { return !b.slot; }).sort(function (a, b) { return a.t - b.t; });
@@ -1276,6 +1297,9 @@ var SKELETONS = {
   hi6: { name: '“Hi … This is a quick reminder that your …”', templates: 'uisxuibxjabuixdemo, uisxuibxjabuixdemo_zr6in, uisxuibxjabuixdemo_zr6in_dws7x', count: 6,
     test: /^\s*Hi \[[^\]]*\],?\s*This is a quick reminder that your \[/,
     places: ['after “Hi”', 'after “This is a quick reminder that your”', 'after “Session Details:”', 'line 4', 'line 5', 'line 6'] },
+  rem5: { name: '“Hi … This is a reminder for your upcoming … session”', templates: '10mintoolaccesstemp, 10minreminder2cccc_yfpvesss_nwz44, 10minreminder2pm_ftsrds', count: 5,
+    test: /This is a reminder for your upcoming \[/,
+    places: ['after “Hi”', 'session name, after “your upcoming”', 'after “Date and time:”', 'line 4', 'line 5'] },
   miss5: { name: '“Dear … This is a reminder regarding your session, which is scheduled on …”', templates: 'pspmissed_auidence111, pspmissed_auidence', count: 5,
     test: /This is a reminder regarding your session, which is scheduled on \[/,
     places: ['after “Dear”', 'after “scheduled on”', 'line 3 (above “To confirm your attendance”)', 'line 4', 'line 5'] },
@@ -1342,6 +1366,9 @@ var FIXES = [
   { id: 'sun-1000', days: ['sun'], slots: ['Morning · 10 AM'], msg: /Just 60 mins away/, order: 600, when: 'Sunday 10 AM',
     why: 'Best: don’t send it. It says the same as the 10:30 AM “30 min away” message and is the weakest Sunday-morning send. If you want a 10 AM message, use it to get people logged in to the tool instead.',
     fixes: { hi6: ['$FirstName, is your AI tool open? ✅', 'session goes LIVE at 11 AM, in 60 minutes', null, null, '👉 Log in to your AI tool now so it’s open when we start: ' + TOOL + ' ', 'We build a business live and you build yours alongside us. Join at 10:55 AM.'] } },
+  { id: 'sun-1030', days: ['sun'], slots: ['Morning · 10:30 AM'], msg: /Just 30 min away/, order: 630, when: 'Sunday 10:30 AM',
+    why: 'On Tuesday and Wednesday at 7 PM this message is fine. On Sunday at 10:30 AM it is the fourth reminder of the morning and gets fewer clicks than similar sends. Bracket 3 only repeats the session title, and bracket 6 ends on what people can’t do (“No replay. No recording.”). Use bracket 3 to say what they will see and do, and bracket 6 to say when to join.',
+    fixes: { hi6: ['$FirstName, your tool link and joining link are inside 👇', null, 'In the first 10 minutes we put one real business idea online, live from a phone, and you build yours alongside us.', null, null, '⏰ Join at 10:55 AM to see the build from the very start.'] } },
   { id: 'sun-1055', days: ['sun'], slots: ['Morning · 10:55 AM'], msg: MSG_ONCE, order: 655, when: 'Sunday 10:55 AM', why: WHY_ONCE, fixes: FIX_ONCE },
   { id: 'sun-1110', days: ['sun'], slots: ['Morning · 11:10 AM'], msg: MSG_INSANE, order: 670, when: 'Sunday 11:10 AM', why: WHY_INSANE, fixes: FIX_INSANE, notes: [NOTE_INSANE] },
   { id: 'sun-1115', days: ['sun'], slots: ['Morning · 11:15 AM'], msg: /One final chance/, order: 675, when: 'Sunday 11:15 AM',
@@ -1365,12 +1392,49 @@ var FIXES = [
     why: 'Same problem as on Sunday: most of this list doesn’t open it. Send it only to people who registered or attended in the last 60 days, use an image instead of the video, and shorten brackets 3–5 to one link and one promise.',
     fixes: { miss5: [null, null, 'Register here: https://cme.sh/Funnel-Build ', 'You’ll watch a real idea become a live business from a phone, then get 2 days of access to the AI Business Launcher Tool to build yours.', 'Tool access opens at 5:30 PM on the day, two hours before we go live.'] },
     notes: ['Bracket 2: update the date each time.'] },
+  { id: 'tue-1800', days: ['tue'], slots: ['1 day before · 6 PM'], msg: null, order: -1440 + 1080, when: 'Monday 6 PM (day before the Tuesday webinar)',
+    why: 'Only two Tuesday sends so far, one good and one poor, so treat this as a test. The Sunday version of this send (day before, 6 PM) is one of your best: it opens with the Funnel Builder Agent hook and the tool access. Use the same brackets here.',
+    fixes: { rem5: [null, 'Launch Your Business Online in 10 Minutes is happening tomorrow', null, '🚀 What if your landing page could tell you exactly why people aren’t converting… and then actually fix it? That’s what Funnel Builder Agent is',
+      '🛠️ You get your own AI tool tomorrow at 5:30 PM to build a business live in 10 minutes with us. Join the community for updates: https://sb.flexifunnels.com/genie-demo-comm '] },
+    notes: ['Bracket 3: put the date and time, e.g. “‹date› at 7:30 PM”.'] },
+  { id: 'tue-1430', days: ['tue'], slots: ['Webinar day · 2:30 PM'], msg: null, order: 870, when: 'Tuesday 2:30 PM', info: true,
+    why: 'No change needed to what you send here now: the INCOME reply message (judged on replies, not clicks) and “3 hours left before we send out logins!” (above similar sends). The slot looks weak because of one push to the big list at this time on 1 Sep. Don’t use this time for big-list pushes.' },
   { id: 'tw-1925', days: ['tue', 'wed'], slots: ['Webinar day · 7:25 PM'], msg: MSG_ONCE, order: 1165, when: 'Tuesday and Wednesday 7:25 PM', why: WHY_ONCE, fixes: FIX_ONCE },
   { id: 'tw-1935', days: ['tue', 'wed'], slots: ['Webinar day · 7:35 PM'], msg: MSG_INSANE, order: 1175, when: 'Tuesday and Wednesday 7:35 PM', why: WHY_INSANE, fixes: FIX_INSANE, notes: [NOTE_INSANE] },
   { id: 'tw-1950', days: ['tue', 'wed'], slots: ['Webinar day · 7:50 PM'], msg: MSG_FULL, order: 1190, when: 'Tuesday and Wednesday 7:50 PM',
     why: '“Only last 50 spots left” goes out every week, 20 minutes into a free webinar, and people don’t believe it; “you haven’t missed out yet” reminds them they are late. The one concrete reason to join, the ₹1.5 lakh+ bonuses, is in the last bracket. Lead with the bonus reveal at 8 PM instead; it also sets up your best message, which goes out at 8 PM.',
     fixes: FIX_FULL }
 ];
+
+// The fixes were first published on 24 Oct; sends from then on are checked for them.
+var FIX_SINCE = Date.UTC(2026, 9, 24) / 60000;
+var FIX_STOP = { the: 1, and: 1, you: 1, your: 1, for: 1, with: 1, this: 1, that: 1, are: 1, our: 1, now: 1, all: 1, just: 1, here: 1, from: 1, will: 1, get: 1, has: 1, have: 1, its: 1, can: 1, out: 1, who: 1, what: 1, into: 1, was: 1, been: 1 };
+function fixWords(s) {
+  return String(s || '').toLowerCase().replace(/https?:\/\/\S+/g, ' ').replace(/\$\w+/g, ' ').split(/[^a-z0-9₹]+/)
+    .filter(function (w) { return w.length >= 3 && !FIX_STOP[w]; });
+}
+/**
+ * How closely a send's brackets follow a fix. A changed bracket counts when the words shared with the
+ * suggestion make up at least half of the longer of the two, so light edits still count but an old,
+ * longer text that happens to contain the suggested words does not.
+ */
+function textSim(a, b) {
+  var A = {}, B = {}, na = 0, nb = 0, hit = 0;
+  fixWords(a).forEach(function (w) { if (!A[w]) { A[w] = 1; na++; } });
+  fixWords(b).forEach(function (w) { if (!B[w]) { B[w] = 1; nb++; if (A[w]) hit++; } });
+  return na && nb ? hit / Math.max(na, nb) : 0;
+}
+/** base = the same brackets as sent before the fix; a bracket only counts if it moved towards the suggestion. */
+function fixMatch(fix, vars, base) {
+  var changed = 0, matched = 0, which = [];
+  fix.forEach(function (v, i) {
+    if (v === null) return;
+    changed++;
+    var sim = textSim(v, vars[i]);
+    if (sim >= 0.5 && (!base || sim > textSim(base[i], vars[i]))) { matched++; which.push(i + 1); }
+  });
+  return { changed: changed, matched: matched, which: which, used: changed > 0 && matched >= Math.ceil(changed * 0.6) };
+}
 
 /** New templates worth getting approved (these change the fixed text, so they need Meta approval). */
 var TEMPLATE_IDEAS = [
@@ -1417,7 +1481,8 @@ function campaignMessages(C) {
   var SERVER = 'Google Sheets';
   var SHEET_ID = '1jXnQPQngi-FbEBBHC0tvaOTXxmtE5_miv6Mq0rTbmLQ';
   var TAB = "'Broadcast History'";
-  var PAGE_ROWS = 300; // the History tab is read in pages; each row carries the full message text
+  var PAGE_ROWS = 300;
+  var FRESH = { analysis: "'Broadcast Analysis'!A1:AC1000", contents: "'Broadcast Contents'!A1:D1000" }; // the History tab is read in pages; each row carries the full message text
   var PERIODS = { all: { label: 'Since Aug', weeks: 0 }, '8w': { label: 'Last 8 weeks', weeks: 8 }, '4w': { label: 'Last 4 weeks', weeks: 4 } };
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
   var IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
@@ -1483,9 +1548,10 @@ function campaignMessages(C) {
     if (allow) allow.addEventListener('click', function () { loadOnce(true); });
   }
 
-  function onData(values, at) {
-    if (!Array.isArray(values) || values.length < 2) { renderError({ code: 'tool_error', message: 'The “Broadcast History” tab returned no rows.' }); return; }
-    state.raw = values;
+  /** raw = { history, analysis, contents }: History has everything since August, Analysis the newest sends. */
+  function onData(raw, at) {
+    if (!raw || !Array.isArray(raw.history) || raw.history.length < 2) { renderError({ code: 'tool_error', message: 'The “Broadcast History” tab returned no rows.' }); return; }
+    state.raw = raw;
     state.cachedAt = at || Date.now();
     compute();
     render();
@@ -1493,7 +1559,8 @@ function campaignMessages(C) {
 
   /** Runs the whole analysis on the broadcasts inside the chosen period. */
   function compute() {
-    var all = buildBroadcasts(state.raw);
+    var raw = state.raw;
+    var all = mergeBroadcasts(buildBroadcasts(raw.history), raw.analysis && raw.analysis.length > 1 ? buildBroadcasts(raw.analysis, raw.contents) : []);
     var lastT = state.lastT = all.reduce(function (m, b) { return Math.max(m, b.t); }, 0);
     var weeks = PERIODS[state.period].weeks;
     state.broadcasts = weeks ? all.filter(function (b) { return b.t >= lastT - weeks * 7 * 1440; }) : all;
@@ -1511,6 +1578,8 @@ function campaignMessages(C) {
     state.fixCards = FIXES.map(resolveFix);
     state.slots = {}; state.live = {};
     ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k] = slotVerdicts(state.result, k, state.stats.bench); state.live[k] = liveCutPlan(state.slots[k]); });
+    state.lifts = featureLifts(state.C.filter(function (b) { return b.goal !== 'reply'; }));
+    state.fixCards.forEach(function (c) { c.test = testFix(c); });
     var latestT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
     setSync('live', all.length + ' broadcasts since ' + dayLabel(all.reduce(function (m, b) { return Math.min(m, b.t); }, Infinity)) + ' · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
       ' · read ' + new Date(state.cachedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }));
@@ -1530,7 +1599,7 @@ function campaignMessages(C) {
 
   function loadGas() {
     setSync('', 'Reading the sheet…');
-    google.script.run.withSuccessHandler(function (d) { onData(d.history, Date.parse(d.fetchedAt)); })
+    google.script.run.withSuccessHandler(function (d) { onData({ history: d.history, analysis: d.analysis, contents: d.contents }, Date.parse(d.fetchedAt)); })
       .withFailureHandler(function (e) { renderError({ code: 'gas', message: e && e.message }); }).getDashboardData();
   }
 
@@ -1543,18 +1612,21 @@ function campaignMessages(C) {
     if (!state.raw) setSync('', 'Reading the sheet…');
     var opts = { cache: { staleTime: fresh ? 0 : 5 * 60000, gcTime: 24 * 3600000, refresh: !!fresh } };
     function get(range) {
-      return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: TAB + '!' + range }, opts)
+      return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: range }, opts)
         .then(function (res) { return { values: (res && res.payload && res.payload.values) || [], at: res && res.cache ? res.cache.storedAt : Date.now() }; });
     }
-    get('A1:A20000').then(function (ids) {
+    // The Analysis and Contents tabs are optional extras (they get new sends a few hours sooner).
+    var optional = function (range) { return get(range).catch(function () { return { values: [], at: Date.now() }; }); };
+    var extras = Promise.all([optional(FRESH.analysis), optional(FRESH.contents)]);
+    get(TAB + '!A1:A20000').then(function (ids) {
       var n = ids.values.length, pages = [];
-      for (var start = 1; start <= n; start += PAGE_ROWS) pages.push(get('A' + start + ':X' + Math.min(n, start + PAGE_ROWS - 1)));
-      return Promise.all(pages);
-    }).then(function (parts) {
+      for (var start = 1; start <= n; start += PAGE_ROWS) pages.push(get(TAB + '!A' + start + ':X' + Math.min(n, start + PAGE_ROWS - 1)));
+      return Promise.all([Promise.all(pages), extras]);
+    }).then(function (res) {
       loading = false;
       var values = [], at = Date.now();
-      parts.forEach(function (p) { values = values.concat(p.values); at = Math.min(at, p.at); });
-      onData(values, at);
+      res[0].forEach(function (p) { values = values.concat(p.values); at = Math.min(at, p.at); });
+      onData({ history: values, analysis: res[1][0].values, contents: res[1][1].values }, at);
     }).catch(function (err) {
       loading = false;
       var code = err && err.code;
@@ -1657,6 +1729,7 @@ function campaignMessages(C) {
     var list = C(), tot = aggregate(list), bench = state.stats.bench, weeks = weeksCovered();
     var done = completed(), perSession = done.length ? tot.cost / done.length : null;
     var acts = campaignActions();
+    var tested = state.fixCards.filter(function (c) { return c.test && (c.test.used.length || c.test.dropped.length); });
     var save = acts.reduce(function (m, a) { return m + (a.save || 0); }, 0), lose = acts.reduce(function (m, a) { return m + (a.lose || 0); }, 0);
     var weekly = tot.cost / weeks;
     var html = '<div class="wrap" style="gap:20px">';
@@ -1670,6 +1743,7 @@ function campaignMessages(C) {
       stat('Spent above average', inr(tot.overspend), pct(tot.cost ? tot.overspend / tot.cost : null, 0) + ' of spend went on clicks costing more than ' + inr(bench)) +
       '</div>';
 
+    if (tested.length) html += '<section class="section"><div class="section-head"><div><h2>Changes you’ve made</h2><p class="muted small">Suggestions the sheet shows you have started using, with the result so far.</p></div></div>' + testSummary() + '</section>';
     html += '<section class="section"><div class="section-head"><div><h2>What to change</h2><p class="muted small">Ranked by money saved. Click an item for the details.</p></div>' +
       (save ? '<div class="savebox"><b>' + inr(save) + '</b> a week could be saved (' + pct(weekly ? save / weekly : null, 0) + ' of weekly spend), losing about ' + int(lose) + ' clicks a week (' + pct(tot.clicks ? lose / (tot.clicks / weeks) : null, 0) + ').</div>' : '') + '</div>' +
       '<ol class="actions">' + acts.sort(function (a, b) { return (b.save || 0) - (a.save || 0); }).map(function (a) {
@@ -1786,8 +1860,10 @@ function campaignMessages(C) {
   }
 
   function slotRewrite(r) {
-    var card = (state.fixCards || []).filter(function (c) { return c.f.slots && c.f.slots.indexOf(r.slot.name) !== -1 && c.f.days.indexOf(state.sched) !== -1; })[0];
-    return card ? '<div class="small"><a href="#" data-fix="' + card.f.id + '">See the bracket changes</a></div>' : '';
+    var card = (state.fixCards || []).filter(function (c) { return (c.f.slots || c.f.slotLinks || []).indexOf(r.slot.name) !== -1 && c.f.days.indexOf(state.sched) !== -1; })[0];
+    if (card) return '<div class="small"><a href="#" data-fix="' + card.f.id + '">See the bracket changes</a></div>';
+    if (['improve', 'cut'].indexOf(r.verdict) === -1 || !r.items.length) return '';
+    return adviceHtml(r.items, judge(r.items), 2);
   }
 
   // ---------- Message fixes ----------
@@ -1855,7 +1931,8 @@ function campaignMessages(C) {
     var allCut = f.drop || (verdicts.length && verdicts.every(function (v) { return v.cut; }));
     var someCut = !allCut && verdicts.some(function (v) { return v.cut; });
     var action;
-    if (allCut) action = 'Don’t send this one.' + (main ? ' If you do keep it: ' + changeLine(f.fixes[main]).replace(/^C/, 'c') : '');
+    if (f.info) action = 'No change needed to the message.';
+    else if (allCut) action = 'Don’t send this one.' + (main ? ' If you do keep it: ' + changeLine(f.fixes[main]).replace(/^C/, 'c') : '');
     else if (someCut) action = verdicts.map(function (v) { return SCHED_SHORT[v.day] + ': ' + (v.cut ? 'don’t send it.' : changeLine(f.fixes[main]).replace(/^C/, 'c')); }).join(' ');
     else action = main ? changeLine(f.fixes[main]) : '';
     var mainSend = main ? latestOn(card, main) : null;
@@ -1863,6 +1940,7 @@ function campaignMessages(C) {
       (f.slots ? '<span class="small faint">Slot:</span>' : '') + verdicts.map(function (v) { return v.html ? '<span class="small">' + (verdicts.length > 1 ? esc(SCHED_SHORT[v.day]) + ' ' : '') + v.html + '</span>' : ''; }).join('') +
       (f.slots && last && last.cmsg ? '<span class="small faint">Message:</span><span class="small">' + verdictPill(last.cmsg.s.verdict) + '</span>' : '') + '</div>' +
       '<h3>' + esc(last && last.cmsg ? last.cmsg.hook : '') + '</h3>' +
+      testBox(card) +
       '<p class="fix-do">' + esc(action) + '</p><p class="why">' + esc(f.why) + '</p>' +
       (f.notes ? f.notes.map(function (n) { return '<p class="small warnline">' + esc(n) + '</p>'; }).join('') : '');
     if (main) {
@@ -1878,6 +1956,119 @@ function campaignMessages(C) {
     }
     return html + '</article>';
   }
+  /**
+   * Has the team used this fix yet? Looks at sends since FIX_SINCE in the same slot (or, for pushes
+   * without a slot, on the same days and template) and compares them with the sends before.
+   */
+  function testFix(card) {
+    var f = card.f, res = { used: [], partly: [], dropped: [] };
+    var scope = C().filter(function (b) {
+      if (!b.session || f.days.indexOf(templateFor(b.session.date)) === -1) return false;
+      return f.slots ? !!(b.slot && f.slots.indexOf(b.slot.name) !== -1) : true;
+    });
+    var oldSends = (f.slots ? scope : card.sends).filter(function (b) { return b.t < FIX_SINCE; }).sort(function (a, b) { return b.t - a.t; });
+    if (f.fixes) scope.forEach(function (b) {
+      if (b.t < FIX_SINCE) return;
+      var sk = skeletonOf(b.content);
+      if (!sk || !f.fixes[sk]) return;
+      var base = oldSends.filter(function (o) { return skeletonOf(o.content) === sk; })[0];
+      var m = fixMatch(f.fixes[sk], parseBrackets(b.content).vars, base ? parseBrackets(base.content).vars : null);
+      if (m.used) res.used.push({ b: b, m: m }); else if (m.matched) res.partly.push({ b: b, m: m });
+    });
+    res.used.sort(function (x, y) { return x.b.t - y.b.t; });
+    if (res.used.length) {
+      var first = res.used[0].b.t, ids = res.used.map(function (u) { return u.b.id; });
+      var before = (f.slots ? scope : card.sends).filter(function (b) { return b.t < first && ids.indexOf(b.id) === -1 && b.t >= first - 42 * 1440 && b.goal !== 'reply'; });
+      res.before = aggregate(before);
+      res.after = aggregate(res.used.map(function (u) { return u.b; }));
+      res.verdict = compareVerdict(res.before, res.after);
+    }
+    // A slot the data says to stop: completed sessions since the fix where nothing went out in it.
+    if (f.slots) {
+      fixVerdicts(card).forEach(function (v) {
+        if (!(v.cut || f.drop)) return;
+        var insts = state.result.instances.filter(function (i) { return i.template === v.day && !i.upcoming; });
+        var after = insts.filter(function (i) { return i.date >= dayStart(FIX_SINCE) && !slotItems(i, f.slots).length; });
+        if (!after.length) return;
+        var prior = insts.filter(function (i) { return i.date < dayStart(FIX_SINCE) && slotItems(i, f.slots).length; }).slice(-4);
+        res.dropped.push({ day: v.day, after: after, prior: prior,
+          a: aggregate([].concat.apply([], after.map(function (i) { return i.broadcasts; }))), p: aggregate([].concat.apply([], prior.map(function (i) { return i.broadcasts; }))) });
+      });
+    }
+    return res;
+  }
+  function slotItems(inst, names) {
+    return [].concat.apply([], inst.slots.filter(function (s) { return names.indexOf(s.name) !== -1; }).map(function (s) { return s.items; }));
+  }
+  function compareVerdict(bf, af) {
+    if (af.exp < 5 || af.clickDel < 300) return { cls: 'data', label: 'Too early', text: af.n + ' send' + (af.n > 1 ? 's' : '') + ' with the new brackets so far. Give it 2–3 sessions before judging.' };
+    if (!bf.n || bf.index === null || af.index === null) return { cls: 'data', label: 'No baseline', text: 'There are no earlier sends in this slot to compare with.' };
+    var r = af.index / bf.index;
+    if (af.n < 2) {
+      var dir = r >= 1.15 ? Math.round((r - 1) * 100) + '% more clicks than before' : r <= 0.87 ? Math.round((1 - r) * 100) + '% fewer clicks than before' : 'about the same clicks as before';
+      return { cls: 'data', label: 'Early sign', text: 'One send so far: ' + dir + ', compared with similar sends. Check again after the next session.' };
+    }
+    if (r >= 1.15) return { cls: 'more', label: 'Working', text: Math.round((r - 1) * 100) + '% more clicks than before, compared with similar sends.' };
+    if (r <= 0.87) return { cls: 'remove', label: 'Worse', text: Math.round((1 - r) * 100) + '% fewer clicks than before, compared with similar sends. Go back to the old text or try another change.' };
+    return { cls: 'keep', label: 'About the same', text: 'Within 15% of before, compared with similar sends.' };
+  }
+  function testBox(card) {
+    var t = card.test, html = '';
+    if (!t) return '';
+    if (t.used.length) {
+      var row = function (label, a) { return '<tr><td class="name">' + label + '</td><td class="r num">' + a.n + '</td><td class="r num">' + pct(a.ctr, 2) + '</td><td class="r num">' + inr(a.cpc) + '</td><td class="r num"><span class="idx ' + idxClass(a.index) + '">' + vsSimilar(a.index) + '</span></td><td class="r num">' + pct(a.readRate, 0) + '</td></tr>'; };
+      html += '<div class="testbox"><p><b>Change detected</b> <span class="verdict v-' + t.verdict.cls + '">' + esc(t.verdict.label) + '</span> ' + esc(t.verdict.text) + '</p>' +
+        '<p class="small muted">Sent with the new brackets: ' + t.used.map(function (u) { return esc(dayLabel(u.b.t)) + ', ' + esc(timeLabel(u.b.t)) + ' (' + esc(u.b.name) + ': ' + u.m.matched + ' of ' + u.m.changed + ' changed brackets match, ' + bracketList(u.m.which) + ')'; }).join(' · ') + '</p>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th></th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">vs similar</th><th class="r">Read rate</th></tr></thead><tbody>' +
+        row('Before (up to 6 weeks)', t.before) + row('After the change', t.after) + '</tbody></table></div></div>';
+    }
+    if (t.partly.length) {
+      html += '<p class="small warnline">Partly used: ' + t.partly.map(function (u) { return esc(dayLabel(u.b.t)) + ' (bracket' + (u.m.which.length > 1 ? 's ' : ' ') + u.m.which.join(', ') + ' of ' + u.m.changed + ')'; }).join(' · ') + '. It counts as tested once most of the changed brackets go out.</p>';
+    }
+    t.dropped.forEach(function (d) {
+      html += '<div class="testbox"><p><b>Not sent</b> on ' + d.after.map(function (i) { return esc(dayLabel(i.date)); }).join(', ') + ', as suggested.</p>' +
+        '<p class="small">That session: ' + inr(d.a.cost / d.after.length) + ' spend and ' + int(d.a.clicks / d.after.length) + ' clicks per session (' + inr(d.a.cpc) + ' per click), against ' +
+        inr(d.prior.length ? d.p.cost / d.prior.length : null) + ' and ' + int(d.prior.length ? d.p.clicks / d.prior.length : null) + ' (' + inr(d.p.cpc) + ' per click) for the ' + d.prior.length + ' sessions before.</p></div>';
+    });
+    return html;
+  }
+  function testSummary() {
+    var used = state.fixCards.filter(function (c) { return c.test && (c.test.used.length || c.test.dropped.length); });
+    if (!used.length) return '<p class="small muted testnote">No changes detected yet. When a send with the suggested brackets reaches the sheet (or a slot marked Drop isn’t sent), its card shows a before/after comparison. Checked from 24 Oct on.</p>';
+    var counts = {};
+    used.forEach(function (c) {
+      if (c.test.verdict) counts[c.test.verdict.label] = (counts[c.test.verdict.label] || 0) + 1;
+      if (c.test.dropped.length) counts['Dropped'] = (counts['Dropped'] || 0) + 1;
+    });
+    return '<div class="testbox"><b>Changes detected: ' + used.length + '</b> ' + Object.keys(counts).map(function (k) { return esc(k) + ' ' + counts[k]; }).join(' · ') +
+      '<div class="small">' + used.map(function (c) { return '<a href="#" data-fix="' + c.f.id + '">' + esc(c.f.when) + '</a>'; }).join(' · ') + '</div></div>';
+  }
+
+  /** What to improve, worked out from the data, for messages and slots without a hand-written fix. */
+  function autoAdvice(sends, s) {
+    var last = sends.slice().sort(function (a, b) { return b.t - a.t; })[0];
+    if (!last || !s) return [];
+    var c = last.content || '', text = c.replace(/https?:\/\/\S+/g, ''), tips = [];
+    var lift = function (key) { var x = (state.lifts || []).filter(function (l) { return l.f.key === key; })[0]; return x ? x.lift : null; };
+    var big = sends.filter(function (b) { return b.list === 'Big list (5,000+)'; }).length;
+    if (big * 2 >= sends.length) tips.push('Most sends go to a 5,000+ list, where few people open it. Send it only to people who registered or attended in the last 60 days.');
+    if (s.readIndex !== null && s.readIndex < 0.85) tips.push('Fewer people open it than similar sends (' + vsSimilar(s.readIndex) + ' reads). The first bracket, after the name, is what shows in the WhatsApp notification: put the most concrete thing there (what they get, or what is happening right now).');
+    if (s.ctorIndex !== null && s.ctorIndex < 0.85) tips.push('People open it but don’t click (' + vsSimilar(s.ctorIndex) + ' clicks per read against similar sends). Make one link the obvious next step and say what they get by clicking it.');
+    if (/insane|crazy|last and final|hurry|going crazy/i.test(text) && !/next up|coming up|revealing|business models|right now:/i.test(text)) tips.push('It leans on urgency words (“hurry”, “last call”, “insane”) without saying what is happening. Your best messages name something concrete: what is on screen, what is revealed next, the tool access.');
+    if (/\/VIDEO\//.test(c) && lift('video') !== null && lift('video') < -0.05) tips.push('It has a video. In this campaign video sends get ' + Math.round(-lift('video') * 100) + '% fewer clicks than similar sends; try an image.');
+    if (text.length > 450 && lift('short') !== null && lift('short') > 0.05) tips.push('It is long (' + text.length + ' characters without links). Messages under 450 characters get ' + Math.round(lift('short') * 100) + '% more clicks than similar sends here.');
+    var links = {}; (c.match(/https?:\/\/[^\s\]]+/g) || []).forEach(function (l) { if (!/cloudfront/.test(l)) links[l.replace(/[.,]+$/, '')] = 1; });
+    if (Object.keys(links).length > 2) tips.push('It has ' + Object.keys(links).length + ' different links. Use one link for the one thing you want them to do.');
+    if (/\bfree\b/i.test(text) && lift('free') !== null && lift('free') < -0.05) tips.push('It says “free”. Messages that say it get ' + Math.round(-lift('free') * 100) + '% fewer clicks than similar sends here.');
+    if (!tips.length) tips.push('Nothing obvious in the text itself. Test a new first bracket (the line after the name) and keep everything else the same, so you can see what moved the number.');
+    return tips;
+  }
+  function adviceHtml(sends, s, limit) {
+    var tips = autoAdvice(sends, s);
+    if (!tips.length) return '';
+    return '<div class="advice small"><b>What to improve</b><ul>' + tips.slice(0, limit || tips.length).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+  }
+
   function renderFixes() {
     var g = state.fixDay;
     var html = '<div class="wrap" style="gap:16px"><div class="intro"><h2>Message fixes</h2><p class="muted">Only the text inside the [brackets] changes. Everything outside them is your approved template and stays exactly as it is. For each message: which brackets to change, which to keep, and what to put in. “Now” is what went into each bracket the last time it was sent.</p></div>' +
@@ -1895,7 +2086,7 @@ function campaignMessages(C) {
         }).join('');
     } else {
       var cards = state.fixCards.filter(function (c) { return DAY_GROUPS[g].days.indexOf(c.f.days[0]) !== -1; }).sort(function (a, b) { return a.f.order - b.f.order; });
-      html += '<p class="small muted">In send order. The verdict next to each time is this period’s result for that slot (Drop = the data says stop sending it).</p>' + cards.map(fixCard).join('');
+      html += testSummary() + '<p class="small muted">In send order. The verdict next to each time is this period’s result for that slot (Drop = the data says stop sending it).</p>' + cards.map(fixCard).join('');
     }
     $('#main').innerHTML = html + '</div>';
   }
@@ -1966,6 +2157,7 @@ function campaignMessages(C) {
       '<span class="faint small">' + esc(g.media) + (g.doc ? ' · template ' + esc(g.doc.templates.join(', ')) : '') + '</span></div>' +
       '<h3>' + esc(g.hook) + '</h3>' + (where ? '<p class="faint small">Doc slots: ' + esc(where) + '</p>' : '') +
       '<p class="why">' + esc(s.why) + '</p>' +
+      (!g.fixes.length && (s.verdict === 'improve' || s.verdict === 'remove') ? (g.sends[g.sends.length - 1].t < state.lastT - 28 * 1440 ? '<p class="small faint">Not sent since ' + esc(dayLabel(g.sends[g.sends.length - 1].t)) + ', so there is nothing to change.</p>' : adviceHtml(g.sends, s)) : '') +
       (g.fixes.length ? '<p class="small fixlinks">Bracket changes ready: ' + g.fixes.map(function (c) { return '<a href="#" data-fix="' + c.f.id + '">' + esc(c.f.when) + '</a>'; }).join(' · ') + '</p>' : '') +
       (s.goal === 'reply' ? replyStats(s, a) : '<div class="mstats">' +
         mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) +
