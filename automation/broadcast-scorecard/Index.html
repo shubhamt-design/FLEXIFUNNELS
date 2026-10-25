@@ -198,10 +198,21 @@ table.slots td.vcell .faint { margin-top: 2px; }
 .plan-list li .t { font-weight: 600; min-width: 150px; }
 .plan-list li.drop { opacity: .6; text-decoration: line-through; border-style: dashed; }
 .filters label.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
-.rewrite { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
-.rewrite summary { color: var(--ink); }
-.rewrite ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-.rewrite .bubble { background: var(--surface); }
+.fix { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fix.flash { box-shadow: 0 0 0 3px var(--accent-soft); }
+.fix-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.fix-head .when { font-weight: 700; font-family: var(--font-display); }
+.fix h3 { font-size: 16px; overflow-wrap: anywhere; }
+.fix-do { font-weight: 600; color: var(--ink); }
+table.brackets td { vertical-align: top; }
+table.brackets td.name { min-width: 150px; max-width: 420px; overflow-wrap: anywhere; }
+table.brackets tr.keep td { color: var(--ink-3); }
+table.brackets tr.change td:last-child { background: var(--accent-soft); }
+.newtext { color: var(--ink); margin-bottom: 6px; white-space: pre-wrap; }
+.small-btn { padding: 3px 10px; font-size: 12px; }
+.bubble.preview .fixed { color: var(--ink-3); }
+.bubble.preview mark { background: var(--accent-soft); color: var(--ink); border-radius: 3px; padding: 0 2px; }
+.fixlinks a { margin-right: 2px; }
 /* Plan check */
 .rulebox { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; }
 .rulebox ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
@@ -1251,182 +1262,131 @@ function docName(text) {
 }
 
 /*
- * Suggested rewrites for the campaign messages that get fewer clicks than similar sends.
- * Text in [brackets] goes into the template's variables; everything outside them is the approved
- * template text, unchanged, so none of these needs a new template approval.
+ * Message fixes: what to put inside each template's [brackets] (the variables).
+ * Text outside the brackets is the approved template and is never changed here; changing it
+ * means a new template, which is what TEMPLATE_IDEAS is for.
  */
-var REWRITES = [
-  {
-    match: /It happens once/,
-    templates: 'qsazazazdemolive',
-    when: 'Tue, Wed and Sun-encore 7:25 PM · Sun 10:55 AM',
-    changes: [
-      'Say what happens in the first 10 minutes instead of “It happens once. No rewind. No replay.” People read this message but don’t click: it warns them about missing out without saying what they would see.',
-      'Drop “you’re still out here reading this”. Telling the reader off doesn’t earn the click.',
-      'Put the tool-access link in its place. People who build along have a reason to be there on time.',
-      'Keep the image. Don’t switch to a video.'
-    ],
-    text: [
-      'Hello [$Name],',
-      '',
-      'Your registered session is now live: [Starting in 5 minutes: Launch Your Business Online in 10 Minutes 🔴]',
-      '',
-      'Session topic: [👉 JOIN NOW: https://sb.flexifunnels.com/genie-demo | Webinar ID: ‹this week’s ID›]',
-      '',
-      '[In the first 10 minutes we take one real business idea and put it online live: website, product, checkout and payments, built from a phone. 📱]',
-      '',
-      '[Want to build yours alongside us? Keep your AI tool open: https://sb.flexifunnels.com/funnel-agent-access ]',
-      '',
-      'Join the live session here: [https://sb.flexifunnels.com/genie-demo ]',
-      '',
-      'If you have any questions, please feel free to reach out to us.'
-    ]
-  },
-  {
-    match: /This is just insane|LIVE RIGHT NOW/,
-    templates: 'uisxuibxjabuixdemo_zr6in_dws7x, newbusinessmosxd_v9chjs',
-    when: 'Tue and Wed 7:35 PM · Sun 11:10 AM · Sun-encore 7:40 PM',
-    changes: [
-      'Replace the hype (“This is just insane… going crazy inside… Last and Final Call”) with a live update: what is already built and what comes next. Your best live message, “Revealing 5 Business Models…”, works because it says what is on screen.',
-      'It goes out 5 minutes after “Housefull”, which already says “it’s live, join now”. A new reason to join beats the same message again.',
-      'Change the first line every week to whatever is actually on screen at send time.',
-      'Use an image or no media instead of the video: video sends get fewer clicks than similar sends in this campaign.',
-      'In newbusinessmosxd_v9chjs (one variable fewer), leave out the tool-access line.'
-    ],
-    text: [
-      'Hi [$FirstName],',
-      '',
-      'This is a quick reminder that your [registered session is LIVE right now 🔴 The website is already built on screen. Next up: the product, checkout and payments.]',
-      '',
-      'Session Details: [Join now: https://sb.flexifunnels.com/genie-demo ]',
-      '',
-      '[You haven’t missed the main part. Watch the business go live, from a phone, in the next 10 minutes.]',
-      '',
-      '[Build yours alongside us: https://sb.flexifunnels.com/funnel-agent-access ]',
-      '',
-      '[See you inside 👇]',
-      '',
-      'We look forward to having you in the session!',
-      '',
-      '–Team FlexiFunnels'
-    ]
-  },
-  {
-    match: /Almost full/,
-    templates: 'uisxuibxjabuixdemo_zr6in_dws7x, livepspchallengefi, newbusinessmosxd_v9chjs',
-    when: 'Tue and Wed 7:50 PM (on Sunday, cut the 11:25 AM send instead)',
-    changes: [
-      'Drop “Only last 50 spots left”. It appears every week, 20 minutes into a free webinar, and people don’t believe it. “You haven’t missed out yet” also reminds them they’re late.',
-      'Lead with the one concrete reason to join now: the ₹1.5 lakh+ bonuses and the 5 business models are revealed at 8 PM, only for people in the room. That sets up your strongest live message, which goes out at 8 PM.',
-      'Swap the video for an image.',
-      'On Sunday the 11:25 AM send is the seventh reminder of the morning: cut it rather than rewrite it.'
-    ],
-    text: [
-      'Hi [$FirstName, 10 minutes to the bonus reveal 🎁],',
-      '',
-      'This is a quick reminder that your [registered session is live. At 8 PM we reveal the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool in 2026.]',
-      '',
-      'Session Details: [Join here: https://sb.flexifunnels.com/genie-demo ]',
-      '',
-      '[The bonuses are only for people in the room.]',
-      '',
-      '[The business is already live on screen, built from a phone.]',
-      '',
-      '[Get in before 8 PM 👇]',
-      '',
-      'We look forward to having you in the session!',
-      '',
-      '–Team FlexiFunnels'
-    ]
-  },
-  {
-    match: /Just 60 mins away/,
-    templates: '10mintoolaccesstemp (instead of uisxuibxjabuixdemo_zr6in)',
-    when: 'Sun 10 AM (and the 6:30 PM send before evening webinars)',
-    changes: [
-      'Stop sending it as it is. It repeats the 30-minute reminder almost word for word, 30 minutes earlier and an hour after the 9 AM tool message.',
-      'If you want one message between 9 and 10:30 AM, send a “log in to your tool now” nudge on the tool-access template instead. Tool-access messages get the cheapest clicks of the morning.',
-      'Test it on half the list for two Sundays before switching fully.'
-    ],
-    text: [
-      'Hi [$FirstName, ✅ is your AI tool open?],',
-      '',
-      'This is a reminder for your upcoming [Launch Your Business Online in 10 Minutes] session.',
-      '',
-      'Date and time: [Today at 11 AM IST, live in 60 minutes]',
-      '',
-      '[👉 Log in now so it’s ready when we start: https://sb.flexifunnels.com/funnel-agent-access ]',
-      '',
-      '[We build a business live and you build yours alongside us. Joining link: https://sb.flexifunnels.com/genie-demo ]',
-      '',
-      'If you have any questions or need assistance regarding the session, please reply to this message.',
-      '',
-      'Best regards,',
-      'Team FlexiFunnels'
-    ]
-  },
-  {
-    match: /waitlist” \(register for Sunday\)|turning your idea into an online business/,
-    templates: 'pspmissed_auidence111, pspmissed_auidence',
-    when: 'Old-list and missed-audience registration pushes, 1–2 days before Sunday',
-    changes: [
-      'Fix the list first. Only about half of these people even open the message, and pushes to lists of 5,000+ cost several times more per click than the registered list. Send only to people who registered or attended in the last 60 days.',
-      'Make it short: what they will see, the date, one link. Short messages get more clicks than similar sends in this campaign.',
-      'Drop “1,000+ people are on the waitlist” and “4,700+ mentees”. Your best registration message (“Your entry has been successfully recorded”) has neither: it gives the date, the link and the tool access.',
-      'Use an image instead of the video, and one link instead of two or three.',
-      'Leave out “FREE”: messages that say it get fewer clicks than similar sends here.'
-    ],
-    text: [
-      'Dear [$FirstName],',
-      '',
-      'This is a reminder regarding your session, which is scheduled on [Sunday ‹date› at 11 AM: Launch Your Business Online in 10 Minutes].',
-      '',
-      '[Register here: https://sb.flexifunnels.com/funnel-agent ]',
-      '',
-      'To confirm your attendance, click on "Please Confirm Here".',
-      '',
-      '[You’ll watch a real idea become a live business from a phone, then get 2 days of access to the AI Business Launcher Tool to build yours.]',
-      '',
-      '[Tool access opens Sunday at 9 AM, two hours before we go live.]',
-      '',
-      'If you have already confirmed, you may ignore this message.',
-      'For any assistance related to confirmation or joining the session, please reply to this message.',
-      '',
-      '—Team Saurabh Bhatnagar'
-    ]
-  },
-  {
-    match: /Missed today/,
-    templates: 'uisxuibxjabuixdemo',
-    when: 'Sun 4:30 PM, to people who missed the 11 AM session',
-    changes: [
-      'Put tonight’s joining link first. Right now the first link is the community link, and the one that matters tonight comes last.',
-      'Say “one more time tonight at 7:30 PM” in the opening line: it is the only new fact for someone who missed the morning.',
-      'Swap the community link for the tool-access link, which gives them a reason to show up live.'
-    ],
-    text: [
-      'Hi [$FirstName, missed this morning’s session?],',
-      '',
-      'This is a quick reminder that your [registered session runs one more time tonight at 7:30 PM: Launch Your Business Online in 10 Minutes.]',
-      '',
-      'Session Details: [Tonight’s joining link: https://sb.flexifunnels.com/genie-demo ]',
-      '',
-      '[💡 Same live build: a real idea becomes a live business from a phone in 10 minutes.]',
-      '',
-      '[Your AI tool access is still open, so you can build yours with us: https://sb.flexifunnels.com/funnel-agent-access ]',
-      '',
-      '[Set a reminder for 7:25 PM ⏰]',
-      '',
-      'We look forward to having you in the session!',
-      '',
-      '–Team FlexiFunnels'
-    ]
-  }
-];
-function rewriteFor(hook) {
-  for (var i = 0; i < REWRITES.length; i++) if (REWRITES[i].match.test(hook)) return REWRITES[i];
+var SKELETONS = {
+  live6: { name: '“Hello … Your registered session is now live …”', templates: 'qsazazazdemolive', count: 6,
+    test: /^\s*Hello \[[^\]]*\],?\s*Your registered session is now live: \[/,
+    places: ['after “Hello”', 'after “Your registered session is now live:”', 'after “Session topic:”', 'line 4', 'line 5', 'after “Join the live session here:”'] },
+  dear5: { name: '“Dear … This is a quick reminder that your …”', templates: 'newbusinessmosxd_v9chjs', count: 5,
+    test: /^\s*Dear \[[^\]]*\],?\s*This is a quick reminder that your \[/,
+    places: ['after “Dear”', 'after “This is a quick reminder that your”', 'after “Session Details:”', 'line 4', 'line 5'] },
+  hi6: { name: '“Hi … This is a quick reminder that your …”', templates: 'uisxuibxjabuixdemo, uisxuibxjabuixdemo_zr6in, uisxuibxjabuixdemo_zr6in_dws7x', count: 6,
+    test: /^\s*Hi \[[^\]]*\],?\s*This is a quick reminder that your \[/,
+    places: ['after “Hi”', 'after “This is a quick reminder that your”', 'after “Session Details:”', 'line 4', 'line 5', 'line 6'] },
+  miss5: { name: '“Dear … This is a reminder regarding your session, which is scheduled on …”', templates: 'pspmissed_auidence111, pspmissed_auidence', count: 5,
+    test: /This is a reminder regarding your session, which is scheduled on \[/,
+    places: ['after “Dear”', 'after “scheduled on”', 'line 3 (above “To confirm your attendance”)', 'line 4', 'line 5'] },
+  pic7: { name: '“Picture … This is a notification regarding your session”', templates: 'the old-list registration template', count: 7,
+    test: /^\s*Picture \[[^\]]*\]\s*Hello \[/,
+    places: ['after “Picture”', 'after “Hello”', 'after “Date:”', 'after “Time:”', 'after “Topic:”', 'line 6', 'line 7'] }
+};
+
+/** Splits a sent message into the template's fixed text and the bracket contents. */
+function parseBrackets(content) {
+  var vars = [], fixed = [], depth = 0, cur = '', fx = '';
+  String(content || '').split('').forEach(function (ch) {
+    if (ch === '[') { if (depth === 0) { fixed.push(fx); fx = ''; cur = ''; } else cur += ch; depth++; return; }
+    if (ch === ']' && depth > 0) { depth--; if (depth === 0) vars.push(cur); else cur += ch; return; }
+    if (depth > 0) cur += ch; else fx += ch;
+  });
+  fixed.push(fx);
+  return { vars: vars, fixed: fixed };
+}
+function skeletonOf(content) {
+  var n = parseBrackets(content).vars.length;
+  for (var k in SKELETONS) if (SKELETONS[k].test.test(content) && SKELETONS[k].count === n) return k;
   return null;
 }
+
+// Bracket contents per template. null = keep what you have.
+var LINK = 'https://sb.flexifunnels.com/genie-demo', TOOL = 'https://sb.flexifunnels.com/funnel-agent-access';
+var FIX_INSANE = {
+  live6: ['$FirstName, the website is already built 👀', 'the website is built on screen. Next up: the product, checkout and payments 🔴',
+    'You haven’t missed the main part. Watch the business go live, from a phone, in the next few minutes.', null,
+    'Build yours alongside us with your AI tool: ' + TOOL + ' ', null],
+  dear5: ['$FirstName, the website is already built 👀', 'registered session is LIVE right now 🔴 The website is built. Next up: the product, checkout and payments.',
+    'You haven’t missed the main part. Watch the business go live, from a phone, in the next few minutes.', null,
+    'Build yours alongside us with your AI tool: ' + TOOL + ' '],
+  hi6: ['$FirstName, the website is already built 👀', 'registered session is LIVE right now 🔴 The website is built. Next up: the product, checkout and payments.',
+    'You haven’t missed the main part. Watch the business go live, from a phone, in the next few minutes.', null, null, 'See you inside 👇']
+};
+var FIX_FULL = {
+  dear5: ['$FirstName, 10 minutes to the bonus reveal 🎁', 'registered session is live. At 8 PM we reveal the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool.',
+    'The business is already live on screen, built from a phone.', 'Join here: ' + LINK + ' ', 'The bonuses are only for people in the room. Get in before 8 PM 👇'],
+  hi6: ['$FirstName, 10 minutes to the bonus reveal 🎁', 'registered session is live. At 8 PM we reveal the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool.',
+    'The business is already live on screen, built from a phone.', 'Join here: ' + LINK + ' ', 'The bonuses are only for people in the room.', 'Get in before 8 PM 👇'],
+  live6: ['$FirstName, 10 minutes to the bonus reveal 🎁', 'at 8 PM we reveal the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool.',
+    'Join here: ' + LINK + ' ', 'The business is already live on screen, built from a phone.', 'The bonuses are only for people in the room. Get in before 8 PM 👇', null]
+};
+var FIX_ONCE = {
+  live6: [null, null, null, 'In the first 10 minutes we take one real business idea and put it online live: website, product, checkout and payments, all from a phone. 📱',
+    'Want to build yours alongside us? Open your AI tool now: ' + TOOL + ' ', null]
+};
+var WHY_INSANE = 'People read it but few click. The brackets say “this is insane, everyone is going crazy, last and final call” but never say what is happening, and it goes out 5 minutes after “Housefull”, which already says “it’s live, join now”. Tell people what is on screen and what comes next.';
+var NOTE_INSANE = 'Change “the website is built … next up …” every week to whatever is actually on screen when you send it.';
+var WHY_ONCE = 'Everything is fine except brackets 4 and 5. People read this message but don’t click: bracket 4 warns them about missing out without saying what they will see, and bracket 5 (“you’re still out here reading this”) tells them off.';
+var MSG_INSANE = /This is just insane|LIVE RIGHT NOW/, MSG_FULL = /Almost full/, MSG_ONCE = /It happens once/;
+
+var FIXES = [
+  // ---- Sunday (11 AM session + 7:30 PM encore) ----
+  { id: 'sun-waitlist', days: ['sun'], slots: null, msg: /waitlist” \(register for Sunday\)/, order: -2 * 1440 + 600, when: 'Friday 10 AM (2 days before), missed and old audiences',
+    why: 'The problem is mostly who it goes to: only about half of these people even open it. Send it only to people who registered or attended in the last 60 days, use an image instead of the video, and shorten brackets 3–5 to one link and one promise. Drop “1,000+ people are on the waitlist” and “4,700+ mentees”.',
+    fixes: { miss5: [null, null, 'Register here: https://cme.sh/Funnel-Build ', 'You’ll watch a real idea become a live business from a phone, then get 2 days of access to the AI Business Launcher Tool to build yours.', 'Tool access opens Sunday at 9 AM, two hours before we go live.'] },
+    notes: ['Bracket 2: update the date each week.'] },
+  { id: 'sun-oldlist', days: ['sun'], slots: null, msg: /turning your idea into an online business/, order: -1440 + 600, when: 'Saturday 10 AM (1 day before), big old list',
+    why: 'Brackets 1–5 are fine. This goes to the big old list, where only about 40% open it, so first send it only to people who registered or attended in the last 60 days. Brackets 6 and 7 say the same thing twice: make 6 just the link and 7 the one-line promise.',
+    fixes: { pic7: [null, null, null, null, null, '🔗 Register here: https://sb.flexifunnels.com/funnel-agent ', '🚀 You’ll watch a real idea go live, then get 2 days of access to the AI Business Launcher Tool (opens Sunday 9 AM) to build yours alongside us.'] } },
+  { id: 'sun-1000', days: ['sun'], slots: ['Morning · 10 AM'], msg: /Just 60 mins away/, order: 600, when: 'Sunday 10 AM',
+    why: 'Best: don’t send it. It says the same as the 10:30 AM “30 min away” message and is the weakest Sunday-morning send. If you want a 10 AM message, use it to get people logged in to the tool instead.',
+    fixes: { hi6: ['$FirstName, is your AI tool open? ✅', 'session goes LIVE at 11 AM, in 60 minutes', null, null, '👉 Log in to your AI tool now so it’s open when we start: ' + TOOL + ' ', 'We build a business live and you build yours alongside us. Join at 10:55 AM.'] } },
+  { id: 'sun-1055', days: ['sun'], slots: ['Morning · 10:55 AM'], msg: MSG_ONCE, order: 655, when: 'Sunday 10:55 AM', why: WHY_ONCE, fixes: FIX_ONCE },
+  { id: 'sun-1110', days: ['sun'], slots: ['Morning · 11:10 AM'], msg: MSG_INSANE, order: 670, when: 'Sunday 11:10 AM', why: WHY_INSANE, fixes: FIX_INSANE, notes: [NOTE_INSANE] },
+  { id: 'sun-1115', days: ['sun'], slots: ['Morning · 11:15 AM'], msg: /One final chance/, order: 675, when: 'Sunday 11:15 AM',
+    why: 'On Tuesday and Wednesday this message does well at 7:40 PM. On Sunday at 11:15 AM it is the fourth live reminder in 20 minutes and does worse. Keep the bonus angle, but say the bonuses are coming up next rather than “last chance” 15 minutes in.',
+    fixes: { live6: ['$FirstName, the ₹1.5L bonuses are coming up 🎁', 'the business is live on screen. Coming up next: the ₹1.5 lakh+ attendee-only bonuses and 5 business models you can start with this tool.', 'Join here: ' + LINK + ' ', 'The bonuses are only for people in the room.', null, null] } },
+  { id: 'sun-1125', days: ['sun'], slots: ['Morning · 11:25 AM'], msg: MSG_FULL, order: 685, when: 'Sunday 11:25 AM', drop: true,
+    why: 'Don’t send this one. It is the seventh live reminder of the morning and the weakest; the 11:35 AM “Revealing 5 Business Models” message does the job better.' },
+  { id: 'sun-1630', days: ['sun'], slots: ['Encore · 4:30 PM to morning missed'], msg: /Missed today/, order: 990, when: 'Sunday 4:30 PM, to people who missed the morning',
+    why: 'Brackets 1 and 4 are good. The first link people see (bracket 3) is the community link, so the link that matters tonight is buried in bracket 5. Put tonight’s joining link in bracket 3 and use bracket 5 for the tool link.',
+    fixes: { hi6: [null, 'registered session runs one more time tonight at 7:30 PM: Launch Your Business Online in 10 Minutes.', 'Tonight’s joining link: ' + LINK + ' ', null, 'Your AI tool access is still open, so you can build yours with us: ' + TOOL + ' ', null] } },
+  { id: 'sun-1925', days: ['sun'], slots: ['Encore · 7:25 PM'], msg: MSG_ONCE, order: 1165, when: 'Sunday 7:25 PM (encore)', drop: true,
+    why: 'Don’t send this one. The evening list has already had the 7 PM reminder and gets “Housefull” 5 minutes later; this is the weakest of the three.' },
+  { id: 'sun-1930', days: ['sun'], slots: ['Encore reg + missed · 7:30 PM'], msg: /Housefull/i, order: 1170, when: 'Sunday 7:30 PM (encore)',
+    why: 'This is the same message you send on Tuesday and Wednesday at 7:30 PM, where it does fine. The Sunday-evening list missed the morning session and has had a dozen reminders, so “HOUSEFULL” doesn’t land. Only brackets 1 and 2 need to change: tell them this is the evening run of the morning session.',
+    fixes: { live6: ['$FirstName, 🔴 the evening session is live', 'the evening session has just started 🔥 Same live build as this morning, for everyone who missed it.', null, null, null, null] } },
+  { id: 'sun-1940', days: ['sun'], slots: ['Encore · 7:40 PM'], msg: MSG_INSANE, order: 1180, when: 'Sunday 7:40 PM (encore)', drop: true,
+    why: 'Don’t send this one. On Sunday evening it costs more per click than any other encore reminder. If you keep it, use the same bracket changes as the 11:10 AM message.', fixes: FIX_INSANE },
+
+  // ---- Tuesday and Wednesday (7:30 PM) ----
+  { id: 'tw-waitlist', days: ['tue', 'wed'], slots: null, msg: /waitlist” \(register for Sunday\)/, order: -600, when: 'Day before or morning of the webinar, missed and old audiences',
+    why: 'Same problem as on Sunday: most of this list doesn’t open it. Send it only to people who registered or attended in the last 60 days, use an image instead of the video, and shorten brackets 3–5 to one link and one promise.',
+    fixes: { miss5: [null, null, 'Register here: https://cme.sh/Funnel-Build ', 'You’ll watch a real idea become a live business from a phone, then get 2 days of access to the AI Business Launcher Tool to build yours.', 'Tool access opens at 5:30 PM on the day, two hours before we go live.'] },
+    notes: ['Bracket 2: update the date each time.'] },
+  { id: 'tw-1925', days: ['tue', 'wed'], slots: ['Webinar day · 7:25 PM'], msg: MSG_ONCE, order: 1165, when: 'Tuesday and Wednesday 7:25 PM', why: WHY_ONCE, fixes: FIX_ONCE },
+  { id: 'tw-1935', days: ['tue', 'wed'], slots: ['Webinar day · 7:35 PM'], msg: MSG_INSANE, order: 1175, when: 'Tuesday and Wednesday 7:35 PM', why: WHY_INSANE, fixes: FIX_INSANE, notes: [NOTE_INSANE] },
+  { id: 'tw-1950', days: ['tue', 'wed'], slots: ['Webinar day · 7:50 PM'], msg: MSG_FULL, order: 1190, when: 'Tuesday and Wednesday 7:50 PM',
+    why: '“Only last 50 spots left” goes out every week, 20 minutes into a free webinar, and people don’t believe it; “you haven’t missed out yet” reminds them they are late. The one concrete reason to join, the ₹1.5 lakh+ bonuses, is in the last bracket. Lead with the bonus reveal at 8 PM instead; it also sets up your best message, which goes out at 8 PM.',
+    fixes: FIX_FULL }
+];
+
+/** New templates worth getting approved (these change the fixed text, so they need Meta approval). */
+var TEMPLATE_IDEAS = [
+  { title: 'A “starting soon” template', use: 'Tuesday and Wednesday 7:25 PM, Sunday 10:55 AM (instead of qsazazazdemolive)',
+    why: 'qsazazazdemolive’s fixed line says “Your registered session is now live”, but it goes out 5 minutes before the session starts. It also puts the link after “Session topic:” and repeats it at the end. This version says “starts in …”, has one link, and puts the webinar ID on its own line.',
+    text: 'Hello [1],\n\nYour registered session starts in [2].\n\n[3]\n\nJoin here: [4]\nWebinar ID: [5]\n\nIf you have any questions, please reply to this message.',
+    example: ['$FirstName', '5 minutes', 'In the first 10 minutes we put one real business idea online live, from a phone.', LINK, '897 8372 7185'] },
+  { title: 'A “live update” template', use: 'Tuesday and Wednesday 7:35 and 7:50 PM, Sunday 11:10 and 11:15 AM',
+    why: 'The “This is a quick reminder that your [ ]” templates force every live update into one awkward sentence (“your registered session is LIVE RIGHT NOW | This is just insane…”). Separate “Right now” and “Coming up next” lines make it easy to write a real update each week, which is what your best live message does.',
+    text: 'Hi [1],\n\nYour registered session is live now.\n\nRight now: [2]\n\nComing up next: [3]\n\nJoin here: [4]\n\n[5]',
+    example: ['$FirstName', 'the website is built and we are setting up the checkout.', 'the ₹1.5 lakh+ attendee-only bonuses at 8 PM.', LINK, 'Build yours alongside us: ' + TOOL] },
+  { title: 'A short registration template', use: 'Old-list and missed-audience registration pushes',
+    why: 'The current registration templates carry four or five fixed lines (“To confirm your attendance, click on…”, “If you have already confirmed…”, “For any assistance…”) before people get to the point. Short messages get more clicks in this campaign. Send it with an image header.',
+    text: 'Hi [1],\n\nYour seat for [2] is reserved.\n\nDate and time: [3]\nConfirm here: [4]\n\n[5]\n\nReply STOP to unsubscribe.',
+    example: ['$FirstName', 'Launch Your Business Online in 10 Minutes', 'Sunday ‹date›, 11 AM IST', 'https://sb.flexifunnels.com/funnel-agent', 'You also get 2 days of access to the AI Business Launcher Tool, from 9 AM on the day.'] }
+];
 
 /** Campaign messages: sends grouped by the doc message they came from (or by text, if not in the docs). */
 function campaignMessages(C) {
@@ -1444,7 +1404,7 @@ function campaignMessages(C) {
     g.media = mediaKind(latest.content);
     g.s = judge(g.sends);
     g.a = aggregate(g.sends);
-    g.rewrite = rewriteFor(g.hook);
+    g.fixes = [];
     g.sends.forEach(function (b) { b.cmsg = g; });
     return g;
   });
@@ -1464,7 +1424,7 @@ function campaignMessages(C) {
 
   var state = {
     raw: null, cachedAt: 0, period: 'all', broadcasts: [], messages: [], result: null, tab: 'overview', metric: 'clickRate', mcp: null,
-    sched: 'tue', slotView: 'verdict', mfilter: { verdict: '', sort: 'impact', docs: '', q: '' },
+    sched: 'tue', slotView: 'verdict', fixDay: 'sun', mfilter: { verdict: '', sort: 'impact', docs: '', q: '' },
     bfilter: { sched: '', session: '', area: '', q: '', others: false }, sort: { key: 't', dir: -1 }, showAll: false
   };
   try {
@@ -1548,6 +1508,7 @@ function campaignMessages(C) {
     state.C = state.broadcasts.filter(function (b) { return b.family === 'genie'; });
     state.stats = campaignStats(state.C);
     state.cmsgs = campaignMessages(state.C);
+    state.fixCards = FIXES.map(resolveFix);
     state.slots = {}; state.live = {};
     ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k] = slotVerdicts(state.result, k, state.stats.bench); state.live[k] = liveCutPlan(state.slots[k]); });
     var latestT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
@@ -1613,6 +1574,7 @@ function campaignMessages(C) {
     SCHED_KEYS.forEach(function (k) { cut += state.slots[k].filter(function (r) { return r.verdict === 'cut'; }).length; });
     return [
       { key: 'overview', label: 'Overview', count: '' },
+      { key: 'fixes', label: 'Message fixes', count: state.fixCards.length + '' },
       { key: 'slots', label: 'Slot verdicts', count: cut ? cut + ' to cut' : '' },
       { key: 'messages', label: 'Messages', count: state.cmsgs.length + '' },
       { key: 'timing', label: 'Timing', count: '' },
@@ -1634,6 +1596,7 @@ function campaignMessages(C) {
     renderTabs();
     var t = state.tab;
     if (t === 'overview') renderOverview();
+    else if (t === 'fixes') renderFixes();
     else if (t === 'slots') renderSlots();
     else if (t === 'messages') renderMessages();
     else if (t === 'timing') renderTiming();
@@ -1674,10 +1637,10 @@ function campaignMessages(C) {
     });
     var current = function (g) { return g.s.sends >= 2 || g.sends[g.sends.length - 1].t >= state.lastT - 28 * 1440; };
     state.cmsgs.filter(function (g) { return g.s.verdict === 'remove' && current(g); }).sort(function (a, b) { return b.a.cost - a.a.cost; }).slice(0, 3).forEach(function (g) {
-      acts.push({ tone: 'bad', text: 'Replace the message ' + g.hook, detail: g.s.why + ' Used ' + g.s.sends + ' time' + (g.s.sends > 1 ? 's' : '') + ', ' + inr(g.a.cost) + ' spent, ' + inr(g.a.cpc) + ' per click.' + (g.rewrite ? ' A rewrite is ready on its card.' : ''), msg: g.id });
+      acts.push({ tone: 'bad', text: 'Replace the message ' + g.hook, detail: g.s.why + ' Used ' + g.s.sends + ' time' + (g.s.sends > 1 ? 's' : '') + ', ' + inr(g.a.cost) + ' spent, ' + inr(g.a.cpc) + ' per click.' + (g.fixes.length ? ' Bracket changes are ready in Message fixes.' : ''), fix: g.fixes.length ? g.fixes[0].f.id : null, msg: g.fixes.length ? null : g.id });
     });
-    state.cmsgs.filter(function (g) { return g.s.verdict === 'improve' && g.rewrite; }).sort(function (a, b) { return b.a.cost - a.a.cost; }).forEach(function (g) {
-      acts.push({ tone: 'warn', text: 'Rewrite ' + g.hook, detail: g.s.why + ' ' + inr(g.a.cost) + ' spent across ' + g.s.sends + ' sends at ' + inr(g.a.cpc) + ' per click. A rewrite on template ' + g.rewrite.templates + ' is ready on its card.', msg: g.id });
+    state.cmsgs.filter(function (g) { return g.s.verdict === 'improve' && g.fixes.length; }).sort(function (a, b) { return b.a.cost - a.a.cost; }).forEach(function (g) {
+      acts.push({ tone: 'warn', text: 'Change the brackets in ' + g.hook, detail: g.s.why + ' ' + inr(g.a.cost) + ' spent across ' + g.s.sends + ' sends at ' + inr(g.a.cpc) + ' per click. Bracket changes for ' + g.fixes.map(function (c) { return c.f.when; }).join(', ') + ' are in Message fixes.', fix: g.fixes[0].f.id });
     });
     state.cmsgs.filter(function (g) { return g.s.verdict === 'more' && current(g); }).sort(function (a, b) { return b.s.z - a.s.z; }).slice(0, 3).forEach(function (g) {
       acts.push({ tone: 'good', text: 'Use ' + g.hook + ' in more slots', detail: g.s.why + ' ' + inr(g.a.cpc) + ' per click across ' + g.s.sends + ' send' + (g.s.sends > 1 ? 's' : '') + '.', msg: g.id });
@@ -1710,7 +1673,7 @@ function campaignMessages(C) {
     html += '<section class="section"><div class="section-head"><div><h2>What to change</h2><p class="muted small">Ranked by money saved. Click an item for the details.</p></div>' +
       (save ? '<div class="savebox"><b>' + inr(save) + '</b> a week could be saved (' + pct(weekly ? save / weekly : null, 0) + ' of weekly spend), losing about ' + int(lose) + ' clicks a week (' + pct(tot.clicks ? lose / (tot.clicks / weeks) : null, 0) + ').</div>' : '') + '</div>' +
       '<ol class="actions">' + acts.sort(function (a, b) { return (b.save || 0) - (a.save || 0); }).map(function (a) {
-        var attrs = a.msg ? ' data-msg="' + a.msg + '"' : a.tab ? ' data-goto="' + a.tab + '"' + (a.sched ? ' data-sched="' + a.sched + '"' : '') + (a.area ? ' data-area="' + esc(a.area) + '"' : '') : '';
+        var attrs = a.fix ? ' data-fix="' + a.fix + '"' : a.msg ? ' data-msg="' + a.msg + '"' : a.tab ? ' data-goto="' + a.tab + '"' + (a.sched ? ' data-sched="' + a.sched + '"' : '') + (a.area ? ' data-area="' + esc(a.area) + '"' : '') : '';
         return '<li class="action ' + a.tone + '"' + attrs + ' tabindex="0"><b>' + esc(a.text) + (a.save ? ' <span class="save">saves ' + inr(a.save) + (a.tab === 'broadcasts' ? ' a week' : ' per webinar') + '</span>' : '') + '</b><span>' + esc(a.detail) + '</span></li>';
       }).join('') + '</ol></section>';
 
@@ -1823,11 +1786,138 @@ function campaignMessages(C) {
   }
 
   function slotRewrite(r) {
-    if (['improve', 'cut', 'swap', 'keep'].indexOf(r.verdict) === -1) return '';
-    var counts = {}, top = null;
-    r.items.forEach(function (b) { if (b.cmsg && b.cmsg.rewrite) { counts[b.cmsg.id] = (counts[b.cmsg.id] || 0) + 1; if (!top || counts[b.cmsg.id] > counts[top.id]) top = b.cmsg; } });
-    if (!top || (r.verdict === 'keep' && top.s.verdict !== 'improve' && top.s.verdict !== 'remove')) return '';
-    return '<div class="small"><a href="#" data-msg="' + esc(top.id) + '">See the suggested rewrite</a></div>';
+    var card = (state.fixCards || []).filter(function (c) { return c.f.slots && c.f.slots.indexOf(r.slot.name) !== -1 && c.f.days.indexOf(state.sched) !== -1; })[0];
+    return card ? '<div class="small"><a href="#" data-fix="' + card.f.id + '">See the bracket changes</a></div>' : '';
+  }
+
+  // ---------- Message fixes ----------
+  var DAY_GROUPS = { sun: { label: 'Sunday webinar', days: ['sun'] }, tw: { label: 'Tuesday & Wednesday webinars', days: ['tue', 'wed'] } };
+
+  /** The campaign sends a fix applies to, newest first. */
+  function resolveFix(f) {
+    var sends = C().filter(function (b) {
+      if (!b.session || f.days.indexOf(templateFor(b.session.date)) === -1) return false;
+      if (f.slots && !(b.slot && f.slots.indexOf(b.slot.name) !== -1)) return false;
+      return !f.msg || (b.cmsg && f.msg.test(b.cmsg.hook));
+    }).sort(function (a, b) { return b.t - a.t; });
+    var card = { f: f, sends: sends };
+    sends.forEach(function (b) { if (b.cmsg && b.cmsg.fixes.indexOf(card) === -1) b.cmsg.fixes.push(card); });
+    return card;
+  }
+  /** The latest send of this message on a given template, preferring this card's own slot and days. */
+  function latestOn(card, skel) {
+    var own = card.sends.filter(function (b) { return skeletonOf(b.content) === skel; })[0];
+    if (own || !card.f.msg) return own || null;
+    return C().filter(function (b) { return b.cmsg && card.f.msg.test(b.cmsg.hook) && skeletonOf(b.content) === skel; }).sort(function (a, b) { return b.t - a.t; })[0] || null;
+  }
+  function fixVerdicts(card) {
+    return card.f.days.map(function (day) {
+      if (card.f.slots) {
+        var row = state.slots[day].filter(function (r) { return card.f.slots.indexOf(r.slot.name) !== -1; })[0];
+        if (!row) return { day: day, cut: false, html: '' };
+        var cut = row.verdict === 'cut' || state.live[day].cuts.indexOf(row) !== -1;
+        return { day: day, cut: cut, html: cut ? '<span class="verdict v-remove">Drop</span>' : slotPill(row.verdict) };
+      }
+      var g = card.sends[0] && card.sends[0].cmsg;
+      return { day: day, cut: false, html: g ? verdictPill(g.s.verdict) : '' };
+    });
+  }
+  function bracketList(nums) {
+    return nums.length === 1 ? 'bracket ' + nums[0] : 'brackets ' + nums.slice(0, -1).join(', ') + ' and ' + nums[nums.length - 1];
+  }
+  function changeLine(fix) {
+    var change = [], keep = [];
+    fix.forEach(function (v, i) { (v === null ? keep : change).push(i + 1); });
+    return 'Change ' + bracketList(change) + '.' + (keep.length ? ' Keep ' + bracketList(keep) + (keep.length === 1 ? ' as it is.' : ' as they are.') : '');
+  }
+  function bracketTable(skel, fix, send) {
+    var sk = SKELETONS[skel], now = send ? parseBrackets(send.content).vars : null;
+    return '<div class="table-wrap"><table class="list brackets"><thead><tr><th>Bracket</th><th>Now' + (send ? ' <span class="faint">(' + esc(dayLabel(send.t)) + ', ' + esc(timeLabel(send.t)) + ')</span>' : '') + '</th><th>Change to</th></tr></thead><tbody>' +
+      fix.map(function (v, i) {
+        return '<tr class="' + (v === null ? 'keep' : 'change') + '"><td class="name"><b>' + (i + 1) + '</b><div class="faint small">' + esc(sk.places[i]) + '</div></td>' +
+          '<td class="name">' + (now ? esc(now[i]) : '<span class="faint">—</span>') + '</td>' +
+          '<td class="name">' + (v === null ? '<span class="verdict v-keep">Keep</span>' : '<div class="newtext">' + esc(v) + '</div><button type="button" class="btn small-btn" data-copytext="' + esc(v) + '">Copy</button>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  /** The whole message as it would go out: template text greyed, changed brackets highlighted. */
+  function previewHtml(fix, send) {
+    var p = parseBrackets(send.content), out = '';
+    p.fixed.forEach(function (fx, i) {
+      out += '<span class="fixed">' + esc(fx) + '</span>';
+      if (i < p.vars.length) out += fix[i] === null ? '<span class="kept">[' + esc(p.vars[i]) + ']</span>' : '<mark>[' + esc(fix[i]) + ']</mark>';
+    });
+    return '<details><summary>See the whole message with these changes</summary><div class="bubble preview">' + out + '</div><p class="faint small">Grey = template text (unchanged). Highlighted = changed brackets.</p></details>';
+  }
+  function fixCard(card) {
+    var f = card.f, verdicts = fixVerdicts(card), skels = Object.keys(f.fixes || {});
+    var last = card.sends[0], lastSkel = last ? skeletonOf(last.content) : null;
+    var main = f.fixes && f.fixes[lastSkel] ? lastSkel : skels[0];
+    var allCut = f.drop || (verdicts.length && verdicts.every(function (v) { return v.cut; }));
+    var someCut = !allCut && verdicts.some(function (v) { return v.cut; });
+    var action;
+    if (allCut) action = 'Don’t send this one.' + (main ? ' If you do keep it: ' + changeLine(f.fixes[main]).replace(/^C/, 'c') : '');
+    else if (someCut) action = verdicts.map(function (v) { return SCHED_SHORT[v.day] + ': ' + (v.cut ? 'don’t send it.' : changeLine(f.fixes[main]).replace(/^C/, 'c')); }).join(' ');
+    else action = main ? changeLine(f.fixes[main]) : '';
+    var mainSend = main ? latestOn(card, main) : null;
+    var html = '<article class="fix" id="fix-' + f.id + '"><div class="fix-head"><span class="when">' + esc(f.when) + '</span>' +
+      (f.slots ? '<span class="small faint">Slot:</span>' : '') + verdicts.map(function (v) { return v.html ? '<span class="small">' + (verdicts.length > 1 ? esc(SCHED_SHORT[v.day]) + ' ' : '') + v.html + '</span>' : ''; }).join('') +
+      (f.slots && last && last.cmsg ? '<span class="small faint">Message:</span><span class="small">' + verdictPill(last.cmsg.s.verdict) + '</span>' : '') + '</div>' +
+      '<h3>' + esc(last && last.cmsg ? last.cmsg.hook : '') + '</h3>' +
+      '<p class="fix-do">' + esc(action) + '</p><p class="why">' + esc(f.why) + '</p>' +
+      (f.notes ? f.notes.map(function (n) { return '<p class="small warnline">' + esc(n) + '</p>'; }).join('') : '');
+    if (main) {
+      html += '<p class="small muted">Template: ' + esc(SKELETONS[main].name) + ' <span class="faint">(' + esc(SKELETONS[main].templates) + ')</span>' + (mainSend ? ' · last sent ' + esc(dayLabel(mainSend.t)) + ', ' + esc(timeLabel(mainSend.t)) + ' as “' + esc(mainSend.name) + '”' : '') + '</p>' +
+        bracketTable(main, f.fixes[main], mainSend) + (mainSend ? previewHtml(f.fixes[main], mainSend) : '');
+      var others = skels.filter(function (k) { return k !== main; });
+      if (others.length) {
+        html += '<details><summary>Sending it on a different template?</summary>' + others.map(function (k) {
+          var s2 = latestOn(card, k);
+          return '<p class="small"><b>' + esc(SKELETONS[k].name) + '</b> <span class="faint">(' + esc(SKELETONS[k].templates) + ')</span> · ' + esc(changeLine(f.fixes[k])) + '</p>' + bracketTable(k, f.fixes[k], s2);
+        }).join('') + '</details>';
+      }
+    }
+    return html + '</article>';
+  }
+  function renderFixes() {
+    var g = state.fixDay;
+    var html = '<div class="wrap" style="gap:16px"><div class="intro"><h2>Message fixes</h2><p class="muted">Only the text inside the [brackets] changes. Everything outside them is your approved template and stays exactly as it is. For each message: which brackets to change, which to keep, and what to put in. “Now” is what went into each bracket the last time it was sent.</p></div>' +
+      '<div class="seg" role="group" aria-label="Webinar">' + [['sun', 'Sunday webinar'], ['tw', 'Tuesday & Wednesday webinars'], ['tpl', 'New templates (need approval)']].map(function (x) {
+        return '<button type="button" data-fixday="' + x[0] + '" aria-pressed="' + (g === x[0]) + '">' + x[1] + '</button>';
+      }).join('') + '</div>';
+    if (g === 'tpl') {
+      html += '<p class="muted">These change the template text itself, so each needs a new template approved in AiSensy. Submit them as <b>Utility</b> and keep the wording about the person’s own registered session: that is what gets a template approved as Utility (about ₹0.15 a message). Promotional wording gets it classed as Marketing (about ₹1.09 a message).</p>' +
+        TEMPLATE_IDEAS.map(function (t) {
+          var p = parseBrackets(t.text), ex = '';
+          p.fixed.forEach(function (fx, i) { ex += '<span class="fixed">' + esc(fx) + '</span>' + (i < p.vars.length ? '<mark>[' + esc(t.example[i]) + ']</mark>' : ''); });
+          return '<article class="fix"><h3>' + esc(t.title) + '</h3><p class="small muted">Use for: ' + esc(t.use) + '</p><p class="why">' + esc(t.why) + '</p>' +
+            '<div class="bubble">' + esc(t.text) + '</div><button type="button" class="btn small-btn" data-copytext="' + esc(t.text) + '">Copy template text</button>' +
+            '<details><summary>Example with the brackets filled in</summary><div class="bubble preview">' + ex + '</div></details></article>';
+        }).join('');
+    } else {
+      var cards = state.fixCards.filter(function (c) { return DAY_GROUPS[g].days.indexOf(c.f.days[0]) !== -1; }).sort(function (a, b) { return a.f.order - b.f.order; });
+      html += '<p class="small muted">In send order. The verdict next to each time is this period’s result for that slot (Drop = the data says stop sending it).</p>' + cards.map(fixCard).join('');
+    }
+    $('#main').innerHTML = html + '</div>';
+  }
+  function showFix(id) {
+    var card = state.fixCards.filter(function (c) { return c.f.id === id; })[0];
+    if (!card) return;
+    closeDrawer();
+    state.fixDay = card.f.days[0] === 'sun' ? 'sun' : 'tw';
+    setTab('fixes');
+    var el = document.getElementById('fix-' + id);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.add('flash'); }
+  }
+  function copyText(btn) {
+    var text = btn.dataset.copytext, label = btn.textContent;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = label; }, 1500); };
+    var fallback = function () {
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (x) { btn.textContent = 'Select the text to copy'; }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
   }
 
   // ---------- Messages ----------
@@ -1841,7 +1931,7 @@ function campaignMessages(C) {
       '<label for="mSort">Sort by<select id="mSort">' + [['impact', 'Strongest evidence first'], ['cost', 'Most spend'], ['cpc', 'Highest cost per click'], ['index', 'Best vs similar'], ['recent', 'Most recently sent']].map(function (o) {
         return '<option value="' + o[0] + '"' + (f.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></label>' +
-      '<label for="mDocs">Show<select id="mDocs"><option value="">All messages</option><option value="doc"' + (f.docs === 'doc' ? ' selected' : '') + '>Doc messages only</option><option value="x"' + (f.docs === 'x' ? ' selected' : '') + '>Not in the docs</option><option value="rw"' + (f.docs === 'rw' ? ' selected' : '') + '>With a suggested rewrite</option></select></label>' +
+      '<label for="mDocs">Show<select id="mDocs"><option value="">All messages</option><option value="doc"' + (f.docs === 'doc' ? ' selected' : '') + '>Doc messages only</option><option value="x"' + (f.docs === 'x' ? ' selected' : '') + '>Not in the docs</option><option value="rw"' + (f.docs === 'rw' ? ' selected' : '') + '>With bracket changes</option></select></label>' +
       '<label for="mQ">Search<input type="search" id="mQ" placeholder="Words, template or broadcast name" value="' + esc(f.q) + '"></label></div><div id="msgList" class="cards-col"></div></div>';
     $('#main').innerHTML = html;
     renderMessageList();
@@ -1852,7 +1942,7 @@ function campaignMessages(C) {
       if (f.verdict && g.s.verdict !== f.verdict) return false;
       if (f.docs === 'doc' && !g.doc) return false;
       if (f.docs === 'x' && g.doc) return false;
-      if (f.docs === 'rw' && !g.rewrite) return false;
+      if (f.docs === 'rw' && !g.fixes.length) return false;
       if (q && (g.hook + ' ' + g.content + ' ' + (g.doc ? g.doc.templates.join(' ') : '') + ' ' + g.sends.map(function (b) { return b.name; }).join(' ')).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -1876,7 +1966,7 @@ function campaignMessages(C) {
       '<span class="faint small">' + esc(g.media) + (g.doc ? ' · template ' + esc(g.doc.templates.join(', ')) : '') + '</span></div>' +
       '<h3>' + esc(g.hook) + '</h3>' + (where ? '<p class="faint small">Doc slots: ' + esc(where) + '</p>' : '') +
       '<p class="why">' + esc(s.why) + '</p>' +
-      rewriteHtml(g) +
+      (g.fixes.length ? '<p class="small fixlinks">Bracket changes ready: ' + g.fixes.map(function (c) { return '<a href="#" data-fix="' + c.f.id + '">' + esc(c.f.when) + '</a>'; }).join(' · ') + '</p>' : '') +
       (s.goal === 'reply' ? replyStats(s, a) : '<div class="mstats">' +
         mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) +
         mstat('Read rate', pct(a.readRate), s.readIndex !== null ? vsSimilar(s.readIndex) + ' vs similar' : '', idxClass(s.readIndex)) +
@@ -1886,17 +1976,6 @@ function campaignMessages(C) {
       '<p class="meta small">First sent ' + esc(dayLabel(first.t)) + ', ' + esc(timeLabel(first.t)) + ' · last sent ' + esc(dayLabel(last.t)) + ', ' + esc(timeLabel(last.t)) +
       (best ? ' · best result: ' + esc(dayLabel(best.t)) + ', ' + esc(timeLabel(best.t)) + ' (' + pct(rate(best), 2) + ')' : '') + '</p>' +
       '<details><summary>Every send and the full message</summary>' + sendTable(g.sends) + '<div class="bubble">' + esc(cleanText(g.content) || 'No message text in the sheet.') + '</div></details></article>';
-  }
-  /** The suggested rewrite: open on cards that need one, folded away as an alternative on the rest. */
-  function rewriteHtml(g) {
-    var r = g.rewrite;
-    if (!r) return '';
-    var needed = g.s.verdict === 'improve' || g.s.verdict === 'remove';
-    return '<details class="rewrite"' + (needed ? ' open' : '') + '><summary>' + (needed ? 'Suggested rewrite' : 'A rewrite to test') + ' · template ' + esc(r.templates) + '</summary>' +
-      '<p class="small muted">Used: ' + esc(r.when) + '. Text in [brackets] goes into the template’s variables; the rest is the approved template text, so no new approval is needed.</p>' +
-      '<ul class="small">' + r.changes.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>' +
-      '<div class="bubble">' + esc(r.text.join('\n')) + '</div>' +
-      '<div><button type="button" class="btn" data-copy="' + esc(g.id) + '">Copy message</button></div></details>';
   }
   function replyStats(s, a) {
     return '<div class="mstats">' + mstat('Sent', s.sends + (s.sends === 1 ? ' time' : ' times')) + mstat('Delivered', int(a.delivered)) + mstat('Read rate', pct(a.readRate)) +
@@ -2323,27 +2402,15 @@ function campaignMessages(C) {
   }
   function kv(k, v) { return '<div><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
   function closeDrawer() { $('#drawer').hidden = true; $('#scrim').hidden = true; }
-  function copyRewrite(btn) {
-    var g = state.cmsgs.filter(function (x) { return x.id === btn.dataset.copy; })[0];
-    if (!g || !g.rewrite) return;
-    var text = g.rewrite.text.join('\n');
-    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy message'; }, 1500); };
-    var fallback = function () {
-      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); done(); } catch (x) { btn.textContent = 'Select the text above to copy'; }
-      document.body.removeChild(ta);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
-  }
-
   // ---------- events ----------
   function setTab(t) { state.tab = t; try { localStorage.setItem('wbs.tab3', t); } catch (x) { /* ignore */ } render(); window.scrollTo(0, 0); }
   document.addEventListener('click', function (e) {
     var el;
     if ((el = e.target.closest('[data-tab]'))) { setTab(el.dataset.tab); return; }
     if ((el = e.target.closest('[data-period]'))) { setPeriod(el.dataset.period); return; }
-    if ((el = e.target.closest('[data-copy]'))) { copyRewrite(el); return; }
+    if ((el = e.target.closest('[data-copytext]'))) { copyText(el); return; }
+    if ((el = e.target.closest('[data-fix]'))) { e.preventDefault(); showFix(el.dataset.fix); return; }
+    if ((el = e.target.closest('[data-fixday]'))) { state.fixDay = el.dataset.fixday; renderFixes(); return; }
     if ((el = e.target.closest('[data-msg]'))) { e.preventDefault(); showMessage(el.dataset.msg); return; }
     if ((el = e.target.closest('[data-goto]'))) {
       if (el.dataset.sched) state.sched = el.dataset.sched;

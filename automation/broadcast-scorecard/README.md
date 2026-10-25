@@ -30,9 +30,10 @@ September still works now.
 
 | Tab | What it answers |
 |---|---|
+| **Message fixes** | For the weak messages: which [brackets] to change and which to keep, with what went in each bracket last time and what to put in instead, one card per send time. Separate pages for the Sunday webinar and for the Tuesday & Wednesday webinars, plus a page of new templates worth getting approved. Text outside the brackets (the approved template) is never changed. |
 | **Overview** | Campaign spend, clicks, cost per click and spend per session/week; how much was spent on clicks costing more than the campaign average; a ranked “What to change” list with the ₹ saved per webinar or per week; spend share vs click share for each part of the campaign (day before, webinar morning, 1–6 h before, final hour, live window, follow-ups, reply messages, big old-list pushes); and each session’s spend, clicks and cost per click. |
 | **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
-| **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. Messages marked Improve or Remove carry a **suggested rewrite** on the same template (variables only, so no new approval), with what to change and why, and a Copy button. Filter with *Show → With a suggested rewrite*. |
+| **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. Cards with bracket changes link to them (*Show → With bracket changes*). |
 | **Timing** | The effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
 | **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message (the same checks the email alerts use). |
 | **Broadcasts** | Every campaign broadcast with session, slot, doc message and template, audience, delivered, read rate, clicks, click rate, cost, cost per click, spend above average and vs similar. Filter by webinar, session, part of the campaign or text; optionally include other campaigns. |
@@ -61,16 +62,21 @@ September still works now.
 The more history the sheet has, the sharper the verdicts get. New broadcasts
 show up automatically as the AiSensy sync adds them to the History tab.
 
-### Suggested rewrites
+### Message fixes
 
-The rewrites live in `Index.html` as `REWRITES` (next to `DOC_NAMES`), one per
-message, matched by the message's name. Each keeps the template's fixed text
-and only changes what goes in the [variables]. They follow what the data shows
-works in this campaign: short messages, one clear link, an image rather than a
-video, and a concrete reason to click (what is on screen, what is revealed
-next, the tool access) instead of general urgency. Once a rewrite goes out, its
-sends are scored against the same similar sends as the old version, so the
-Messages tab shows whether it did better.
+The fixes live in `Index.html` as `FIXES` (next to `DOC_NAMES`): one entry per send
+time and message, with what to put in each bracket for each template that
+message has been sent on (`null` = keep). `SKELETONS` recognises the templates
+from their fixed text (“Hello … Your registered session is now live”, “Dear …
+This is a quick reminder that your”, and so on); the page reads the latest send
+to show what is in each bracket now. `TEMPLATE_IDEAS` holds the suggested new
+templates, which do need approval (as Utility).
+
+The suggestions follow what the data shows works in this campaign: short
+messages, one clear link, an image rather than a video, and a concrete reason
+to click (what is on screen, what is revealed next, the tool access) instead of
+general urgency. Once a change goes out, its sends are scored against the same
+similar sends as before, so the Messages tab shows whether it did better.
 
 ## Set it up for the team (about 5 minutes, once)
 
