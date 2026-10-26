@@ -25,6 +25,17 @@
   };
   var today = new Date().toISOString().slice(0, 10);
 
+  // ---------- light / dark theme ----------
+  function applyTheme(mode) {
+    var root = document.documentElement;
+    if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+    else root.removeAttribute('data-theme');
+    document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === (mode || 'auto')));
+    });
+  }
+  applyTheme(load('commsTheme', 'auto'));
+
   // ---------- schedule groups ----------
   var GROUPS = [
     { name: 'Reference', test: function (t) { return /meeting|assets|guidelines/i.test(t); } },
@@ -254,7 +265,7 @@
       html += '<div class="group"><h2>' + esc(g.name) + (g.day === day ? '<span class="today">Today</span>' : '') + '</h2><ul>' +
         items.map(function (x) {
           var n = x.s.blocks.filter(function (b) { return b.type !== 'divider' && b.type !== 'note'; }).length;
-          return '<li><button data-section="' + x.i + '"' + (x.i === state.current && !state.query ? ' aria-current="true"' : '') + '><span>' + esc(x.s.title) + '</span><span class="count">' + n + '</span></button></li>';
+          return '<li><button data-section="' + x.i + '"' + (x.i === state.current && !state.query ? ' aria-current="true"' : '') + '><span>' + esc(x.s.title) + '</span>' + (n ? '<span class="count">' + n + '</span>' : '') + '</button></li>';
         }).join('') + '</ul></div>';
       opts += '<optgroup label="' + esc(g.name) + '">' + items.map(function (x) {
         return '<option value="' + x.i + '"' + (x.i === state.current ? ' selected' : '') + '>' + esc(x.s.title) + '</option>';
@@ -367,6 +378,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, [data-section]');
     if (!t) return;
+    if (t.dataset.themeSet) { applyTheme(t.dataset.themeSet); save('commsTheme', t.dataset.themeSet); return; }
     if (t.dataset.copy != null) { copyText(t.dataset.copy, t, t.dataset.what); return; }
     if (t.dataset.copyimg) { copyImage(t.dataset.copyimg, t); return; }
     if (t.dataset.section != null) {
