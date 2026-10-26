@@ -121,7 +121,7 @@ All graphics - <https://drive.google.com/drive/folders/1hI0XpLc2rh2DLhG52XP2EYw4
 
   
 
-**Template Name** **-** pspmissed\_auidence111
+**Template Name** **-** pspmissed\_auidence
 
 Media Drive Link: <https://drive.google.com/file/d/1m7dG4Oknd-vdTKJ-13R6ZEqn8J9Hz5UB/view?usp=drive_link>
 
@@ -228,7 +228,7 @@ For any queries regarding the session, reply to this message.
 
 Another variation
 
-**Template Name** **-** pspmissed\_auidence111
+**Template Name** **-** pspmissed\_auidence
 
 Media link - 
 
@@ -304,9 +304,7 @@ Critical **Note (Non-Negotiable):** **
 
 Temp-  uisxuibxjabuixdemo
 
-Media Link- 
-
-  
+Media Link- <https://drive.google.com/file/d/1qsPjFKu-24OWpVLvLe6dDW3AIJj2jlAR/view?usp=sharing> 
 
 Dear, \[$FirstName\]
 
@@ -501,6 +499,10 @@ We look forward to having you in the session\!
 
   
 
+<https://drive.google.com/file/d/1-6_gdXDyr5wB7OEoy7tpGRVxxBRr2klQ/view?usp=sharing> 
+
+  
+
 Dear \[$FirstName\! 🚨 3 hours left before we send out logins\! Make sure you’ve signed up with the same email you used for the workshop, so your access reaches you on time\]
 
   
@@ -535,6 +537,8 @@ We look forward to having you in the session\!
 
 Audience - All reg  
 Template - 10mintoolaccesstemp
+
+<https://drive.google.com/file/d/11ZDEvi74pNEvUq4j6ora6bsmYB8PvaEb/view?usp=sharing> 
 
   
 
@@ -584,7 +588,8 @@ Audience - All reg + missed of previous webinar
 
 Template: uisxuibxjabuixdemo\_zr6in  
 
-  
+<https://drive.google.com/file/d/13zmabUXAkTDrsOnTDSv1rFX-QLlcnLfZ/view?usp=sharing> 
+
   
 
  
@@ -633,7 +638,7 @@ Audience - All reg + missed of previous webinar
 
 Template: qsazazazdemolive
 
-Drive Link - <https://drive.google.com/file/d/1jpId5X5SzZLs-_pFmhzL9Alwjf2jEdYJ/view?usp=drive_link>
+Drive Link - <https://drive.google.com/file/d/10zVLO4R5H-wuHs1HZz8dxpCmNEBJLhYZ/view?usp=sharing> 
 
   
 
@@ -727,7 +732,7 @@ Template - newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
 
 Drive 
 
-<https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link>
+<https://drive.google.com/file/d/15dXAF2dqQwC3-3sWXkA4FD3bZq6xiwRr/view?usp=drive_link> 
 
   
 
@@ -901,6 +906,8 @@ Template - Miss15
 
 Audience - Missed Audience
 
+<https://drive.google.com/file/d/1xrFOxuQAHmHHarHndrUk6E2zXDt8l8kY/view?usp=sharing> 
+
   
 
   
@@ -956,9 +963,8 @@ Critical **Note (Non-Negotiable):** **
 
 **Template -** uisxuibxjabuixdemo 
 
-**Drive Link -** <https://drive.google.com/file/d/1fB7RZk44LmnZKj27PU72Tk1SX_ioJHEr/view?usp=drive_link>
+**Drive Link -** [**https://drive.google.com/file/d/1fB7RZk44LmnZKj27PU72Tk1SX\_ioJHEr/view?usp=drive\_link**](https://drive.google.com/file/d/1fB7RZk44LmnZKj27PU72Tk1SX_ioJHEr/view?usp=drive_link) 
 
-  
   
 
 Hi \[**$FirstName\! At 5:30 PM today, you’ll unlock FREE access to our AI Business Builder Tool and build your own business LIVE with us, step by step**\],
@@ -1097,6 +1103,8 @@ Tool Access
 
 Template - 10mintoolaccesstemp 
 
+<https://drive.google.com/file/d/11ZDEvi74pNEvUq4j6ora6bsmYB8PvaEb/view?usp=sharing> 
+
   
 
   
@@ -1144,6 +1152,8 @@ Webinar Day - 7:00 PM
 Audience - All reg + missed of previous webinar
 
 Template: uisxuibxjabuixdemo\_zr6in  
+
+<https://drive.google.com/file/d/13zmabUXAkTDrsOnTDSv1rFX-QLlcnLfZ/view?usp=sharing> 
 
   
   
@@ -1194,7 +1204,7 @@ Audience - All reg + missed of previous webinar
 
 Template: qsazazazdemolive
 
-Drive Link - <https://drive.google.com/file/d/1jpId5X5SzZLs-_pFmhzL9Alwjf2jEdYJ/view?usp=drive_link>
+Drive Link - <https://drive.google.com/file/d/10zVLO4R5H-wuHs1HZz8dxpCmNEBJLhYZ/view?usp=sharing> 
 
   
 
@@ -1462,541 +1472,9 @@ Template - Miss15
 
 Audience - Missed Audience
 
-  
-
-  
-
-Hi \[$FirstName\] I can see that you missed \[yesterday's session where we showed how to completely \***automate, build and launch a business with phone in just 10 minutes**\*\]
-
-  
-
-Could you please share the reason here?
-
-  
-
-\[**\*Once I have it, I’ll share the next session invite so you can get started\***\]
-
-  
-
-Reply STOP to Unsubscribe\!
-
-  
-
-                                                       Schedule mismatch
-
-                                                     Zoom app wasn't installed
-
-                                                       Link Wasn't Working
-
-  
-  
-**  
-**
-
-# 7:30 PM-webinar Day**  
-**
-
-Critical **Note (Non-Negotiable):** **  
-****  
-****1.** **Always give a space before and after the link;** **otherwise, the link will be invalid.**
-
-**2.** **Always check the date, time, and link of the webinar** **to ensure they are correct as per the webinar schedule.**
-
-**3.** **Always check the template category, whether it’s marketing or utility,** **before sending it to the real audience.** **Don’t send a marketing template****–reach out to your senior, get it approved in utility, then send.**
-
-  
-
-**Right after webinar, change the redirection link -** <https://sb.flexifunnels.com/genie-demo>
-
-  
-  
-
-**10 AM**
-
-  
-
-**Template -** uisxuibxjabuixdemo 
-
-**Drive Link -** <https://drive.google.com/file/d/1fB7RZk44LmnZKj27PU72Tk1SX_ioJHEr/view?usp=drive_link>
-
-  
-
-Hi \[$FirstName\],
-
-  
-
-This is a quick reminder that your \[registered session on \*Flexi Genie - Launch Your Business Online in 10 Minutes\! is LIVE TODAY\*\]
-
-  
-
-Session Details: \[People inside the community are already discovering what happens when AI does the heavy lifting. \*Join the community here\*: https://sb.flexifunnels.com/genie-demo-comm \]
-
-  
-
-\[💡 Now it's your turn to see how a simple chat with Flexi Genie can turn an idea into a real online business. \*Today **{{Date & TIME\*}}.**\]
-
-  
-
-\[🔴 \*Don't miss the LIVE build. Live Joining Link Here\*🔗: https://sb.flexifunnels.com/genie-demo \]
-
-  
-
-\[⚡️Join on time to avoid any rush.\]
-
-  
-
-We look forward to having you in the session\!
-
-  
-
-–Team FlexiFunnels
-
-  
-  
-
-\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
-
-  
-
-Missed Audience - 10 AM  
-Media Drive Link: <https://drive.google.com/file/d/1m7dG4Oknd-vdTKJ-13R6ZEqn8J9Hz5UB/view?usp=drive_link>
-
-**Template - pspmissed\_auidence111,** pspmissed\_auidence 
-
-  
-
-Dear {{1}},
-
-  
-
-This is a reminder regarding your \[**\*missed session yesterday,** “Launch Your Business Online in 10 Minutes - Directly From Your Phone”\].
-
-  
-
-\*1,000+ people are on the waitlist to attend this session after missing it last time. If you are one of them, you can't afford to miss out.\*
-
-  
-
-In this workshop, we take a real business idea from someone attending live — and put it online in 10 minutes. On a visible clock. From a phone. From an empty account. …
-
-  
-
-\*and how you can duplicate the same system in just 3 simple steps to launch your online journey to Lakhs & Crores—just like our 4,500+ mentees\!\*
-
-  
-
-To confirm your attendance, click on "Please Confirm Here".
-
-  
-
-If you have already confirmed, you may ignore this message.
-
-  
-
-—Team Saurabh Bhatnagar
-
-Reply STOP to unsubscribe
-
-  
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Webinar Day - 2 PM (Sunday)
-
-Template - tfp6pmwebinarday\_2uruwx 
-
-  
-
-Hello {{1}},
-
-  
-
-This is a reminder for your upcoming session: \*{**Launch Your Business Online in 10 Minutes - Directly From Your Phone | Implement with me**}\*
-
-  
-
-You can join the session using this link: {{<https://sb.flexifunnels.com/genie-demo> }}
-
-  
-
-\*We’re taking one real business idea and launching it online in just 10 minutes — website, product, checkout, payments, members area & follow-ups, all built from a phone, live on the clock\!🎁 Get **FREE AI BUSINESS LAUNCH TOOL ACCESS FOR 2 DAYS.** Don’t miss out\!\*
-
-  
-
-If you have any questions or need assistance related to the session, please reply to this message.
-
-  
-
-Best regards,
-
-—Team FlexiFunnels
-
-\~ Reply STOP to unsubscribe
-
-  
-  
-
-\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
-
-  
-
-5:30 PM  
-Tool Access
-
-Tempalte - 10mintoolaccesstemp 
-
-  
-
-Hi \[$FirstName, 🚀 **Your FREE AI Business-Building Tool is LIVE\!**\],
-
-  
-
-This is a reminder for your upcoming \[**Launch Your Business Online in 10 Minutes**\] session.
-
-  
-
-Date and time: \[**Tonight at 7:30 PM** ( Before we go **LIVE in 2 hour, make sure you: ✅ Claim your access)**\]
-
-  
-
-\[👉 **Claim your FREE access here**:[ https://sb.flexifunnels.com/funnel-agent-access](https://sb.flexifunnels.com/funnel-agent-access) \]
-
-  
-
-\[✅ Sign up and log in ✅ **Keep the tool open and ready\! Claim your access now and be ready to BUILD with us at 7:30 PM IST**. 🚀\]
-
-  
-
-If you have any questions or need assistance regarding the session, please reply to this message.
-
-  
-
-Best regards,
-
-Team FlexiFunnels
-
-  
-
-##### Reply STOP to unsubscribe.
-
-  
-
------
-
-  
-
-Webinar Day - 7:00 PM
-
-Template: uisxuibxjabuixdemo\_zr6in  
-
- 
-
-  
-
-Hi \[$FirstName\],
-
-  
-
-This is a quick reminder that your \[**scheduled session is just 30 min away.**\]
-
-  
-
-Session Details: \[**Launch Your Business Online in 10 Minutes — Directly From Your Phone | Live Build**\]
-
-  
-
-\[👉 **Here is the joining link: Joining link:**[ https://sb.flexifunnels.com/genie-demo](https://sb.flexifunnels.com/genie-demo) \]
-
-  
-
-\[👉 Webinar ID: 
-
-  
-
-\[⚠️ **No replay. No recording. It doesn't run again.**\]
-
-  
-
-We look forward to having you in the session\!
-
-  
-
-##### –Team FlexiFunnels
-
-  
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
+<https://drive.google.com/file/d/1xrFOxuQAHmHHarHndrUk6E2zXDt8l8kY/view?usp=sharing> 
 
   
-
-Webinar - 7:25 PM - 
-
-Template: qsazazazdemolive
-
-Drive Link - <https://drive.google.com/file/d/1jpId5X5SzZLs-_pFmhzL9Alwjf2jEdYJ/view?usp=drive_link>
-
-  
-
-Hello \[$FirstName\],
-
-  
-
-**Your registered session is now live**: \[**Launch Your Business Online in 10 Minutes - Directly From Your Phone | Live Build**\]
-
-  
-
-Session topic: \[👉 COME IN NOW:[ https://sb.flexifunnels.com/genie-demo](https://sb.flexifunnels.com/genie-demo) | Webinar ID:\]
-
-  
-
-\[It happens once. No rewind. No replay. **Don't be the one seeing it in somebody else's screenshot tomorrow.**\]
-
-  
-
-\[It's about to start. And you're still out here reading this.\]
-
-  
-
-**Join the live session here**: \[<https://sb.flexifunnels.com/genie-demo> \]
-
-  
-
-##### If you have any questions, please feel free to reach out to us.
-
-  
-  
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-  
-
-7:30 PM (Reg + missed) 
-
-Template- uisxuibxjabuixdemo\_zr6in, qsazazazdemolive
-
-  
-
-Drive Link - <https://drive.google.com/file/d/1U8U1tbiXiqmR-dQRgUzrFJjc9jQMbX7j/view?usp=drive_link>
-
-  
-
-Dear \[$FirstName, **Don't miss this**\],
-
-  
-
-This is a reminder for your registered session \[🚨 **IS HOUSEFULL - & The Live Flexi Genie Demo just started** 🔥\].
-
-  
-
-Session topic: \[You can join if you are not there. **Showing it live, launching the business live in just 10 Minutes.**\]
-
-  
-
-\[**760+ business people have already joined.**\]
-
-  
-
-\[**If you haven't joined yet, join now as seats might get full**:[ https://cme.sh/Exclusive-live](https://cme.sh/Exclusive-live) \]
-
-  
-
-If you have any queries, please reply to this message.
-
-  
-
-##### —Team Saurabh Bhatnagar
-
-Reply STOP to unsubscribe
-
-  
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Webinar Day -7:35 PM 
-
-Template - newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
-
-  
-
-Drive 
-
-<https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link>
-
-  
-
-Dear \[$Name\]
-
-This is a reminder for your registered session \[that is **LIVE RIGHT NOW** | This is just insane; **all the freelancers, business owners, and solopreneurs are going crazy inside.** 🔥\].
-
-  
-
-Session topic: \[**The live 10 Minute Business Launch is happening and don't miss this out\!**\]
-
-  
-
-\[**Join Now**:[ https://sb.flexifunnels.com/genie-demo](https://sb.flexifunnels.com/genie-demo) \]
-
-  
-
-\[Hurry Up\! **Last and Final Call\!** 🚨\]
-
-  
-
-If you have any queries, please reply to this message.
-
-  
-
-##### —Team Saurabh Bhatnagar
-
-Reply STOP to unsubscribe
-
-[Please Confirm Here](https://cme.sh/Exclusive-live)
-
-I've Joined
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Webinar Day -7:40 PM - 
-
-Template Name - qsazazazdemolive
-
- Drive Link - <https://drive.google.com/file/d/1de50glZ5gsIif3o0LS8XPXqz78A3Cvq9/view?usp=drive_link>
-
-  
-
-Hello \[$Name\],
-
-  
-
-**Your registered session is now live**: \[**One final chance to get in inside\!**\]
-
-  
-
-Session topic: \[**Join Here (Last Chance)**:[ https://sb.flexifunnels.com/genie-demo](https://sb.flexifunnels.com/genie-demo) \]
-
-  
-
-\[**Don't miss it\! ₹1.5 Lakhs+ worth of bonuses will be revealed now\!**\]
-
-  
-
-\[**Join in\! Don't wait\!** 🚨\]
-
-  
-
-**Join the live session here**: \[<https://sb.flexifunnels.com/genie-demo> \]
-
-  
-
-If you have any questions, please feel free to reach out to us.
-
-[Join Live](https://sb.flexifunnels.com/genie-demo)
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Webinar Day -7:50 
-
-Template - livepspchallengefi, newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
-
-  
-
-Drive <https://drive.google.com/file/d/1r59qE-ZwOsGMexZX-5JWAS-Z9g6y-D9m/view?usp=drive_link>
-
-  
-
-Dear \[$FirstName, **you haven't missed out the Flexi Genie demo yet**\],
-
-  
-
-This is a reminder for your registered session \[**is almost full**\].
-
-  
-
-Session topic: \[**This Live Flexi Genie Demo has just made everyone go crazy** 🔥\]
-
-  
-
-\[**Here is the link (Only last 50 spots left.❌):** \]
-
-  
-
-\[Join now to also get ₹1.5+ lakhs worth of attendees only bonuses.\]
-
-  
-
-If you have any queries, please reply to this message.
-
-  
-
-—Team Saurabh Bhatnagar
-
-Reply STOP to unsubscribe
-
-[Please Confirm Here](https://cme.sh/Exclusive-live)
-
-I've Joined
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Webinar Day Last - 8:00 PM 
-
-Template - qsazazazdemolive,   video - newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
-
-  
-
-Drive link - <https://drive.google.com/file/d/1PDHSVejWRLNqFN3RzBx2EJd9hHk4w1V6/view?usp=drive_link>
-
-  
-
-Hello \[$Name\],
-
-  
-
-**Your registered session is now live**: \[**Revealing 5 Business Models to make easy money in 2026 even as a beginner using AI.** 🔥\]
-
-  
-
-Session topic: \[**Final Chance to join**:[ https://sb.flexifunnels.com/genie-demo](https://sb.flexifunnels.com/genie-demo) \]
-
-  
-
-\[You can watch others build their success… **or start building yours.**\]
-
-  
-
-\[The choice is yours. **Join LIVE right now.**\]
-
-  
-
-**Join the live session here**: \[<https://sb.flexifunnels.com/genie-demo> \]
-
-  
-
-If you have any questions, please feel free to reach out to us.
-
-[Join Live](https://sb.flexifunnels.com/genie-demo)
-
-**\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_**
-
-  
-
-Next Day - Before 11 AM
-
-Template - Miss15
-
-Audience - Missed Audience
-
   
 
   
@@ -2082,6 +1560,8 @@ Joining Link and other updates will be dropped soon.
 
   
 
+<https://drive.google.com/file/d/1zu5_LWN8qTOqMzjg4XCZZ5Eu7fIRYWJN/view?usp=sharing> 
+
 ☀️ \*GOOD AFTERNOON, EVERYONE\!\*
 
  Ever had a business idea but got stuck thinking about websites, products, payments, and all the tech stuff?
@@ -2095,6 +1575,8 @@ What if you could get it all done in just 10 minutes — using AI and your phone
 ⏰ \*{{DATE}} • 7:30 PM IST\*
 
 \*No more just thinking about it. Let's build it\!\* 🚀
+
+  
 
 📊 PLUS, LET'S BE HONEST\!
 
@@ -2158,6 +1640,8 @@ What if you could get it all done in just 10 minutes — using AI and your phone
 **1 Day LEFT 6:00 PM**
 
   
+
+<https://drive.google.com/file/d/1U3K99_LFyj6ZAW43Jav2h4rrDQi-eO72/view?usp=sharing> 
 
   
 
@@ -2386,6 +1870,10 @@ I. Others
 
   
 
+<https://drive.google.com/file/d/1-6_gdXDyr5wB7OEoy7tpGRVxxBRr2klQ/view?usp=sharing> 
+
+  
+
 🤯 \***THIS IS WHAT 10 MINUTES WITH FLEXI GENIE CAN DO.\***
 
   
@@ -2425,6 +1913,10 @@ And this is just one real example of what happens when you can build by simply c
 **5:30 PM**
 
   
+
+  
+
+<https://drive.google.com/file/d/11ZDEvi74pNEvUq4j6ora6bsmYB8PvaEb/view?usp=sharing> 
 
   
 
@@ -2498,7 +1990,10 @@ So don’t wait for the session to start.
 **6:30 PM**
 
   
+
   
+
+<https://drive.google.com/file/d/17e6dMsC-5qDnK2T7cSGJvIqY404hT4gL/view?usp=sharing> 
 
 🔥 \*\[LIVE in 1 Hour\] EXCLUSIVE LIVE BONUS (Only for the First 100 Attendees)\*
 
@@ -2530,6 +2025,10 @@ Drop a 👍 in the chat if you’re joining – would love to see who’s coming
 **7 PM (30 Min)**
 
   
+
+  
+
+<https://drive.google.com/file/d/13zmabUXAkTDrsOnTDSv1rFX-QLlcnLfZ/view?usp=sharing> 
 
   
 
@@ -2589,6 +2088,10 @@ Just click on the link, fill up the form, and get the credentials on your email.
 
   
 
+<https://drive.google.com/file/d/10zVLO4R5H-wuHs1HZz8dxpCmNEBJLhYZ/view?usp=drive_link> 
+
+  
+
 🔴 \***WE'RE LIVE — AND THE ROOM IS FILLING UP FAST.\***
 
   
@@ -2632,6 +2135,10 @@ Don't be the one seeing it in somebody else's screenshot tomorrow. 🔥
 
   
 
+<https://drive.google.com/file/d/18zlPt4EnUm9NBt4T1sYe23f5Mu9Nusdw/view?usp=drive_link> 
+
+  
+
 **\*The session is live, are you inside?\***
 
   
@@ -2660,7 +2167,7 @@ Don't be the one seeing it in somebody else's screenshot tomorrow. 🔥
 
 ## **🕗 7:45 PM — Final pull-in**
 
-<https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link>   
+<https://drive.google.com/file/d/15dXAF2dqQwC3-3sWXkA4FD3bZq6xiwRr/view?usp=drive_link>   
 
 \*This Live Flexi Genie Demo has just made everyone go crazy\* 🔥
 
@@ -2929,6 +2436,10 @@ I. Others
 
   
 
+<https://drive.google.com/file/d/1-6_gdXDyr5wB7OEoy7tpGRVxxBRr2klQ/view?usp=sharing> 
+
+  
+
 🤯 \***THIS IS WHAT 10 MINUTES WITH FLEXI GENIE CAN DO.\***
 
   
@@ -2968,6 +2479,10 @@ And this is just one real example of what happens when you can build by simply c
 **5:30 PM**
 
   
+
+  
+
+<https://drive.google.com/file/d/11ZDEvi74pNEvUq4j6ora6bsmYB8PvaEb/view?usp=sharing> 
 
   
 
@@ -3019,7 +2534,8 @@ So don’t wait for the session to start.
   
 
   
-  
+
+<https://drive.google.com/file/d/17e6dMsC-5qDnK2T7cSGJvIqY404hT4gL/view?usp=sharing> 
 
 🔥 \*\[LIVE in 1 Hour\] EXCLUSIVE LIVE BONUS (Only for the First 100 Attendees)\*
 
@@ -3051,6 +2567,10 @@ Drop a 👍 in the chat if you’re joining – would love to see who’s coming
 **7 PM (30 Min)**
 
   
+
+  
+
+<https://drive.google.com/file/d/13zmabUXAkTDrsOnTDSv1rFX-QLlcnLfZ/view?usp=sharing> 
 
   
 
@@ -3115,6 +2635,10 @@ Just click on the link, fill up the form, and get the credentials on your email.
 
   
 
+<https://drive.google.com/file/d/10zVLO4R5H-wuHs1HZz8dxpCmNEBJLhYZ/view?usp=drive_link> 
+
+  
+
 🔴 \***WE'RE LIVE — AND THE ROOM IS FILLING UP FAST.\***
 
   
@@ -3158,6 +2682,10 @@ Don't be the one seeing it in somebody else's screenshot tomorrow. 🔥
 
   
 
+<https://drive.google.com/file/d/18zlPt4EnUm9NBt4T1sYe23f5Mu9Nusdw/view?usp=drive_link> 
+
+  
+
 **\*The session is live, are you inside?\***
 
   
@@ -3172,6 +2700,7 @@ Don't be the one seeing it in somebody else's screenshot tomorrow. 🔥
 
 **7:40 PM**
 
+  
   
 
 \*👋 Are you in? If you can't get into Zoom, reply here and we'll help you right away.\*
@@ -3409,7 +2938,7 @@ dCritical **Note (Non-Negotiable):** **
 
   
 
-**Drive Link -** [**https://drive.google.com/file/d/1l8oszkz2IHT1tk\_QWVbowpYaq6G-BlGk/view?usp=drive\_link**](https://drive.google.com/file/d/1l8oszkz2IHT1tk_QWVbowpYaq6G-BlGk/view?usp=drive_link)
+**Drive Link -** [**https://drive.google.com/file/d/1qsPjFKu-24OWpVLvLe6dDW3AIJj2jlAR/view?usp=sharing**](https://drive.google.com/file/d/1qsPjFKu-24OWpVLvLe6dDW3AIJj2jlAR/view?usp=sharing) 
 
   
 
@@ -3435,9 +2964,7 @@ Dear \[$Name\],
   
 
 Missed Audience - 10 AM  
-Media Drive Link:    
-  
-**Template - pspmissed\_auidence111,** pspmissed\_auidence 
+Media Drive Link:  <https://drive.google.com/file/d/1m7dG4Oknd-vdTKJ-13R6ZEqn8J9Hz5UB/view?usp=drive_link>**Template - pspmissed\_auidence111,** pspmissed\_auidence 
 
   
 
@@ -3480,6 +3007,10 @@ Reply STOP to unsubscribe
 2 Day Before Webinar Day - 6 PM
 
 Template - 10mintoolaccesstemp 
+
+  
+
+<https://drive.google.com/file/d/1HFBdnF_kyankTKPJ6O2qyTDHt3ipWlyu/view?usp=drive_link> 
 
   
 
@@ -3534,7 +3065,7 @@ I am excited for my tool\!
 
 Temp-  uisxuibxjabuixdemo
 
-Media Link- 
+Media Link- <https://drive.google.com/file/d/1ATeNuhh_F4ca4LNIEQvFrgUG50O-WISA/view?usp=drive_link> 
 
   
 
@@ -3620,7 +3151,7 @@ Reply STOP to unsubscribe.
 
 **Template -**  **10minreminder2cccc\_yfpvesss\_nwz44** 
 
-**Drive Link -** [**https://drive.google.com/file/d/1M5lMxxt9boiStZFG9u12vc7QF0d77xt-/view?usp=drive\_link**](https://drive.google.com/file/d/1M5lMxxt9boiStZFG9u12vc7QF0d77xt-/view?usp=drive_link) 
+**Drive Link -** [**https://drive.google.com/file/d/1M5lMxxt9boiStZFG9u12vc7QF0d77xt-/view?usp=sharing**](https://drive.google.com/file/d/1M5lMxxt9boiStZFG9u12vc7QF0d77xt-/view?usp=sharing)
 
   
 
@@ -3676,7 +3207,7 @@ Webinar Day - 8 AM
 
 Template- **Temp-**  **aipromoremindernew2334\_9ke4q**
 
-Drive Link- 
+Drive Link- [**https://drive.google.com/file/d/1CZ9IP5StTIWBtpoVcJGfhmkpKg2ZhZEA/view?usp=sharing**](https://drive.google.com/file/d/1CZ9IP5StTIWBtpoVcJGfhmkpKg2ZhZEA/view?usp=sharing) 
 
   
 
@@ -3720,6 +3251,8 @@ We look forward to having you in the session\!
 
 Webinar Day - 9 AM   
 Template - 10mintoolaccesstemp
+
+<https://drive.google.com/file/d/1J1v8ic6DZBbV4u4Q4qZTiqGgkQL5XYKP/view?usp=sharing> 
 
   
 
@@ -3767,6 +3300,8 @@ We look forward to having you in the session\!
 
 **Template** **-** uisxuibxjabuixdemo\_zr6in
 
+<https://drive.google.com/file/d/1zPFOjgZxRe8v_O-2Uqok5B9mGzNITUHD/view?usp=sharing> 
+
   
 
   
@@ -3811,6 +3346,8 @@ We look forward to having you in the session\!
 
 **Template -** uisxuibxjabuixdemo\_zr6in 
 
+[**https://drive.google.com/file/d/1HzYlhPwRoGiHw5VqWpeAPMMJpIIstwNN/view?usp=sharing**](https://drive.google.com/file/d/1HzYlhPwRoGiHw5VqWpeAPMMJpIIstwNN/view?usp=sharing) 
+
   
 
   
@@ -3854,7 +3391,9 @@ We look forward to having you in the session\!
 
 **10:55 AM**
 
-**Template -** qsazazazdemolive 
+**Template -** qsazazazdemolive
+
+ [**https://drive.google.com/file/d/1qIY2KhIyBbXWmEZYEmkwE73gvOmrNbA9/view?usp=sharing**](https://drive.google.com/file/d/1qIY2KhIyBbXWmEZYEmkwE73gvOmrNbA9/view?usp=sharing) 
 
   
 
@@ -3938,7 +3477,7 @@ Reply STOP to unsubscribe
 
 Template **-** newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
 
-Drive Link - <https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link>
+Drive Link - <https://drive.google.com/file/d/15dXAF2dqQwC3-3sWXkA4FD3bZq6xiwRr/view?usp=drive_link> 
 
   
 
@@ -4114,7 +3653,7 @@ If you have any questions, please feel free to reach out to us.
 
 **TEMPLATE -** uisxuibxjabuixdemo 
 
-  
+<https://drive.google.com/file/d/1gPbzF_CZ6T0S02T59mzuN8q40X6cWQE2/view?usp=sharing> 
 
   
 
@@ -4160,7 +3699,7 @@ We look forward to having you in the session\!
 
 **Template -** uisxuibxjabuixdemo 
 
-  
+<https://drive.google.com/file/d/1ATeNuhh_F4ca4LNIEQvFrgUG50O-WISA/view?usp=drive_link>   
   
 Hi \[$FirstName\],
 
@@ -4199,6 +3738,8 @@ We look forward to having you in the session\!
 4:30 PM - To Morning Miss Audience
 
 Template - uisxuibxjabuixdemo 
+
+<https://drive.google.com/file/d/1ATeNuhh_F4ca4LNIEQvFrgUG50O-WISA/view?usp=drive_link> 
 
   
 
@@ -4244,7 +3785,8 @@ We look forward to having you in the session\!
 
 Template - 10mintoolaccesstemp 
 
-  
+<https://drive.google.com/file/d/11ZDEvi74pNEvUq4j6ora6bsmYB8PvaEb/view?usp=sharing> 
+
   
 
 Hi \[$FirstName, 🚀 **Your FREE AI Business-Building Tool is LIVE\!**\],
@@ -4297,7 +3839,7 @@ Webinar Day - 7:00 PM
 
 Template: uisxuibxjabuixdemo\_zr6in  
 
- Drive Link: <https://drive.google.com/file/d/1GOTocFGcaPyISIbIwHFqCiyt0ttwuAdX/view?usp=drive_link>
+ Drive Link: <https://drive.google.com/file/d/13zmabUXAkTDrsOnTDSv1rFX-QLlcnLfZ/view?usp=sharing> 
 
   
 
@@ -4341,7 +3883,7 @@ Webinar - 7:25 PM -
 
 Template: qsazazazdemolive
 
-Drive Link - <https://drive.google.com/file/d/1jpId5X5SzZLs-_pFmhzL9Alwjf2jEdYJ/view?usp=drive_link>
+Drive Link - [**https://drive.google.com/file/d/1qIY2KhIyBbXWmEZYEmkwE73gvOmrNbA9/view?usp=sharing**](https://drive.google.com/file/d/1qIY2KhIyBbXWmEZYEmkwE73gvOmrNbA9/view?usp=sharing) 
 
   
 
@@ -4428,7 +3970,7 @@ Template - newbusinessmosxd\_v9chjs, uisxuibxjabuixdemo\_zr6in\_dws7x
 
 Drive 
 
-<https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link>
+<https://drive.google.com/file/d/15dXAF2dqQwC3-3sWXkA4FD3bZq6xiwRr/view?usp=drive_link> 
 
   
 
@@ -5080,7 +4622,7 @@ If not here is the link: <https://sb.flexifunnels.com/genie-demo>
 
   
 
-<https://drive.google.com/file/d/1Jq2HqskOyAafipJqlAnArgLC3iAI8UGD/view?usp=drive_link> 
+<https://drive.google.com/file/d/15dXAF2dqQwC3-3sWXkA4FD3bZq6xiwRr/view?usp=drive_link> 
 
   
 
@@ -5361,7 +4903,7 @@ Joining link and other updates will be dropped soon.
 
   
 
-**45 PM**
+**4 PM**
 
   
 
@@ -7228,4 +6770,4 @@ Topic:
 
   
 
-\*{**The Launc
+\*{**The Launch-In-A-Day Starter Kit is being unlocked inside — t

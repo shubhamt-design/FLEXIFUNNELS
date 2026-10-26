@@ -414,7 +414,13 @@
       raw.replace(/\\_/g, '_').replace(DRIVE_RE, function (m, id) { ids.push(id); });
       if (ids.length) {
         ids.forEach(function (id) { if (block.media.indexOf(id) < 0) block.media.push(id); });
-        var rest = p.replace(/https?:\/\/\S+/g, '').trim();
+        var rest = plain(raw.replace(/>/g, '> ')).replace(/https?:\/\/\S+/g, '').trim();
+        // "Drive Link: <url> Template - name" can end up on one line in the doc.
+        var tplAt = rest.search(/\btemplate\b\s*(name)?\s*[-:–]/i);
+        if (tplAt >= 0) {
+          templateNames(rest.slice(tplAt)).forEach(function (n) { if (block.templates.indexOf(n) < 0) block.templates.push(n); });
+          return;
+        }
         if (rest.length < 25 || /^(media|drive)/i.test(rest)) return;
       }
 
