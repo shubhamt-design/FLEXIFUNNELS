@@ -88,6 +88,13 @@ send, then *Working* (15%+ more clicks than before, against similar sends),
 out in that slot show up as **Not sent**, with the session's spend and clicks
 against the sessions before. The Overview lists every change detected.
 
+**Numbers still coming in.** Reads and clicks keep arriving for about a day, but
+the sheet sometimes marks a row *Final* within an hour of sending. Any send the
+sheet last updated less than 24 hours after it went out (or marked *Still
+collecting*) is labelled “numbers still coming in” and left out of click and
+read scoring, verdicts and cost per click until the sync refreshes it; change
+results show its numbers as provisional in the meantime.
+
 **Everything else.** Wherever a message or slot is marked Improve or Remove and
 has no fix written for it, its card or slot row shows **What to improve**,
 worked out from the data: whether people don't open it or open it but don't

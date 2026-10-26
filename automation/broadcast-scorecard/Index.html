@@ -562,7 +562,7 @@ var FAMILIES = [
   { key: 'launch', label: 'Funnel Builder Agent launch and promos', test: function (b) { return /Launch Event|launch event|LIVE reveal|revealing the Funnel Builder|16 Aug|16 August|Funnel Builder Agent (session|event|DEMO|launch)|agenticflexifunnels|Automated (Online Business System|Income Blueprint)|4 Automated System|Beginner-Friendly/i.test(b.content) || /promo|agentic/i.test(b.name); } },
   { key: 'flexiagent', label: 'FlexiAgent and MCP sessions', test: function (b) { return /FlexiAgent|Flexi Agent|FlexiFunnels MCP|\+ MCP/i.test(b.content) || /mcp|flexiagent/i.test(b.name); } },
   { key: 'buyers', label: 'Buyer onboarding and challenges', test: function (b) { return /Onboarding|Ambassador Challenge|FlexiFunnels Member|Flexi ?Genie Challenge/i.test(b.content) || /^buyer/i.test(b.name); } },
-  { key: 'faceless', label: 'Faceless webinar', test: function (b) { return /faceless/i.test(b.content) && !/10 Minutes/i.test(b.content); } },
+  { key: 'faceless', label: 'Faceless webinar', test: function (b) { return /faceless/i.test(b.content) && !/Flexi ?Genie|genie-demo|Launch Your Business Online/i.test(b.content); } },
   { key: 'followers', label: '1,000 Followers Income Blueprint', test: function (b) { return /1,?000 Followers? Income/i.test(b.content); } },
   { key: 'closing', label: 'Sales offers (launch, anniversary, closing)', test: function (b) { return /clos/i.test(b.name) || /Launch Special|Anniversary Special|vanishes forever|become a member today|If fear is the only thing|enrollment (verification|status)|reserved your seat|before it closes|Gold Ticket/i.test(b.content); } },
   { key: 'reveal', label: 'Flexi Genie reveal and ₹80K build webinars (before 26 Aug)', test: function (b) { return b.t < CAMPAIGN_START && GENIE_TEXT.test(b.content); } },
@@ -620,6 +620,8 @@ function buildBroadcasts(values, contentValues) {
       inferredStart: parseIst(r['Webinar Start (inferred)']), updated: String(r['Last Updated (IST)'] || r['Last Updated'] || ''),
       content: String(r['Message Content'] !== undefined ? r['Message Content'] : content[r['Campaign ID']] || '')
     };
+    var upd = parseIst(b.updated);
+    b.fresh = /still collecting/i.test(b.status) || (upd !== null && b.t !== null && upd - b.t < 1440);
     b.family = FAMILIES.filter(function (f) { return f.test(b); })[0].key;
     b.missedFollowUp = /missed (yesterday|today)|Missed today|you missed/i.test(b.content);
     b.goal = /reply below|reply .{0,12}["“]?income|share the reason|reply with/i.test(b.content) ? 'reply' : 'click';
@@ -633,15 +635,18 @@ function detectSessions(genie) {
   var byDay = {};
   genie.forEach(function (b) {
     var d = dayStart(b.t), m = b.t - d, k = String(d);
-    byDay[k] = byDay[k] || { evening: 0, morning: 0, d: d };
+    byDay[k] = byDay[k] || { evening: 0, morning: 0, preEvening: 0, preMorning: 0, d: d };
     if (m >= minutesOf('19:20') && m <= minutesOf('20:05')) byDay[k].evening++;
-    if (m >= minutesOf('10:50') && m <= minutesOf('11:40') && weekday(d) === 0) byDay[k].morning++;
+    if (m >= minutesOf('17:00') && m < minutesOf('19:20')) byDay[k].preEvening++;
+    if (weekday(d) === 0 && m >= minutesOf('10:50') && m <= minutesOf('11:40')) byDay[k].morning++;
+    if (weekday(d) === 0 && m >= minutesOf('08:00') && m < minutesOf('10:50')) byDay[k].preMorning++;
   });
+  // Two live-time sends, or one plus two reminders earlier that day (when most live reminders were cut).
   var sessions = [];
   Object.keys(byDay).forEach(function (k) {
     var x = byDay[k];
-    if (x.morning >= 2) sessions.push({ t: x.d + minutesOf('11:00'), date: x.d });
-    if (x.evening >= 2) sessions.push({ t: x.d + minutesOf('19:30'), date: x.d });
+    if (x.morning >= 2 || (x.morning >= 1 && x.preMorning >= 2)) sessions.push({ t: x.d + minutesOf('11:00'), date: x.d });
+    if (x.evening >= 2 || (x.evening >= 1 && x.preEvening >= 2)) sessions.push({ t: x.d + minutesOf('19:30'), date: x.d });
   });
   return sessions.sort(function (a, b) { return a.t - b.t; });
 }
@@ -762,7 +767,9 @@ function isPreLive(stage) { return stage === '1+ days before' || stage === 'Webi
 function listBucket(b) { return (b.audience || 0) >= 5000 ? 'Big list (5,000+)' : 'Registered list'; }
 function familyLabel(key) { var f = FAMILIES.filter(function (x) { return x.key === key; })[0]; return f ? f.label : key; }
 
-function hasClicks(b) { return b.clicks !== null && (b.delivered || 0) > 0; }
+// Reads and clicks keep arriving for about a day, so sends the sheet updated sooner than that aren't scored yet.
+function hasClicks(b) { return b.clicks !== null && (b.delivered || 0) > 0 && !b.fresh; }
+function hasReads(b) { return b.read !== null && (b.delivered || 0) > 0 && !b.fresh; }
 
 /* --- message grouping --- */
 var BOILERPLATE = /(this is a quick reminder that your|this is a reminder (for|regarding) your( upcoming)?( registered)? session|we look forward to having you in the session|team flexifunnels|reply stop to unsubscribe|please confirm here|confirm here|session details|session topic|join now|here is joining link|join community|this is a notification regarding your session|date and time|hello|dear)/g;
@@ -838,7 +845,7 @@ function pool(list) {
   list.forEach(function (b) {
     if (b.goal === 'reply') return;
     if (hasClicks(b)) { p.del += b.delivered; p.clicks += b.clicks; p.n++; }
-    if ((b.delivered || 0) > 0 && b.read !== null) { p.readDel += b.delivered; p.reads += b.read; }
+    if (hasReads(b)) { p.readDel += b.delivered; p.reads += b.read; }
   });
   return p;
 }
@@ -862,8 +869,8 @@ function scoreBroadcasts(broadcasts) {
       var del = p.del - (own ? b.delivered : 0), clicks = p.clicks - (own ? b.clicks : 0), n = p.n - own;
       if (n >= 3 && del >= 1500 && clicks > 0) {
         b.peerRate = clicks / del; b.peerLevel = i;
-        var rDel = p.readDel - ((b.delivered || 0) > 0 && b.read !== null ? b.delivered : 0);
-        var reads = p.reads - ((b.delivered || 0) > 0 && b.read !== null ? b.read : 0);
+        var rDel = p.readDel - (hasReads(b) ? b.delivered : 0);
+        var reads = p.reads - (hasReads(b) ? b.read : 0);
         b.peerRead = rDel > 0 ? reads / rDel : null;
         b.peerCtor = reads > 0 ? clicks / reads : null;
         break;
@@ -896,21 +903,22 @@ var VERDICTS = {
 };
 
 function judge(sends) {
-  var s = { sends: sends.length, sent: 0, delivered: 0, read: 0, clicks: 0, clickDel: 0, cost: 0, replies: 0, failed: 0, audience: 0, expected: 0, expReads: 0, readDelForExp: 0, ctorExpClicks: 0 };
+  var s = { sends: sends.length, sent: 0, delivered: 0, read: 0, readDel: 0, clicks: 0, clickDel: 0, clickCost: 0, cost: 0, replies: 0, failed: 0, audience: 0, expected: 0, expReads: 0, readDelForExp: 0, ctorExpClicks: 0 };
   sends.forEach(function (b) {
-    s.sent += b.sent || 0; s.delivered += b.delivered || 0; s.read += b.read || 0; s.cost += b.cost || 0;
+    s.sent += b.sent || 0; s.delivered += b.delivered || 0; s.cost += b.cost || 0;
     s.replies += b.replies || 0; s.failed += b.failed || 0; s.audience += b.audience || 0;
-    if (hasClicks(b)) { s.clicks += b.clicks; s.clickDel += b.delivered; if (b.expected !== null) s.expected += b.expected; }
-    if (b.peerRead !== null && b.peerRead !== undefined && (b.delivered || 0) > 0) { s.expReads += b.delivered * b.peerRead; s.readDelForExp += b.delivered; }
-    if (b.peerCtor && b.read) s.ctorExpClicks += b.read * b.peerCtor;
+    if (hasReads(b)) { s.read += b.read; s.readDel += b.delivered; }
+    if (hasClicks(b)) { s.clicks += b.clicks; s.clickDel += b.delivered; s.clickCost += b.cost || 0; if (b.expected !== null) s.expected += b.expected; }
+    if (hasReads(b) && b.peerRead !== null && b.peerRead !== undefined) { s.expReads += b.delivered * b.peerRead; s.readDelForExp += b.delivered; }
+    if (hasClicks(b) && b.peerCtor && b.read) s.ctorExpClicks += b.read * b.peerCtor;
   });
   s.ctr = s.clickDel > 0 ? s.clicks / s.clickDel : null;
-  s.readRate = s.delivered > 0 ? s.read / s.delivered : null;
+  s.readRate = s.readDel > 0 ? s.read / s.readDel : null;
   s.ctor = s.read > 0 ? s.clicks / s.read : null;
   s.deliveryRate = s.audience > 0 ? s.delivered / s.audience : null;
   s.failRate = s.audience > 0 ? s.failed / s.audience : null;
   s.replyRate = s.delivered > 0 ? s.replies / s.delivered : null;
-  s.cpc = s.clicks > 0 ? s.cost / s.clicks : null;
+  s.cpc = s.clicks > 0 ? s.clickCost / s.clicks : null;
   s.cpr = s.read > 0 ? s.cost / s.read : null;
   s.index = s.expected > 0 ? s.clicks / s.expected : null;
   s.readIndex = s.expReads > 0 ? s.read / s.expReads : null;
@@ -1158,15 +1166,17 @@ function campaignStats(C) {
 }
 
 function aggregate(list) {
-  var a = { n: list.length, cost: 0, delivered: 0, read: 0, clicks: 0, clickDel: 0, exp: 0, replies: 0, repDel: 0, overspend: 0, audience: 0 };
+  var a = { n: list.length, cost: 0, delivered: 0, read: 0, readDel: 0, clicks: 0, clickDel: 0, clickCost: 0, exp: 0, replies: 0, repDel: 0, overspend: 0, audience: 0, fresh: 0 };
   list.forEach(function (b) {
-    a.cost += b.cost || 0; a.delivered += b.delivered || 0; a.read += b.read || 0; a.audience += b.audience || 0; a.overspend += b.overspend || 0;
-    if (b.goal !== 'reply' && hasClicks(b)) { a.clicks += b.clicks; a.clickDel += b.delivered; if (b.expected !== null) a.exp += b.expected; }
+    a.cost += b.cost || 0; a.delivered += b.delivered || 0; a.audience += b.audience || 0; a.overspend += b.overspend || 0;
+    if (b.fresh) a.fresh++;
+    if (hasReads(b)) { a.read += b.read; a.readDel += b.delivered; }
+    if (b.goal !== 'reply' && hasClicks(b)) { a.clicks += b.clicks; a.clickDel += b.delivered; a.clickCost += b.cost || 0; if (b.expected !== null) a.exp += b.expected; }
     if (hasReplies(b)) { a.replies += b.replies; a.repDel += b.delivered; }
   });
   a.ctr = a.clickDel ? a.clicks / a.clickDel : null;
-  a.readRate = a.delivered ? a.read / a.delivered : null;
-  a.cpc = a.clicks ? a.cost / a.clicks : null;
+  a.readRate = a.readDel ? a.read / a.readDel : null;
+  a.cpc = a.clicks ? a.clickCost / a.clicks : null;
   a.index = a.exp > 0 ? a.clicks / a.exp : null;
   a.z = a.exp > 0 ? (a.clicks - a.exp) / Math.sqrt(a.exp) : 0;
   a.replyRate = a.repDel ? a.replies / a.repDel : null;
@@ -1424,14 +1434,18 @@ function textSim(a, b) {
   fixWords(b).forEach(function (w) { if (!B[w]) { B[w] = 1; nb++; if (A[w]) hit++; } });
   return na && nb ? hit / Math.max(na, nb) : 0;
 }
-/** base = the same brackets as sent before the fix; a bracket only counts if it moved towards the suggestion. */
+function bestSim(text, list) { return (list || []).reduce(function (m, v) { return Math.max(m, textSim(text, v)); }, 0); }
+/**
+ * A suggested bracket counts as used when some bracket of the send carries it (teams often move lines
+ * between brackets) and the send is closer to it than the earlier send (base) was.
+ */
 function fixMatch(fix, vars, base) {
   var changed = 0, matched = 0, which = [];
   fix.forEach(function (v, i) {
     if (v === null) return;
     changed++;
-    var sim = textSim(v, vars[i]);
-    if (sim >= 0.5 && (!base || sim > textSim(base[i], vars[i]))) { matched++; which.push(i + 1); }
+    var sim = bestSim(v, vars);
+    if (sim >= 0.5 && (!base || sim > bestSim(v, base))) { matched++; which.push(i + 1); }
   });
   return { changed: changed, matched: matched, which: which, used: changed > 0 && matched >= Math.ceil(changed * 0.6) };
 }
@@ -2000,7 +2014,14 @@ function campaignMessages(C) {
   function slotItems(inst, names) {
     return [].concat.apply([], inst.slots.filter(function (s) { return names.indexOf(s.name) !== -1; }).map(function (s) { return s.items; }));
   }
+  /** Raw numbers for sends whose reads and clicks are still coming in (not compared with similar sends yet). */
+  function rawRow(label, list) {
+    var del = 0, clicks = 0, cost = 0, read = 0;
+    list.forEach(function (b) { del += b.delivered || 0; clicks += b.clicks || 0; cost += b.cost || 0; read += b.read || 0; });
+    return '<tr><td class="name">' + label + '</td><td class="r num">' + list.length + '</td><td class="r num">' + pct(del ? clicks / del : null, 2) + '</td><td class="r num">' + inr(clicks ? cost / clicks : null) + '</td><td class="r num">—</td><td class="r num">' + pct(del ? read / del : null, 0) + '</td></tr>';
+  }
   function compareVerdict(bf, af) {
+    if (af.fresh && af.clickDel < 300) return { cls: 'data', label: 'Numbers still coming in', text: 'The sheet last updated ' + (af.fresh > 1 ? 'these sends' : 'this send') + ' less than a day after it went out, and reads and clicks keep arriving for about a day. The comparison appears once they settle (usually the next day).' };
     if (af.exp < 5 || af.clickDel < 300) return { cls: 'data', label: 'Too early', text: af.n + ' send' + (af.n > 1 ? 's' : '') + ' with the new brackets so far. Give it 2–3 sessions before judging.' };
     if (!bf.n || bf.index === null || af.index === null) return { cls: 'data', label: 'No baseline', text: 'There are no earlier sends in this slot to compare with.' };
     var r = af.index / bf.index;
@@ -2020,13 +2041,17 @@ function campaignMessages(C) {
       html += '<div class="testbox"><p><b>Change detected</b> <span class="verdict v-' + t.verdict.cls + '">' + esc(t.verdict.label) + '</span> ' + esc(t.verdict.text) + '</p>' +
         '<p class="small muted">Sent with the new brackets: ' + t.used.map(function (u) { return esc(dayLabel(u.b.t)) + ', ' + esc(timeLabel(u.b.t)) + ' (' + esc(u.b.name) + ': ' + u.m.matched + ' of ' + u.m.changed + ' changed brackets match, ' + bracketList(u.m.which) + ')'; }).join(' · ') + '</p>' +
         '<div class="table-wrap"><table class="list"><thead><tr><th></th><th class="r">Sends</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">vs similar</th><th class="r">Read rate</th></tr></thead><tbody>' +
-        row('Before (up to 6 weeks)', t.before) + row('After the change', t.after) + '</tbody></table></div></div>';
+        row('Before (up to 6 weeks)', t.before) + (t.after.fresh ? rawRow('After, so far (provisional)', t.used.map(function (u) { return u.b; })) : row('After the change', t.after)) + '</tbody></table></div></div>';
     }
     if (t.partly.length) {
       html += '<p class="small warnline">Partly used: ' + t.partly.map(function (u) { return esc(dayLabel(u.b.t)) + ' (bracket' + (u.m.which.length > 1 ? 's ' : ' ') + u.m.which.join(', ') + ' of ' + u.m.changed + ')'; }).join(' · ') + '. It counts as tested once most of the changed brackets go out.</p>';
     }
     t.dropped.forEach(function (d) {
-      html += '<div class="testbox"><p><b>Not sent</b> on ' + d.after.map(function (i) { return esc(dayLabel(i.date)); }).join(', ') + ', as suggested.</p>' +
+      var sessFresh = d.after.some(function (i) { return i.broadcasts.some(function (b) { return b.fresh; }); });
+      var raw = { cost: 0, clicks: 0 };
+      d.after.forEach(function (i) { i.broadcasts.forEach(function (b) { raw.cost += b.cost || 0; raw.clicks += b.goal !== 'reply' ? b.clicks || 0 : 0; }); });
+      if (sessFresh) { d.a = { cost: raw.cost, clicks: raw.clicks, cpc: raw.clicks ? raw.cost / raw.clicks : null }; }
+      html += '<div class="testbox"><p><b>Not sent</b> on ' + d.after.map(function (i) { return esc(dayLabel(i.date)); }).join(', ') + ', as suggested.' + (sessFresh ? ' <span class="faint">(that session’s numbers are still coming in)</span>' : '') + '</p>' +
         '<p class="small">That session: ' + inr(d.a.cost / d.after.length) + ' spend and ' + int(d.a.clicks / d.after.length) + ' clicks per session (' + inr(d.a.cpc) + ' per click), against ' +
         inr(d.prior.length ? d.p.cost / d.prior.length : null) + ' and ' + int(d.prior.length ? d.p.clicks / d.prior.length : null) + ' (' + inr(d.p.cpc) + ' per click) for the ' + d.prior.length + ' sessions before.</p></div>';
     });
@@ -2241,7 +2266,7 @@ function campaignMessages(C) {
     html += '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('slot', 'Session · slot') + th('msg', 'Message (doc) · template') + th('name', 'Broadcast') + th('audience', 'Audience', 1) + th('delivered', 'Delivered', 1) +
       th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('cost', 'Cost', 1) + th('cpc', 'Cost / click', 1) + th('overspend', 'Above avg', 1) + th('index', 'vs similar', 1) + '</tr></thead><tbody>' +
       shown.map(function (b) {
-        var flags = (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') + (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '');
+        var flags = (b.fresh ? ' <span class="pill">numbers still coming in</span>' : '') + (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') + (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '');
         return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + '<div class="faint small">' + esc(timeLabel(b.t)) + '</div></td>' +
           '<td class="small">' + esc(b.family === 'genie' ? sessionLabel(b) : familyLabel(b.family)) + '<div class="faint">' + esc(b.slot ? b.slot.name : b.family === 'genie' ? 'not in schedule' : '') + '</div></td>' +
           '<td class="name small">' + esc(b.family === 'genie' ? msgName(b) : '—') + (b.doc ? '<div class="faint">' + esc(b.doc.templates.join(', ')) + '</div>' : b.family === 'genie' ? '<div class="faint">not in the docs</div>' : '') + '</td>' +
