@@ -32,9 +32,9 @@ September still works now.
 |---|---|
 | **Message fixes** | For the weak messages: which [brackets] to change and which to keep, with what went in each bracket last time and what to put in instead, one card per send time. Separate pages for the Sunday webinar and for the Tuesday & Wednesday webinars, plus a page of new templates worth getting approved. Text outside the brackets (the approved template) is never changed. |
 | **Overview** | Campaign spend, clicks, cost per click and spend per session/week; how much was spent on clicks costing more than the campaign average; a ranked “What to change” list with the ₹ saved per webinar or per week; spend share vs click share for each part of the campaign (day before, webinar morning, 1–6 h before, final hour, live window, follow-ups, reply messages, big old-list pushes); and each session’s spend, clicks and cost per click. |
-| **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
+| **Slot verdicts** | For every Tuesday, Wednesday and Sunday slot: keep (top slot), keep, keep the slot but use the better message, improve the message, or cut, plus for each weak slot whether the time or the message is the problem and what to do instead, with sends, usual send time and delay, cost per send, clicks per send, click rate, cost per click, clicks vs similar sends, and what cutting it saves and loses per webinar. Includes the live-window analysis (which 5–10 minute reminders earn their cost), a suggested schedule for the next webinar, and a session-by-session heat grid. |
 | **Messages** | One card per doc message (with template names and doc slots) or off-doc message: verdict, sends, clicks, click rate, spend, cost per click, clicks vs similar, best send, every send and the full text. Reply messages are judged on replies. Cards with bracket changes link to them (*Show → With bracket changes*). |
-| **Timing** | The effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
+| **Timing** | Weak slots across all three webinars with the time-or-message call, reminders sent too close together, the effect of sending late (before live and in the live window), minutes late vs result, the same slot at different times, the best hour by stage (click rate and cost per click), and 10 AM vs 12 PM. |
 | **Schedule check** | Each session against its schedule (sent, on time, full list; moved days and clashing slots handled) and the team's non-negotiables checked on every sent message (the same checks the email alerts use). |
 | **Broadcasts** | Every campaign broadcast with session, slot, doc message and template, audience, delivered, read rate, clicks, click rate, cost, cost per click, spend above average and vs similar. Filter by webinar, session, part of the campaign or text; optionally include other campaigns. |
 | **Other campaigns** | TFP and PSP webinars, the Funnel Builder Agent launch, the 2-Day AI Income Blueprint, FlexiAgent/MCP sessions, Flexi Genie reveal webinars, faceless, community, 15 Days challenge, Q&A, sales offers, buyer onboarding, renewals and others, for reference. |
@@ -94,6 +94,30 @@ sheet last updated less than 24 hours after it went out (or marked *Still
 collecting*) is labelled “numbers still coming in” and left out of click and
 read scoring, verdicts and cost per click until the sync refreshes it; change
 results show its numbers as provisional in the meantime.
+
+### Time or message?
+
+Every slot marked Improve, Cut or Drop gets a call on whether the **send time**
+or the **message** is the problem, and what to do instead (Slot verdicts,
+Timing, Message fixes and the Overview list). Only registered-list sends count,
+and a "point" of the webinar means minutes from the start (within 3 minutes in
+the live window, 20 minutes before it).
+
+| Call | When |
+|---|---|
+| **It's the time** | The same message does well at other points of the webinar, other messages also flop at this point, or the slot lands within 75 minutes of the previous reminder (those get about a third fewer clicks than similar sends; reminders 2½ hours or more after the last one get about a quarter more) |
+| **It's the message** | The message is weak wherever it goes out, or other messages do well at this point |
+| **Time and message** | Both sides have solid evidence |
+| **It's this day's list** | The same message does well at the same point on another webinar day |
+| **It's the big-list sends** | Registered-list sends here are fine; pushes to 5,000+ lists pulled the slot down |
+| **Can't tell yet** | The message has only gone out here and nothing else has been tried here, so test new brackets first |
+
+A signal counts only with at least 4 expected clicks behind it. A call needs
+one strong signal (2+ sends and 8+ expected clicks), two weaker ones, or the
+crowding rule. For a time problem the page suggests where to send it instead:
+
+- **Live window:** if the message does well at another minute of the live window and the slot at that minute is weak, send it there instead (e.g. Sunday 11:15 AM → 11:10 AM). Otherwise drop it, since the reminders are already 5–10 minutes apart.
+- **Before live:** the free time with the best record, within 16 hours earlier and no later than 45 minutes before the start, between 8 AM and 9 PM, and 2½ hours or more from every reminder that is kept. A time with fewer than 4 sends behind it is offered only as a test, and the advice is to drop the slot. The suggested schedule shows the moves and drops.
 
 **Everything else.** Wherever a message or slot is marked Improve or Remove and
 has no fix written for it, its card or slot row shows **What to improve**,

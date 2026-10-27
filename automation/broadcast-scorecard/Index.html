@@ -213,8 +213,19 @@ table.brackets tr.change td:last-child { background: var(--accent-soft); }
 .bubble.preview .fixed { color: var(--ink-3); }
 .bubble.preview mark { background: var(--accent-soft); color: var(--ink); border-radius: 3px; padding: 0 2px; }
 .fixlinks a { margin-right: 2px; }
+a { color: var(--accent); text-underline-offset: 2px; }
 .testbox { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
 .testbox .table-wrap { background: var(--surface); }
+.diags { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 12px; }
+.diag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.diag-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.diag-head b { margin-right: 4px; }
+.diag-do { margin: 0; font-weight: 600; }
+.diag ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.diag p.small { margin: 0; }
+.diagline { margin-top: 4px; white-space: normal; max-width: 340px; }
+.diagline .verdict { margin-right: 4px; }
+.diagline.wide { max-width: none; margin: 0; }
 .advice { background: var(--warn-soft); border-radius: 8px; padding: 8px 12px; margin-top: 4px; white-space: normal; }
 .advice ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
 /* Plan check */
@@ -1228,7 +1239,7 @@ function slotVerdicts(result, tpl, bench) {
       why = 'Below similar sends overall, but one week’s message here did well (' + Math.round((best.index - 1) * 100) + '% above similar). Use that message every week.';
     } else if (a.index < 0.85) {
       v = 'improve';
-      why = Math.round((1 - a.index) * 100) + '% fewer clicks than similar sends. The timing is fine to keep; the message needs work.';
+      why = Math.round((1 - a.index) * 100) + '% fewer clicks than similar sends.';
     } else if (a.index >= 1.15 && bench && a.cpc !== null && a.cpc <= bench) {
       v = 'top';
       why = Math.round((a.index - 1) * 100) + '% more clicks than similar sends, at ₹' + a.cpc.toFixed(1) + ' per click.';
@@ -1257,6 +1268,181 @@ function liveCutPlan(rows) {
   var save = cuts.reduce(function (m, r) { return m + r.costPerSession; }, 0);
   var lose = cuts.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
   return { live: live, cost: cost, clicks: clicks, avgCpc: avgCpc, cuts: cuts, save: save, lose: lose, loseShare: clicks ? lose / clicks : 0, saveShare: cost ? save / cost : 0 };
+}
+
+/* --- weak slots: is it the time or the message? --- */
+
+// A reminder within 75 minutes of the previous one counts as crowded; a new time keeps 2½ hours from every other send.
+var CROWD_NEAR = 75, CROWD_FAR = 150, SEND_FROM = 8 * 60, SEND_TO = 21 * 60, MOVE_BACK = 16 * 60;
+var SESSION_DAY = { tue: 2, wed: 3, sun: 0 }, DAY_SHORT = { tue: 'Tue', wed: 'Wed', sun: 'Sun' };
+
+function clock12(mins) { var m = ((Math.round(mins) % 1440) + 1440) % 1440, h = Math.floor(m / 60); return (h % 12 || 12) + (m % 60 ? ':' + String(m % 60).padStart(2, '0') : '') + (h < 12 ? ' AM' : ' PM'); }
+function scoredSends(list) { return list.filter(function (b) { return b.goal !== 'reply' && hasClicks(b) && b.index !== null && (b.delivered || 0) >= 200; }); }
+function indexOf(list) { var c = 0, e = 0; list.forEach(function (b) { c += b.clicks; e += b.expected; }); return { n: list.length, clicks: c, exp: e, index: e > 0 ? c / e : null }; }
+function sendName(b) { return b.doc ? b.doc.name : b.cmsg ? b.cmsg.hook : b.name; }
+function shortDate(t) { var d = new Date(t * 60000); return WEEKDAY_NAMES[d.getUTCDay()].slice(0, 3) + ' ' + d.getUTCDate() + ' ' + MONTH_NAMES[d.getUTCMonth()]; }
+function median(xs) { var s = xs.slice().sort(function (a, b) { return a - b; }); return s.length ? s[Math.floor(s.length / 2)] : null; }
+function pctWord(idx) { var d = Math.round((idx - 1) * 100); return (d >= 0 ? '+' : '−') + Math.abs(d) + '%'; }
+
+/** Minutes since the previous send of the same session to the same kind of list (sends within 2 minutes of each other go to different lists). */
+function markGaps(C) {
+  var bySession = {};
+  C.forEach(function (b) { b.gapPrev = null; b.prevSend = null; if (b.session) (bySession[b.session.t] = bySession[b.session.t] || []).push(b); });
+  Object.keys(bySession).forEach(function (k) {
+    var list = bySession[k];
+    list.forEach(function (b) {
+      list.forEach(function (x) {
+        if (x.t < b.t - 2 && x.list === b.list && x.missedish === b.missedish && (!b.prevSend || x.t > b.prevSend.t)) b.prevSend = x;
+      });
+      if (b.prevSend) b.gapPrev = b.t - b.prevSend.t;
+    });
+  });
+}
+
+/** How much crowding costs, and how each send hour does, for reminders before live time to registered lists. */
+function timingEffects(C) {
+  var pre = scoredSends(C).filter(function (b) { return b.session && b.t < b.session.t && !isLiveTime(b.t) && b.list === 'Registered list'; });
+  var hours = {};
+  for (var h = 0; h < 24; h++) {
+    var x = indexOf(pre.filter(function (b) { return Math.floor((b.t - dayStart(b.t)) / 60) === h; }));
+    hours[h] = { n: x.n, index: x.index, score: (x.n * (x.index === null ? 1 : x.index) + 6) / (x.n + 6) };   // few sends: pulled towards average
+  }
+  var near = indexOf(pre.filter(function (b) { return b.gapPrev !== null && b.gapPrev > 15 && b.gapPrev <= CROWD_NEAR; }));
+  var far = indexOf(pre.filter(function (b) { return b.gapPrev !== null && b.gapPrev >= CROWD_FAR; }));
+  return { scored: scoredSends(C), hours: hours, near: near, far: far, crowdingHurts: near.n >= 8 && far.n >= 8 && near.index !== null && far.index !== null && near.index < 0.85 && far.index >= near.index * 1.25 };
+}
+
+/** Where a slot sits, in minutes from midnight on the session day (negative = days before), and its session's start. */
+function slotPos(row) { return row.slot.offset * 1440 + minutesOf(row.slot.time); }
+function slotStart(row) { var b = row.items.filter(function (x) { return x.session; })[0]; return b ? b.session.t - b.session.date : null; }
+function posLabel(pos, tpl) { return WEEKDAY_NAMES[(SESSION_DAY[tpl] + Math.floor(pos / 1440) + 7) % 7] + ' ' + clock12(pos); }
+function relLabel(rel) { return rel === 0 ? 'right at the start' : Math.abs(rel) + ' min ' + (rel > 0 ? 'after' : 'before') + ' the start'; }
+
+/**
+ * For a weak slot: is the send time or the message the problem?
+ * Evidence (registered lists only): the same message at other points of the webinar, other messages
+ * at this point, how soon it follows the previous reminder, and whether big-list sends drag it down.
+ * "Point" = minutes from the session start, within 3 min in the live window and 20 min before it.
+ */
+function slotDiagnosis(row, tpl, rows, liveCuts, fx) {
+  var items = scoredSends(row.items), all = indexOf(items);
+  var cut = row.verdict === 'cut' || liveCuts.indexOf(row) !== -1;
+  if (!items.length || all.exp < 3 || row.slot.goal === 'reply') return null;
+  if (['improve', 'cut', 'swap'].indexOf(row.verdict) === -1 && !cut) return null;
+  var ev = [], time = 0, message = 0, pos = slotPos(row), start = slotStart(row), live = row.live;
+  var weight = function (x) { return x.exp >= 8 && x.n >= 2 ? 2 : x.exp >= 4 ? 1 : 0; };
+
+  // 1. Big-list pushes in an otherwise fine slot.
+  var regItems = items.filter(function (b) { return b.list === 'Registered list'; }), reg = indexOf(regItems);
+  var big = items.filter(function (b) { return b.list !== 'Registered list'; });
+  if (big.length && reg.exp >= 3 && reg.index >= 0.9 && all.index < 0.85) {
+    return { cause: 'audience', cut: cut, ev: [{ side: 'audience', text: 'Sends to registered lists here get ' + pctWord(reg.index) + ' vs similar sends; ' + big.length + ' send' + (big.length > 1 ? 's' : '') + ' to a 5,000+ list (' +
+      big.map(function (x) { return shortDate(x.t); }).join(', ') + ') pulled the slot down.' }], move: { kind: 'keep' } };
+  }
+  if (!regItems.length || reg.exp < 3) return null;
+
+  var missed = regItems.filter(function (b) { return b.missedish; }).length * 2 > regItems.length;
+  var relOf = function (b) { return b.t - b.session.t; };
+  var rel = median(regItems.filter(function (b) { return b.session; }).map(relOf)), near = live ? 3 : 20;
+  var here = function (b) { return row.items.indexOf(b) !== -1; };
+  var pool = fx.scored.filter(function (b) { return b.session && b.list === 'Registered list' && b.missedish === missed && !here(b); });
+  var where = function (b) { return b.slot ? DAY_SHORT[templateFor(b.session.date)] + ' ' + clock12(b.slot.at - dayStart(b.slot.at)) : shortDate(b.t) + ' ' + clock12(b.t - dayStart(b.t)); };
+
+  // 2. The message used most here, sent at other points of the webinar.
+  var byMsg = {};
+  regItems.forEach(function (b) { if (b.cmsg) { var g = byMsg[b.cmsg.id] = byMsg[b.cmsg.id] || { m: b.cmsg, exp: 0, sends: [] }; g.exp += b.expected; g.sends.push(b); } });
+  var main = Object.keys(byMsg).map(function (k) { return byMsg[k]; }).sort(function (a, b) { return b.exp - a.exp; })[0];
+  var bestElse = null;
+  if (main) {
+    var same = pool.filter(function (b) { return b.cmsg === main.m; });
+    var places = {};
+    same.forEach(function (b) { var k = where(b); (places[k] = places[k] || []).push(b); });
+    Object.keys(places).forEach(function (k) {
+      var g = places[k], x = indexOf(g);
+      if (g.length >= 2 && x.exp >= 4 && x.index >= 1 && (!bestElse || x.index > bestElse.index)) bestElse = { index: x.index, n: g.length, rel: median(g.map(relOf)), where: k };
+    });
+    var other = indexOf(same.filter(function (b) { return Math.abs(relOf(b) - rel) > near; }));
+    var hereIdx = indexOf(main.sends).index, w = weight(other);
+    if (w && other.index >= 0.95 && hereIdx < 0.9) {
+      time += w;
+      ev.push({ side: 'time', text: sendName(main.sends[0]) + ' gets ' + pctWord(other.index) + ' vs similar sends at other points of the webinar (' + other.n + ' send' + (other.n > 1 ? 's' : '') + ') but ' + pctWord(hereIdx) + ' here.' });
+    } else if (w && other.index < 0.85) {
+      message += w;
+      ev.push({ side: 'message', text: sendName(main.sends[0]) + ' is weak at other points of the webinar too (' + pctWord(other.index) + ' vs similar sends across ' + other.n + ' send' + (other.n > 1 ? 's' : '') + ').' });
+    }
+  }
+
+  // 3. Other messages at this point of the webinar (this slot and the same minute on other webinar days).
+  var others = pool.concat(regItems).filter(function (b) { return b.session && (!main || b.cmsg !== main.m) && Math.abs(relOf(b) - rel) <= near; });
+  var oi = indexOf(others), w2 = weight(oi);
+  if (w2 && oi.index >= 1) {
+    var groups = {};
+    others.forEach(function (b) { var k = sendName(b); (groups[k] = groups[k] || []).push(b); });
+    var top = Object.keys(groups).map(function (k) { return { name: k, x: indexOf(groups[k]), at: where(groups[k][0]) }; }).filter(function (g) { return g.x.exp >= 3; })
+      .sort(function (a, b) { return b.x.index - a.x.index; })[0];
+    message += w2;
+    ev.push({ side: 'message', text: 'The time can work: other messages at this point of the webinar get ' + pctWord(oi.index) + ' vs similar sends (' + oi.n + ' send' + (oi.n > 1 ? 's' : '') + ')' +
+      (top ? ', best ' + top.name + ' at ' + pctWord(top.x.index) + ' (' + top.at + ')' : '') + '.' });
+  } else if (w2 && oi.index < 0.85) {
+    time += w2;
+    ev.push({ side: 'time', text: 'Other messages at this point of the webinar did poorly too (' + pctWord(oi.index) + ' vs similar sends across ' + oi.n + ' send' + (oi.n > 1 ? 's' : '') + ').' });
+  }
+
+  // 4. Crowding: before live time, how soon it follows the previous reminder.
+  var gap = median(regItems.map(function (b) { return b.gapPrev; }).filter(function (g) { return g !== null; }));
+  var prev = regItems.filter(function (b) { return b.prevSend; }).map(function (b) { return b.prevSend; })[0];
+  if (!live && gap !== null && gap > 15 && gap <= CROWD_NEAR && fx.crowdingHurts) {
+    time += 2;
+    ev.push({ side: 'time', text: 'It goes out about ' + Math.round(gap) + ' min after the previous reminder' + (prev && prev.slot ? ' (' + prev.slot.name.replace(/^.*· /, '') + ')' : '') + '. Reminders that close to the last one get ' +
+      pctWord(fx.near.index) + ' vs similar sends; with 2½ hours or more in between they get ' + pctWord(fx.far.index) + '.' });
+  }
+
+  var cause = time >= 2 && time > message ? 'time' : message >= 2 && message > time ? 'message' : time >= 2 && message >= 2 ? 'both' : 'unclear';
+  // It does well at this same point on other days: then it's this day's list, not the clock.
+  if ((cause === 'time' || cause === 'unclear') && bestElse && Math.abs(bestElse.rel - rel) <= near) {
+    cause = 'list';
+    ev.push({ side: 'list', text: 'It does well at this same point on ' + bestElse.where + ' (' + pctWord(bestElse.index) + ' vs similar sends, ' + bestElse.n + ' sends).' });
+  }
+  var res = { cause: cause, cut: cut, ev: ev, gap: gap, rel: rel, bestElse: bestElse, move: { kind: cause === 'message' ? 'rewrite' : cause === 'list' ? 'keep' : 'test' } };
+  if (cause !== 'time' && cause !== 'both') return res;
+
+  // Where to send it instead: the point where this message works, if that slot is weak; otherwise a free time nearby.
+  if (bestElse && start !== null) {
+    var target = start + bestElse.rel;
+    var there = rows.filter(function (r) { return r !== row && r.items.length && Math.abs(slotPos(r) - target) <= 3 && !r.slot.missed; })[0];
+    if (there && (there.verdict === 'cut' || liveCuts.indexOf(there) !== -1 || (there.a.index !== null && there.a.index < 0.9))) {
+      res.move = { kind: 'swap', row: there, pos: slotPos(there), label: posLabel(slotPos(there), tpl), msg: there.items.length ? sendName(there.items[0]) : '',
+        why: 'This message gets ' + pctWord(bestElse.index) + ' vs similar sends ' + relLabel(bestElse.rel) + ' (' + bestElse.where + '). The ' + clock12(slotPos(there)) + ' slot is weak with its current message.' };
+      return res;
+    }
+  }
+  if (live) { res.move = { kind: 'drop', why: 'The live window already has a reminder every 5–10 minutes, so there is no better minute to move it to.' }; return res; }
+  var kept = rows.filter(function (r) { return r !== row && r.items.length && !r.slot.missed && r.verdict !== 'cut' && liveCuts.indexOf(r) === -1; }).map(slotPos);
+  var latest = start !== null ? start - 45 : pos + 120, cands = [];
+  for (var c = Math.ceil((pos - MOVE_BACK) / 30) * 30; c <= latest; c += 30) {
+    var m = ((c % 1440) + 1440) % 1440;
+    if (m < SEND_FROM || m > SEND_TO || isLiveTime(m) || Math.abs(c - pos) < 60) continue;
+    if (kept.some(function (p) { return Math.abs(c - p) < CROWD_FAR; })) continue;
+    var hr = fx.hours[Math.floor(m / 60)];
+    cands.push({ pos: c, score: hr.score, n: hr.n, index: hr.index });
+  }
+  cands.sort(function (a, b) { return b.score - a.score || Math.abs(a.pos - pos) - Math.abs(b.pos - pos); });
+  var pick = cands[0];
+  if (!pick) {
+    res.move = { kind: 'drop', why: 'There is no free time nearby: every time from ' + posLabel(Math.max(pos - MOVE_BACK, kept.filter(function (p) { return p < pos; }).sort(function (a, b) { return b - a; })[0] || pos - MOVE_BACK), tpl) + ' to the start is within 2½ hours of another reminder.' };
+    return res;
+  }
+  var before = kept.filter(function (p) { return p < pick.pos; }).sort(function (a, b) { return b - a; })[0], after = kept.filter(function (p) { return p > pick.pos; }).sort(function (a, b) { return a - b; })[0];
+  var hrs = function (d) { var h = Math.round(d / 30) / 2; return h >= 10 ? Math.round(h) + ' hours' : Math.floor(h) + (h % 1 ? '½' : '') + (h === 1 ? ' hour' : ' hours'); };
+  var proven = pick.n >= 4 && pick.index >= 0.9, hourLabel12 = clock12(Math.floor(((pick.pos % 1440) + 1440) % 1440 / 60) * 60);
+  var at = { pos: pick.pos, label: posLabel(pick.pos, tpl),
+    why: 'It is ' + (before !== undefined ? hrs(pick.pos - before) + ' after the ' + posLabel(before, tpl) + ' send' : 'the first send') + (after !== undefined ? ' and ' + hrs(after - pick.pos) + ' before the ' + posLabel(after, tpl) + ' send' : '') + '.' +
+      (proven ? ' Reminders sent around ' + hourLabel12 + ' get ' + pctWord(pick.index) + ' vs similar sends (' + pick.n + ' sends).' :
+        ' Only ' + (pick.n ? pick.n + ' send' + (pick.n > 1 ? 's have' : ' has') + ' gone out around ' + hourLabel12 + ' so far (' + pctWord(pick.index) + ' vs similar sends)' : 'nothing has gone out around ' + hourLabel12 + ' so far') + ', so run it as a test for two weeks and compare.') };
+  // A time nobody has tried is a test, not a fix: then the advice is to drop the slot, with the new time as the option.
+  res.move = proven ? { kind: 'move', pos: at.pos, label: at.label, why: at.why } :
+    { kind: 'drop', why: 'No proven better time nearby.', alt: at };
+  return res;
 }
 
 /** Recognisable names for the doc messages, taken from their own copy. */
@@ -1375,11 +1561,14 @@ var FIXES = [
     fixes: { pic7: [null, null, null, null, null, '🔗 Register here: https://sb.flexifunnels.com/funnel-agent ', '🚀 You’ll watch a real idea go live, then get 2 days of access to the AI Business Launcher Tool (opens Sunday 9 AM) to build yours alongside us.'] } },
   { id: 'sun-1000', days: ['sun'], slots: ['Morning · 10 AM'], msg: /Just 60 mins away/, order: 600, when: 'Sunday 10 AM',
     why: 'Best: don’t send it. It says the same as the 10:30 AM “30 min away” message and is the weakest Sunday-morning send. If you want a 10 AM message, use it to get people logged in to the tool instead.',
-    fixes: { hi6: ['$FirstName, is your AI tool open? ✅', 'session goes LIVE at 11 AM, in 60 minutes', null, null, '👉 Log in to your AI tool now so it’s open when we start: ' + TOOL + ' ', 'We build a business live and you build yours alongside us. Join at 10:55 AM.'] } },
+    fixes: { hi6: ['$FirstName, is your AI tool open? ✅', 'session goes LIVE at 11 AM, in 60 minutes', null, null, '👉 Log in to your AI tool now so it’s open when we start: ' + TOOL + ' ', 'We build a business live and you build yours alongside us. Join at 10:55 AM.'] },
+    // If it moves to the evening before (see Time or message?), the time words have to change.
+    moved: { hi6: ['$FirstName, set your alarm for tomorrow ⏰', 'session is tomorrow, Sunday, at 11 AM IST', null, null, '🛠️ Your AI tool access opens at 9 AM tomorrow, two hours before we go live, so you can build alongside us.', 'Join at 10:55 AM to see the build from the very start.'] } },
   { id: 'sun-1030', days: ['sun'], slots: ['Morning · 10:30 AM'], msg: /Just 30 min away/, order: 630, when: 'Sunday 10:30 AM',
     why: 'On Tuesday and Wednesday at 7 PM this message is fine. On Sunday at 10:30 AM it is the fourth reminder of the morning and gets fewer clicks than similar sends. Bracket 3 only repeats the session title, and bracket 6 ends on what people can’t do (“No replay. No recording.”). Use bracket 3 to say what they will see and do, and bracket 6 to say when to join.',
     fixes: { hi6: ['$FirstName, your tool link and joining link are inside 👇', null, 'In the first 10 minutes we put one real business idea online, live from a phone, and you build yours alongside us.', null, null, '⏰ Join at 10:55 AM to see the build from the very start.'] } },
-  { id: 'sun-1055', days: ['sun'], slots: ['Morning · 10:55 AM'], msg: MSG_ONCE, order: 655, when: 'Sunday 10:55 AM', why: WHY_ONCE, fixes: FIX_ONCE },
+  { id: 'sun-1055', days: ['sun'], slots: ['Morning · 10:55 AM'], msg: MSG_ONCE, order: 655, when: 'Sunday 10:55 AM', info: true,
+    why: 'Keep sending it as it is. On the registered list this message does well at 10:55 AM; the slot only looked weak because of one push to the big old list on 30 Aug. Don’t use this slot for big-list pushes.' },
   { id: 'sun-1110', days: ['sun'], slots: ['Morning · 11:10 AM'], msg: MSG_INSANE, order: 670, when: 'Sunday 11:10 AM', why: WHY_INSANE, fixes: FIX_INSANE, notes: [NOTE_INSANE] },
   { id: 'sun-1115', days: ['sun'], slots: ['Morning · 11:15 AM'], msg: /One final chance/, order: 675, when: 'Sunday 11:15 AM',
     why: 'On Tuesday and Wednesday this message does well at 7:40 PM. On Sunday at 11:15 AM it is the fourth live reminder in 20 minutes and does worse. Keep the bonus angle, but say the bonuses are coming up next rather than “last chance” 15 minutes in.',
@@ -1592,6 +1781,9 @@ function campaignMessages(C) {
     state.fixCards = FIXES.map(resolveFix);
     state.slots = {}; state.live = {};
     ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k] = slotVerdicts(state.result, k, state.stats.bench); state.live[k] = liveCutPlan(state.slots[k]); });
+    markGaps(state.C);
+    state.fx = timingEffects(state.C);
+    ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k].forEach(function (r) { r.diag = slotDiagnosis(r, k, state.slots[k], state.live[k].cuts, state.fx); }); });
     state.lifts = featureLifts(state.C.filter(function (b) { return b.goal !== 'reply'; }));
     state.fixCards.forEach(function (c) { c.test = testFix(c); });
     var latestT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
@@ -1718,7 +1910,18 @@ function campaignMessages(C) {
       if (lp.cuts.length) acts.push({ tone: 'warn', save: lp.save, lose: lp.lose, text: SCHED_SHORT[k] + ' webinar: drop the ' + lp.cuts.map(function (r) { return r.slot.name.replace(/^.*· /, ''); }).join(', ') + ' live reminder' + (lp.cuts.length > 1 ? 's' : ''),
         detail: 'Saves about ' + inr(lp.save) + ' per webinar (' + pct(lp.saveShare, 0) + ' of live-window spend) and loses about ' + int(lp.lose) + ' clicks (' + pct(lp.loseShare, 0) + ' of live-window clicks). These reminders cost ' + lp.cuts.map(function (r) { return inr(r.clicksPerSession ? r.costPerSession / r.clicksPerSession : null); }).join(', ') + ' per click, against ' + inr(lp.avgCpc) + ' for the live window as a whole.', tab: 'slots', sched: k });
       state.slots[k].filter(function (r) { return r.verdict === 'cut' && !r.live; }).forEach(function (r) {
-        acts.push({ tone: 'warn', save: r.costPerSession, lose: r.clicksPerSession, text: SCHED_SHORT[k] + ' webinar: cut or rewrite the ' + r.slot.name + ' slot', detail: r.why + ' Costs about ' + inr(r.costPerSession) + ' per webinar.', tab: 'slots', sched: k });
+        var d = r.diag, ev = d ? ' ' + d.ev.map(function (e) { return e.text; }).join(' ') : '';
+        if (d && d.cause === 'audience') { acts.push({ tone: 'good', text: SCHED_SHORT[k] + ' webinar: keep the ' + r.slot.name + ' slot, for registered lists only', detail: 'The slot looks weak only because of big-list pushes.' + ev, tab: 'slots', sched: k }); return; }
+        var title = !d || d.cause === 'unclear' || d.cause === 'list' ? 'cut or rewrite the ' + r.slot.name + ' slot' :
+          d.cause === 'message' ? 'change the message in the ' + r.slot.name + ' slot' :
+          d.move.kind === 'move' ? 'move the ' + r.slot.name + ' slot to ' + d.move.label :
+          'drop the ' + r.slot.name + ' slot: ' + (d.cause === 'both' ? 'both the time and the message are weak' : 'it’s the time, not the message');
+        acts.push({ tone: 'warn', save: r.costPerSession, lose: r.clicksPerSession, text: SCHED_SHORT[k] + ' webinar: ' + title,
+          detail: r.why + ev + (d && d.move.alt ? ' To keep this reminder, test ' + d.move.alt.label + ' instead.' : '') + ' Costs about ' + inr(r.costPerSession) + ' per webinar.', tab: 'slots', sched: k });
+      });
+      // A message that works 10 minutes in, sent 15 minutes in: move it into the weaker slot.
+      state.slots[k].filter(function (r) { return r.diag && r.diag.move.kind === 'swap'; }).forEach(function (r) {
+        acts.push({ tone: 'good', save: state.live[k].cuts.indexOf(r) === -1 ? r.costPerSession : 0, text: SCHED_SHORT[k] + ' webinar: ' + diagDo(r, k).text.replace(/^S/, 's'), detail: r.diag.move.why, tab: 'slots', sched: k });
       });
     });
     var current = function (g) { return g.s.sends >= 2 || g.sends[g.sends.length - 1].t >= state.lastT - 28 * 1440; };
@@ -1814,6 +2017,7 @@ function campaignMessages(C) {
     var spend = rows.reduce(function (m, r) { return m + r.costPerSession; }, 0), clicks = rows.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
     html += '<div class="intro"><h2>' + esc(SCHEDULES[k].label) + ': keep, change or cut each slot</h2><p class="muted">Judged on ' + insts.length + ' session' + (insts.length > 1 ? 's' : '') + ' (' + esc(insts.map(function (i) { return dayLabel(i.date); }).join(', ')) + '). A typical session costs ' +
       inr(spend) + ' across its slots and brings about ' + int(clicks) + ' clicks (' + inr(clicks ? spend / clicks : null) + ' per click; campaign average ' + inr(bench) + '). Click a row to see the broadcasts.</p></div>';
+    html += diagSection(k);
     html += '<div class="table-wrap"><table class="list slots"><thead><tr><th>Slot</th><th style="min-width:250px">Verdict</th><th class="r">Sent</th><th>Usually sent</th><th class="r">Cost / send</th><th class="r">Clicks / send</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">vs similar</th><th class="r">If cut</th></tr></thead><tbody>';
     var lastOff = null;
     rows.forEach(function (r) {
@@ -1827,7 +2031,8 @@ function campaignMessages(C) {
       var perSend = r.items.length ? 1 / r.items.length : 0;
       html += '<tr' + (r.items.length ? ' class="click" data-ids="' + esc(r.items.map(function (b) { return b.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
         '<td class="name"><b>' + esc(r.slot.name) + '</b>' + (r.live ? ' <span class="pill">live window</span>' : '') + '<div class="faint small">' + esc(r.slot.audience || '') + ' · ' + esc(String(r.slot.template || '').split(',')[0]) + '</div></td>' +
-        '<td class="vcell">' + slotPill(r.verdict) + '<div class="small why2">' + esc(r.why) + '</div>' + slotRewrite(r) + (r.best && (r.verdict === 'swap' || r.verdict === 'improve' || r.verdict === 'top' || r.verdict === 'keep') ? '<div class="faint small">Best here: ' + esc(msgName(r.best)) + ' (' + esc(dayLabel(r.best.t)) + ', ' + pct(rate(r.best), 2) + ')</div>' : '') + '</td>' +
+        '<td class="vcell">' + slotPill(r.verdict) + '<div class="small why2">' + esc(r.why) + '</div>' +
+        (r.diag ? '<div class="small diagline">' + causePill(r.diag) + ' ' + diagDoHtml(r, k) + '</div>' + (['message', 'both', 'unclear'].indexOf(r.diag.cause) !== -1 && !fixCardFor(r, k) ? adviceHtml(r.items, judge(r.items), 2) : '') : slotRewrite(r)) + (r.best && (r.verdict === 'swap' || r.verdict === 'improve' || r.verdict === 'top' || r.verdict === 'keep') ? '<div class="faint small">Best here: ' + esc(msgName(r.best)) + ' (' + esc(dayLabel(r.best.t)) + ', ' + pct(rate(r.best), 2) + ')</div>' : '') + '</td>' +
         '<td class="r num">' + r.sessionsSent + ' of ' + r.sessions + '</td>' +
         '<td class="small">' + (r.items.length ? esc(avgClock) + (r.avgDelay !== null && Math.abs(r.avgDelay) >= 5 ? ' <span class="faint">(' + (r.avgDelay > 0 ? '+' : '−') + Math.round(Math.abs(r.avgDelay)) + 'm)</span>' : '') : '—') + '</td>' +
         '<td class="r num">' + inr(a.cost * perSend) + '</td>' +
@@ -1860,17 +2065,74 @@ function campaignMessages(C) {
     }
 
     // Recommended schedule
-    var keep = rows.filter(function (r) { return r.items.length && r.verdict !== 'cut' && lp.cuts.indexOf(r) === -1; });
-    var dropped = rows.filter(function (r) { return r.items.length && (r.verdict === 'cut' || lp.cuts.indexOf(r) !== -1); });
+    // Slots the time-or-message check says to drop, or whose message moves to another slot.
+    var swapIn = {};
+    rows.forEach(function (r) { if (r.diag && r.diag.move.kind === 'swap') swapIn[r.diag.move.row.idx] = r; });
+    var timeDrop = function (r) { return r.diag && (r.diag.cause === 'time' || r.diag.cause === 'both') && (r.diag.move.kind === 'swap' || r.diag.move.kind === 'drop'); };
+    var keep = rows.filter(function (r) { return r.items.length && r.verdict !== 'cut' && lp.cuts.indexOf(r) === -1 && !timeDrop(r); });
+    var dropped = rows.filter(function (r) { return r.items.length && (r.verdict === 'cut' || lp.cuts.indexOf(r) !== -1 || timeDrop(r)); });
     var newSpend = keep.reduce(function (m, r) { return m + r.costPerSession; }, 0), newClicks = keep.reduce(function (m, r) { return m + r.clicksPerSession; }, 0);
     html += '<section class="section"><div class="section-head"><div><h2>Suggested schedule for the next ' + esc(SCHED_SHORT[k]) + ' webinar</h2><p class="muted small">' +
       'About ' + inr(newSpend) + ' per session instead of ' + inr(spend) + ' (' + (spend ? '−' + pct((spend - newSpend) / spend, 0) : '') + '), keeping about ' + int(newClicks) + ' of ' + int(clicks) + ' clicks (' + pct(clicks ? newClicks / clicks : null, 0) + ').</p></div></div>' +
       '<ol class="plan-list">' + rows.filter(function (r) { return r.items.length || r.verdict === 'none'; }).map(function (r) {
-        var drop = dropped.indexOf(r) !== -1;
+        var drop = dropped.indexOf(r) !== -1, from = swapIn[r.idx], mv = r.diag && r.diag.cause !== 'audience' ? r.diag.move : null;
         var use = r.best && r.best.index >= 1 ? msgName(r.best) : (r.slot.plan ? docName(r.slot.plan) : '');
-        return '<li class="' + (drop ? 'drop' : '') + '"><span class="t">' + esc(r.slot.name) + '</span><span>' + (drop ? 'Drop' : r.verdict === 'none' ? 'Not sent so far' : 'Send ' + esc(use)) + '</span></li>';
+        var what = from ? 'Send ' + esc(msgName(from.items[0])) + ' <span class="faint">(moved from ' + esc(shortSlot(from)) + ')</span>' :
+          drop ? 'Drop' + (mv && mv.kind === 'swap' ? ' <span class="faint">(its message moves to ' + esc(shortSlot(mv.row)) + ')</span>' : mv && mv.alt ? ' <span class="faint">(or test it at ' + esc(mv.alt.label) + ')</span>' : '') :
+          mv && mv.kind === 'move' ? 'Move to ' + esc(mv.label) + ': send ' + esc(use) :
+          r.verdict === 'none' ? 'Not sent so far' : 'Send ' + esc(use);
+        return '<li class="' + (drop ? 'drop' : '') + '"><span class="t">' + esc(r.slot.name) + '</span><span>' + what + '</span></li>';
       }).join('') + '</ol></section>';
     $('#main').innerHTML = html + '</div>';
+  }
+
+  // ---------- Time or message? ----------
+  var CAUSES = {
+    time: { label: 'It’s the time', cls: 'improve' },
+    message: { label: 'It’s the message', cls: 'improve' },
+    both: { label: 'Time and message', cls: 'remove' },
+    list: { label: 'It’s this day’s list', cls: 'keep' },
+    audience: { label: 'It’s the big-list sends', cls: 'keep' },
+    unclear: { label: 'Can’t tell yet', cls: 'data' }
+  };
+  function causePill(d) { var c = CAUSES[d.cause]; return '<span class="verdict v-' + c.cls + '">' + esc(c.label) + '</span>'; }
+  function fixCardFor(r, k) { return (state.fixCards || []).filter(function (c) { return (c.f.slots || []).indexOf(r.slot.name) !== -1 && c.f.days.indexOf(k) !== -1; })[0] || null; }
+  function shortSlot(r) { return r.slot.name.replace(/^.*· /, ''); }
+  /** What to do about a weak slot: one sentence, plus the bracket-change card when the message is part of the problem. */
+  function diagDo(r, k) {
+    var d = r.diag, mv = d.move, card = fixCardFor(r, k), info = card && card.f.info;
+    var dropping = (d.cut && d.cause !== 'message') || ((d.cause === 'time' || d.cause === 'both') && mv.kind === 'drop');
+    var fix = card && !info && !dropping && ['message', 'both', 'list', 'unclear'].indexOf(d.cause) !== -1 ? card.f.id : null;
+    var text;
+    if (d.cause === 'audience') text = 'Keep the time and the message. Send it to registered lists only, not to big old lists.';
+    else if (d.cause === 'message') text = d.cut ? 'Change the message, or drop the slot.' : 'Keep the time, change the message.';
+    else if (d.cause === 'list') text = d.cut ? 'Drop it. The message works at this point on other days, but this list has had enough reminders by now.' : 'Keep the time. Change the opening brackets so they speak to this day’s list.';
+    else if (d.cause === 'unclear') text = d.cut ? 'Drop it: it doesn’t earn its cost.' : 'Test new brackets first (cheaper than moving the slot). If that doesn’t help in two weeks, drop it.';
+    else if (mv.kind === 'swap') text = 'Send ' + msgName(r.items[0]) + ' at ' + shortSlot(mv.row) + ' instead of ' + mv.msg + ', and stop sending at ' + shortSlot(r) + '.';
+    else if (mv.kind === 'move') text = 'Move it to ' + mv.label + (d.cause === 'both' ? ' and change the brackets' : '') + '. Update any time words in the brackets to match.';
+    else text = 'Drop it' + (r.costPerSession ? ' (saves about ' + inr(r.costPerSession) + ' per webinar)' : '') + '.' + (mv.alt ? ' If you want to keep this reminder, test it at ' + mv.alt.label + ' instead.' : '');
+    return { text: text, fix: fix };
+  }
+  function diagDoHtml(r, k, noFix) {
+    var x = diagDo(r, k);
+    return esc(x.text) + (x.fix && !noFix ? ' <a href="#" data-fix="' + x.fix + '">See the bracket changes</a>' : '');
+  }
+  function diagCard(r, k) {
+    var d = r.diag, mv = d.move, lp = state.live[k];
+    var note = mv.kind === 'swap' || mv.kind === 'move' ? mv.why : mv.kind === 'drop' && (d.cause === 'time' || d.cause === 'both') ? (mv.alt ? mv.why + ' The nearest free time is ' + mv.alt.label + ': ' + mv.alt.why.replace(/^It/, 'it') : mv.why) : '';
+    return '<article class="diag"><div class="diag-head"><b>' + esc(r.slot.name) + '</b>' + (lp.cuts.indexOf(r) !== -1 && r.verdict !== 'cut' ? '<span class="verdict v-remove">Drop</span>' : slotPill(r.verdict)) + causePill(d) + '</div>' +
+      '<p class="diag-do">' + diagDoHtml(r, k) + '</p>' +
+      (d.ev.length ? '<ul class="small">' + d.ev.map(function (e) { return '<li><b>' + esc({ time: 'Time', message: 'Message', list: 'List', audience: 'List' }[e.side]) + '</b> · ' + esc(e.text) + '</li>'; }).join('') + '</ul>' :
+        '<p class="small muted">This message has only gone out at this point of the webinar, and no other message has been tried here, so the data can’t separate the two yet.</p>') +
+      (note ? '<p class="small muted">' + esc(note) + '</p>' : '') + '</article>';
+  }
+  function diagSection(k) {
+    var rows = state.slots[k].filter(function (r) { return r.diag; });
+    if (!rows.length) return '';
+    return '<section class="section"><div class="section-head"><div><h2>Weak slots: is it the time or the message?</h2><p class="muted small">For each slot marked Improve, Cut or Drop. ' +
+      '<b>Time</b>: the same message does well at other points of the webinar, other messages also flop here, or it lands within 75 minutes of the previous reminder. ' +
+      '<b>Message</b>: the message is weak wherever it goes out, or other messages do well at this point. Only registered-list sends count.</p></div></div>' +
+      '<div class="diags">' + rows.map(function (r) { return diagCard(r, k); }).join('') + '</div></section>';
   }
 
   function slotRewrite(r) {
@@ -1950,16 +2212,25 @@ function campaignMessages(C) {
     else if (someCut) action = verdicts.map(function (v) { return SCHED_SHORT[v.day] + ': ' + (v.cut ? 'don’t send it.' : changeLine(f.fixes[main]).replace(/^C/, 'c')); }).join(' ');
     else action = main ? changeLine(f.fixes[main]) : '';
     var mainSend = main ? latestOn(card, main) : null;
+    // The time-or-message check for this card's slot(s).
+    var diags = f.slots ? f.days.map(function (day) { return { day: day, r: state.slots[day].filter(function (r) { return f.slots.indexOf(r.slot.name) !== -1 && r.diag; })[0] }; }).filter(function (x) { return x.r; }) : [];
+    if (diags.length && diags.every(function (x) { return x.r.diag.cause === 'audience'; })) action = 'No change needed to the brackets.';
+    var diagHtml = diags.map(function (x) {
+      return '<p class="small diagline wide"><b>' + (diags.length > 1 ? esc(SCHED_SHORT[x.day]) + ': ' : '') + 'Time or message?</b> ' + causePill(x.r.diag) + ' ' + diagDoHtml(x.r, x.day, true) +
+        (x.r.diag.ev.length ? ' <span class="muted">' + esc(x.r.diag.ev.map(function (e) { return e.text; }).join(' ')) + '</span>' : '') + '</p>';
+    }).join('');
     var html = '<article class="fix" id="fix-' + f.id + '"><div class="fix-head"><span class="when">' + esc(f.when) + '</span>' +
       (f.slots ? '<span class="small faint">Slot:</span>' : '') + verdicts.map(function (v) { return v.html ? '<span class="small">' + (verdicts.length > 1 ? esc(SCHED_SHORT[v.day]) + ' ' : '') + v.html + '</span>' : ''; }).join('') +
       (f.slots && last && last.cmsg ? '<span class="small faint">Message:</span><span class="small">' + verdictPill(last.cmsg.s.verdict) + '</span>' : '') + '</div>' +
       '<h3>' + esc(last && last.cmsg ? last.cmsg.hook : '') + '</h3>' +
       testBox(card) +
-      '<p class="fix-do">' + esc(action) + '</p><p class="why">' + esc(f.why) + '</p>' +
+      '<p class="fix-do">' + esc(action) + '</p>' + diagHtml + '<p class="why">' + esc(f.why) + '</p>' +
       (f.notes ? f.notes.map(function (n) { return '<p class="small warnline">' + esc(n) + '</p>'; }).join('') : '');
     if (main) {
       html += '<p class="small muted">Template: ' + esc(SKELETONS[main].name) + ' <span class="faint">(' + esc(SKELETONS[main].templates) + ')</span>' + (mainSend ? ' · last sent ' + esc(dayLabel(mainSend.t)) + ', ' + esc(timeLabel(mainSend.t)) + ' as “' + esc(mainSend.name) + '”' : '') + '</p>' +
         bracketTable(main, f.fixes[main], mainSend) + (mainSend ? previewHtml(f.fixes[main], mainSend) : '');
+      var moveTo = diags.map(function (x) { var mv = x.r.diag.move; return mv.kind === 'move' ? mv.label : mv.alt ? mv.alt.label : null; }).filter(Boolean)[0];
+      if (f.moved && f.moved[main] && moveTo) html += '<details><summary>Testing it at ' + esc(moveTo) + ' instead? Use these brackets</summary>' + bracketTable(main, f.moved[main], mainSend) + (mainSend ? previewHtml(f.moved[main], mainSend) : '') + '</details>';
       var others = skels.filter(function (k) { return k !== main; });
       if (others.length) {
         html += '<details><summary>Sending it on a different template?</summary>' + others.map(function (k) {
@@ -2339,6 +2610,30 @@ function campaignMessages(C) {
       .map(function (b) { return { b: b, delay: Math.round(b.t - b.slot.at), live: liveSlot(b.slot) }; });
     var html = '<div class="wrap" style="gap:20px"><div class="intro"><h2>Does timing change the result?</h2><p class="muted">Each broadcast’s actual send time compared with its schedule slot, and click rates by the hour they went out. “vs similar” already accounts for the message’s timing stage and list size, so it isolates the effect of being early or late. Messages that ask for replies are left out.</p></div>';
 
+    // 0. Weak slots across the three webinars: time or message, and reminders sent too close together
+    var weak = [];
+    SCHED_KEYS.forEach(function (k) { state.slots[k].forEach(function (r) { if (r.diag) weak.push({ k: k, r: r }); }); });
+    if (weak.length) {
+      html += '<section class="section"><div class="section-head"><div><h2>Weak slots: is it the time or the message?</h2><p class="muted small">Every slot marked Improve, Cut or Drop, with what the data says is wrong. Click a row for the evidence in Slot verdicts.</p></div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Slot</th><th>It’s…</th><th style="min-width:300px">Do this</th></tr></thead><tbody>' +
+        weak.map(function (x) {
+          return '<tr class="click" data-goto="slots" data-sched="' + x.k + '" tabindex="0"><td class="name"><b>' + esc(SCHED_SHORT[x.k]) + ' · ' + esc(shortSlot(x.r)) + '</b><div class="faint small">' + esc(x.r.slot.name.split(' · ')[0]) + '</div></td>' +
+            '<td>' + causePill(x.r.diag) + '</td><td class="name small">' + esc(diagDo(x.r, x.k).text) + '</td></tr>';
+        }).join('') + '</tbody></table></div></section>';
+    }
+    var pre = state.C.filter(function (b) { return b.gapPrev !== null && b.goal !== 'reply' && hasClicks(b) && b.index !== null && b.list === 'Registered list' && b.session && b.t < b.session.t && !isLiveTime(b.t); });
+    var gapRows = [['16–75 min', 16, CROWD_NEAR], ['76–149 min', CROWD_NEAR + 1, CROWD_FAR - 1], ['2½ hours or more', CROWD_FAR, 1e9]].map(function (g) {
+      return { label: g[0], s: sumUp(pre.filter(function (b) { return b.gapPrev >= g[1] && b.gapPrev <= g[2]; })) };
+    }).filter(function (g) { return g.s.n; });
+    if (gapRows.length) {
+      var fx = state.fx;
+      html += '<section class="section"><div class="section-head"><div><h2>Reminders sent too close together</h2><p class="muted small">Reminders before live time to registered lists, by how long after the previous reminder to the same list they went out. The live window is left out: there, reminders are 5–10 minutes apart by design.</p>' +
+        (fx.crowdingHurts ? '<p class="small"><b>A reminder that lands within 75 minutes of the last one gets ' + vsSimilar(fx.near.index) + ' vs similar sends; with 2½ hours or more in between it gets ' + vsSimilar(fx.far.index) + '. Space reminders out, or drop the one in between.</b></p>' : '') + '</div></div>' +
+        '<div class="table-wrap"><table class="list"><thead><tr><th>Time since the previous reminder</th><th class="r">Broadcasts</th><th class="r">Delivered</th><th class="r">Click rate</th><th class="r">Cost / click</th><th class="r">Clicks vs similar</th></tr></thead><tbody>' +
+        gapRows.map(function (g) { return '<tr><td class="name">' + esc(g.label) + '</td><td class="r num">' + g.s.n + '</td><td class="r num">' + int(g.s.del) + '</td><td class="r num">' + pct(g.s.ctr, 2) + '</td><td class="r num">' + inr(g.s.cpc) + '</td><td class="r num"><span class="idx ' + idxClass(g.s.index) + '">' + vsSimilar(g.s.index) + '</span></td></tr>'; }).join('') +
+        '</tbody></table></div></section>';
+    }
+
     // 1. Late vs on time, before live and during live
     ['pre', 'live'].forEach(function (kind) {
       var rows = sched.filter(function (x) { return kind === 'live' ? x.live : !x.live; });
@@ -2632,6 +2927,7 @@ function campaignMessages(C) {
     if ((el = e.target.closest('[data-goto]'))) {
       if (el.dataset.sched) state.sched = el.dataset.sched;
       if (el.dataset.goto === 'broadcasts') { state.bfilter = { sched: '', session: '', area: el.dataset.area || '', q: '', others: false }; }
+      if (el.dataset.goto === 'slots') state.slotView = 'verdict';
       setTab(el.dataset.goto); return;
     }
     if ((el = e.target.closest('[data-sched]'))) { state.sched = el.dataset.sched; render(); return; }
