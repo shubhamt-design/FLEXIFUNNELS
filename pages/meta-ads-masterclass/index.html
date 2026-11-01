@@ -80,6 +80,9 @@ h1,h2,h3{font-family:var(--f-head);font-weight:800;line-height:1.06;letter-spaci
 .ses h2{font-size:clamp(23px,2.7vw,34px);margin-bottom:18px;max-width:26ch}
 .ses-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;align-items:start}
 .player{position:relative;padding-top:56.25%;background:var(--ink);border-radius:var(--r);overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 60px -34px rgba(20,18,43,.6)}
+.player .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff;text-align:center;padding:20px}
+.player .ph b{font-family:var(--f-head);font-size:20px;letter-spacing:-.02em}
+.player .ph span{color:#A9A7C4;font-size:14.5px}
 .player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .covers{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 22px 22px}
 .covers h3{font-size:16px;display:flex;align-items:center;gap:9px;margin-bottom:14px}
@@ -194,7 +197,7 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
       <div class="ses-top reveal"><span class="ses-badge">Day 1 &middot; Replay</span><span class="ses-when">Recorded live &middot; Saturday, 31 October 2026</span></div>
       <h2 class="reveal">The 2026 Meta Ads System, Day 1</h2>
       <div class="ses-grid">
-        <div class="player reveal"><iframe src="DAY1_REPLAY_EMBED_URL" title="Meta Ads Masterclass Day 1 Replay" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>
+        <div class="player reveal" id="d1-player"><div class="ph"><b>Day 1 replay</b><span>The recording will appear here shortly.</span></div></div>
         <div class="covers reveal">
           <h3>Before Day 2</h3>
           <ul>
@@ -223,7 +226,7 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
             <div><b id="cd-m">00</b><span>Mins</span></div>
             <div><b id="cd-s">00</b><span>Secs</span></div>
           </div>
-          <a class="join js-join" href="DAY2_JOIN_URL" target="_blank" rel="noopener">Join Day 2 Live
+          <a class="join js-join" href="#day2">Join Day 2 Live
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           <p class="note">The link opens the live session. Joining early gets you settled before it begins.</p>
         </div>
@@ -284,7 +287,7 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
   <div class="wrap reveal">
     <h2>See you live on <span class="flow">Day 2</span>.</h2>
     <p>Sunday, 1 November 2026 &middot; 8:00 PM IST &middot; 9:30 AM ET</p>
-    <a class="join js-join" href="DAY2_JOIN_URL" target="_blank" rel="noopener">Join Day 2 Live
+    <a class="join js-join" href="#day2">Join Day 2 Live
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
 </section>
