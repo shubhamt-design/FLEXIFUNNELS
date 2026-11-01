@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meta Ads Masterclass 2026</title>
+<meta name="description" content="Meta Ads Masterclass 2026 with Saurabh Bhatnagar. Watch the Day 1 replay and join Day 2 live. Exclusive for FlexiFunnels customers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ======================================================
+     EDIT THESE LINKS (also in the CONFIG script at bottom)
+     ====================================================== */
+  :root{
+    --bg:#ffffff;
+    --surface:#f6f7f9;
+    --ink:#0f1115;
+    --muted:#5b6170;
+    --line:#e6e8ec;
+    --accent:#1d4ed8;
+    --accent-ink:#ffffff;
+    --live:#e11d48;
+    --ok:#16a34a;
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d0f13; --surface:#151821; --ink:#f2f4f8; --muted:#9aa1b2;
+      --line:#252a36; --accent:#3b82f6; --accent-ink:#ffffff; --live:#f43f5e; --ok:#22c55e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d0f13; --surface:#151821; --ink:#f2f4f8; --muted:#9aa1b2;
+    --line:#252a36; --accent:#3b82f6; --accent-ink:#ffffff; --live:#f43f5e; --ok:#22c55e;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.6;font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+
+  /* Top bar */
+  .top{border-bottom:1px solid var(--line)}
+  .top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:18px}
+  .brand span{color:var(--accent)}
+  .tag{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+
+  /* Hero */
+  .hero{padding:64px 0 40px;text-align:center}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+  h1{font-size:clamp(32px,6vw,54px);line-height:1.08;letter-spacing:-.035em;font-weight:800;margin-bottom:18px}
+  .sub{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:620px;margin:0 auto 22px}
+  .host{display:inline-flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+  .host .av{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:13px}
+  .host b{color:var(--ink);font-weight:600}
+  .host > div:last-child{text-align:left}
+
+  /* Day cards */
+  .days{display:grid;grid-template-columns:1fr;gap:20px;padding-bottom:56px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .day{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:5px 11px}
+  .pill.done{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+  .pill.live{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live)}
+  .pill.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--live);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .card h2{font-size:22px;letter-spacing:-.02em;line-height:1.25;margin-bottom:6px}
+  .meta{font-size:14px;color:var(--muted);margin-bottom:18px}
+
+  .video{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;border:1px solid var(--line)}
+  .video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .video .ph{position:absolute;inset:0;display:grid;place-items:center;color:#9aa1b2;font-size:14px;text-align:center;padding:20px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--accent);color:var(--accent-ink);text-decoration:none;
+    font-weight:700;font-size:17px;padding:16px 28px;border-radius:12px;
+    transition:transform .15s ease, box-shadow .15s ease;width:100%;
+    box-shadow:0 6px 20px color-mix(in srgb,var(--accent) 30%,transparent)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 38%,transparent)}
+  .btn svg{width:18px;height:18px}
+  .btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none;font-size:15px;padding:12px 18px;margin-top:14px}
+
+  .countdown{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  .cd{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center}
+  .cd b{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .cd span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .note{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+
+  /* Sections */
+  section.block{padding:48px 0;border-top:1px solid var(--line)}
+  section.block h3{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  section.block h4{font-size:clamp(22px,3.4vw,30px);letter-spacing:-.025em;line-height:1.2;margin-bottom:24px}
+  .intro p{color:var(--muted);font-size:17px;max-width:680px}
+  .intro p + p{margin-top:12px}
+  .list{list-style:none;display:grid;grid-template-columns:1fr;gap:2px}
+  .list li{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+  .list li:last-child{border-bottom:0}
+  .list .n{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;width:24px;padding-top:2px}
+  .who{display:grid;grid-template-columns:1fr;gap:12px}
+  .who div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .who b{display:block;margin-bottom:4px}
+  .who p{color:var(--muted);font-size:15px}
+
+  footer{border-top:1px solid var(--line);padding:28px 0 40px;text-align:center;font-size:13px;color:var(--muted)}
+
+  @media (min-width:720px){
+    .days{grid-template-columns:1.25fr 1fr;align-items:start}
+    .card{padding:28px}
+    .list{grid-template-columns:1fr 1fr;column-gap:36px}
+    .who{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:380px){ .cd b{font-size:22px} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Flexi<span>Funnels</span></div>
+    <div class="tag">Customers only</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">Live Masterclass · 2026</div>
+    <h1>Meta Ads Masterclass 2026</h1>
+    <p class="sub">Learn the skill that grows your business. Turn Facebook &amp; Instagram ads into a predictable source of leads, sales and ROI.</p>
+    <div class="host">
+      <div class="av">SB</div>
+      <div>Hosted by <b>Saurabh Bhatnagar</b>, CEO of FlexiFunnels</div>
+    </div>
+  </section>
+
+  <div class="days">
+    <!-- DAY 1 REPLAY -->
+    <article class="card" id="day1">
+      <div class="card-head">
+        <span class="day">Day 1</span>
+        <span class="pill done">✓ Replay available</span>
+      </div>
+      <h2>Watch the Day 1 replay</h2>
+      <p class="meta">Recorded live · Saturday, 31 October 2026</p>
+      <div class="video" id="replay">
+        <div class="ph">Replay will appear here.</div>
+      </div>
+    </article>
+
+    <!-- DAY 2 LIVE -->
+    <article class="card" id="day2">
+      <div class="card-head">
+        <span class="day">Day 2</span>
+        <span class="pill live" id="day2-pill">Live today</span>
+      </div>
+      <h2>Join Day 2 live</h2>
+      <p class="meta" id="day2-meta">Sunday, 1 November 2026 · 8:00 PM IST · 9:30 AM ET</p>
+
+      <div class="countdown" id="countdown" aria-live="polite">
+        <div class="cd"><b id="cd-d">00</b><span>Days</span></div>
+        <div class="cd"><b id="cd-h">00</b><span>Hours</span></div>
+        <div class="cd"><b id="cd-m">00</b><span>Mins</span></div>
+        <div class="cd"><b id="cd-s">00</b><span>Secs</span></div>
+      </div>
+
+      <a class="btn" id="day2-btn" href="#" target="_blank" rel="noopener">
+        Join Day 2 Live
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <p class="note">Join on time and keep a notebook ready.</p>
+    </article>
+  </div>
+
+  <section class="block intro">
+    <h3>Why this matters</h3>
+    <h4>Meta Ads changed completely in 2026.</h4>
+    <p>Meta's new AI-driven system now decides who sees your ads, and the strategies that worked before are costing advertisers more and delivering less.</p>
+    <p>In this live session, Saurabh walks you through every major Meta Ads update and the exact system to turn your ads into a predictable source of leads, sales and ROI.</p>
+  </section>
+
+  <section class="block">
+    <h3>What you'll learn</h3>
+    <h4>The complete 2026 Meta Ads system</h4>
+    <ul class="list">
+      <li><span class="n">01</span><span>The biggest Meta Ads updates of 2026, and how to use them before your competitors do</span></li>
+      <li><span class="n">02</span><span>How to find your ideal customers, the people ready to buy, not just scroll</span></li>
+      <li><span class="n">03</span><span>How to turn complete strangers into paying buyers</span></li>
+      <li><span class="n">04</span><span>How to build campaigns that aim for a consistent 5–6X return</span></li>
+      <li><span class="n">05</span><span>How to generate more leads, consistently, every single day</span></li>
+      <li><span class="n">06</span><span>How to drive more sales, consistently, not just once in a while</span></li>
+      <li><span class="n">07</span><span>How to track your ads properly, so you know exactly what to optimize</span></li>
+      <li><span class="n">08</span><span>How to spot your winning ads early and scale them without burning money</span></li>
+      <li><span class="n">09</span><span>How to bring back people who saw your offer but didn't buy</span></li>
+      <li><span class="n">10</span><span>How to make Meta's new AI tools work for you, not against your budget</span></li>
+      <li><span class="n">11</span><span>The costly mistakes to stop immediately</span></li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>Who this is for</h3>
+    <h4>Built for anyone who wants ads that pay back</h4>
+    <div class="who">
+      <div><b>Beginners</b><p>Never run an ad and want to start the right way.</p></div>
+      <div><b>Business owners</b><p>Bring in customers yourself, without depending on agencies.</p></div>
+      <div><b>Marketers &amp; freelancers</b><p>Master the 2026 system and stay ahead.</p></div>
+      <div><b>Past advertisers</b><p>Spent money on ads and didn't see the results you expected.</p></div>
+    </div>
+  </section>
+
+  <section class="block" style="text-align:center">
+    <h4 style="margin-bottom:18px">See you live on Day 2.</h4>
+    <a class="btn" id="day2-btn-bottom" href="#" target="_blank" rel="noopener" style="max-width:420px">
+      Join Day 2 Live
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+    <p class="note">This session is exclusive to FlexiFunnels customers.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 FlexiFunnels · Meta Ads Masterclass</div>
+</footer>
+
+<script>
+  /* ==========================================================
+     CONFIG — replace these two links before publishing
+     ========================================================== */
+  var CONFIG = {
+    // Day 1 replay: a YouTube / Vimeo embed URL, e.g.
+    // "https://www.youtube.com/embed/VIDEO_ID" or "https://player.vimeo.com/video/VIDEO_ID"
+    day1ReplayEmbed: "",
+    // Day 2 joining link (Zoom / YouTube Live / etc.)
+    day2JoinLink: "https://zoom.us/j/YOUR_MEETING_ID",
+    // Day 2 start time (ISO with IST offset)
+    day2Start: "2026-11-01T20:00:00+05:30"
+  };
+
+  (function(){
+    // Replay
+    if (CONFIG.day1ReplayEmbed) {
+      var box = document.getElementById("replay");
+      box.innerHTML = '<iframe src="' + CONFIG.day1ReplayEmbed +
+        '" title="Day 1 Replay" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>';
+    }
+
+    // Join buttons
+    ["day2-btn","day2-btn-bottom"].forEach(function(id){
+      var a = document.getElementById(id);
+      if (a) a.href = CONFIG.day2JoinLink;
+    });
+
+    // Countdown
+    var target = new Date(CONFIG.day2Start).getTime();
+    var pill = document.getElementById("day2-pill");
+    var cd = document.getElementById("countdown");
+    function pad(n){ return String(n).padStart(2,"0"); }
+    function tick(){
+      var diff = target - Date.now();
+      if (diff <= 0) {
+        cd.style.display = "none";
+        pill.textContent = "Live now";
+        return;
+      }
+      if (diff > 864e5) pill.textContent = "Upcoming";
+      var s = Math.floor(diff/1000);
+      document.getElementById("cd-d").textContent = pad(Math.floor(s/86400));
+      document.getElementById("cd-h").textContent = pad(Math.floor(s%86400/3600));
+      document.getElementById("cd-m").textContent = pad(Math.floor(s%3600/60));
+      document.getElementById("cd-s").textContent = pad(s%60);
+      setTimeout(tick, 1000);
+    }
+    tick();
+  })();
+</script>
+</body>
+</html>
