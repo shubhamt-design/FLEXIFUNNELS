@@ -93,7 +93,16 @@ the sheet sometimes marks a row *Final* within an hour of sending. Any send the
 sheet last updated less than 24 hours after it went out (or marked *Still
 collecting*) is labelled “numbers still coming in” and left out of click and
 read scoring, verdicts and cost per click until the sync refreshes it; change
-results show its numbers as provisional in the meantime.
+results show its numbers as provisional in the meantime. Its click rate and cost
+per click still show, in grey with a dotted underline (hover for when the sheet
+captured it).
+
+If the sheet has synced for more than a day since a send and still hasn't
+refreshed its row, the label changes to **early numbers only (+N min)** and the
+Overview and Broadcasts tabs show a warning. Those rows are stuck at their first
+count. The fix is in the AiSensy-to-sheet sync, which should keep refreshing
+each row for 48 hours after sending instead of marking it Final on the first
+pass.
 
 ### Time or message?
 

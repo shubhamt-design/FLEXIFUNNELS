@@ -351,6 +351,7 @@ table.list { border-collapse: collapse; width: 100%; font-size: 13px; }
 .bubble { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
 .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-weight: 600; }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.prov { color: var(--ink-3); text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 
 @media (max-width: 640px) {
   .stat { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -691,8 +692,10 @@ function analyse(broadcasts) {
     }
     // The next session, up to 3½ days ahead (the 2-days-before slots are ~50 hours out).
     if (!s) s = sessions.filter(function (x) { return b.t <= x.t + 45 && x.t - b.t <= 5040; })[0] || null;
-    // Sends after the last session that took place are for one that hasn't happened yet.
-    var upcoming = !s && b.t > lastSession ? (b.inferredStart > b.t ? b.inferredStart : nextWebinarAfter(b.t)) : null;
+    // Sends after the last session that took place are for one that hasn't happened yet (or is live now):
+    // the usual session on that day if it starts within 6 hours or began up to 45 minutes ago, else the sheet's guess.
+    var own = nextWebinarAfter(b.t - 45);
+    var upcoming = !s && b.t > lastSession ? (own && own - b.t <= 360 ? own : b.inferredStart > b.t ? b.inferredStart : own) : null;
     if (upcoming) {
       s = sessions.filter(function (x) { return x.t === upcoming; })[0];
       if (!s) { s = { t: upcoming, date: dayStart(upcoming), upcoming: true }; sessions.push(s); }
@@ -1713,6 +1716,34 @@ function campaignMessages(C) {
   function timeLabel(t) { return when(t, { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase(); }
   function hourLabel(h) { return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
   function rate(b) { return hasClicks(b) ? b.clicks / b.delivered : null; }
+  // Sends the sheet updated less than a day after they went out: shown, greyed, but kept out of verdicts.
+  function rateSoFar(b) { return b.clicks !== null && (b.delivered || 0) > 0 ? b.clicks / b.delivered : null; }
+  function snapMins(b) { var u = parseIst(b.updated); return u !== null && b.t !== null ? u - b.t : null; }
+  function minsText(m) { return m < 60 ? Math.max(1, Math.round(m)) + ' min' : (Math.round(m / 6) / 10) + ' h'; }
+  /** The sheet has synced for more than a day since this send but never refreshed its row. */
+  function stuck(b) { return b.fresh && state.syncT && state.syncT - b.t > 1440; }
+  function snapNote(b) {
+    var m = snapMins(b);
+    return 'The sheet last updated this send ' + (m !== null ? minsText(m) + ' after it went out' : 'soon after it went out') +
+      (stuck(b) ? ' and hasn’t refreshed it since, so reads and clicks are stuck at that early count.' : '; reads and clicks keep arriving for about a day.') + ' Left out of verdicts until the sheet refreshes it.';
+  }
+  function freshPill(b) {
+    if (!b.fresh) return '';
+    var m = snapMins(b);
+    return ' <span class="pill' + (stuck(b) ? ' warn' : '') + '" title="' + esc(snapNote(b)) + '">' + (stuck(b) ? 'early numbers only' + (m !== null ? ' (+' + minsText(m) + ')' : '') : 'numbers still coming in') + '</span>';
+  }
+  function provPct(b) { return b.fresh ? '<span class="prov" title="' + esc(snapNote(b)) + '">' + pct(rateSoFar(b), 2) + '</span>' : pct(rate(b), 2); }
+  function provCpc(b) { return b.fresh ? '<span class="prov" title="' + esc(snapNote(b)) + '">' + inr(b.clicks ? b.cost / b.clicks : null) + '</span>' : inr(b.cpc !== undefined ? b.cpc : b.clicks ? b.cost / b.clicks : null); }
+  /** Warning when the sheet stopped updating recent sends. */
+  function stuckBanner() {
+    var st = C().filter(stuck).sort(function (a, b) { return a.t - b.t; });
+    if (!st.length) return '';
+    var ex = st.filter(function (b) { return b.read !== null && b.delivered && snapMins(b) !== null; }).sort(function (a, b) { return a.read / a.delivered - b.read / b.delivered; })[0];
+    return '<div class="rulebox"><b>The sheet stopped updating ' + st.length + ' campaign send' + (st.length > 1 ? 's' : '') + ' (from ' + esc(dayLabel(st[0].t)) + ').</b> ' +
+      'It marked them Final a few minutes to a few hours after they went out and hasn’t refreshed them since, so their reads and clicks are stuck at that early count' +
+      (ex ? ' (for example ' + esc(ex.name) + ', ' + esc(dayLabel(ex.t)) + ': ' + pct(ex.read / ex.delivered, 0) + ' read, captured ' + minsText(snapMins(ex)) + ' after sending)' : '') +
+      '. Their click rates show in grey and they are left out of verdicts. Ask whoever runs the AiSensy-to-sheet sync to keep refreshing each row for 48 hours after it is sent.</div>';
+  }
   function cleanText(s) {
     s = String(s || '');
     if (/^\s*https?:\/\/\S+\s*$/.test(s)) return 'Image or video template (no text).';
@@ -1786,7 +1817,7 @@ function campaignMessages(C) {
     ['tue', 'wed', 'sun'].forEach(function (k) { state.slots[k].forEach(function (r) { r.diag = slotDiagnosis(r, k, state.slots[k], state.live[k].cuts, state.fx); }); });
     state.lifts = featureLifts(state.C.filter(function (b) { return b.goal !== 'reply'; }));
     state.fixCards.forEach(function (c) { c.test = testFix(c); });
-    var latestT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
+    var latestT = state.syncT = all.reduce(function (m, b) { var t = parseIst(b.updated); return t !== null && t > m ? t : m; }, 0);
     setSync('live', all.length + ' broadcasts since ' + dayLabel(all.reduce(function (m, b) { return Math.min(m, b.t); }, Infinity)) + ' · AiSensy synced ' + (latestT ? dayLabel(latestT) + ', ' + timeLabel(latestT) : 'unknown') +
       ' · read ' + new Date(state.cachedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }));
     renderPeriod();
@@ -1952,6 +1983,7 @@ function campaignMessages(C) {
     var html = '<div class="wrap" style="gap:20px">';
     html += '<div class="intro"><h2>10-minute webinar campaign</h2><p class="muted">Flexi Genie “Launch Your Business Online in 10 Minutes” broadcasts for the Tuesday, Wednesday and Sunday webinars: ' +
       esc(dayLabel(Math.min.apply(null, list.map(function (b) { return b.t; })))) + ' to ' + esc(dayLabel(Math.max.apply(null, list.map(function (b) { return b.t; })))) + '. Every broadcast is matched to its webinar session, its schedule slot and the doc message it came from.</p></div>';
+    html += stuckBanner();
     html += '<div class="strip">' +
       stat('Webinar sessions', done.length, esc(done.map(function (i) { return SCHED_SHORT[i.template].slice(0, 3) + ' ' + dayLabel(i.date).replace(/^\w+, /, ''); }).join(' · '))) +
       stat('Spend', inr(tot.cost), inr(perSession) + ' per session · ' + inr(weekly) + ' per week') +
@@ -2266,7 +2298,7 @@ function campaignMessages(C) {
       var before = (f.slots ? scope : card.sends).filter(function (b) { return b.t < first && ids.indexOf(b.id) === -1 && b.t >= first - 42 * 1440 && b.goal !== 'reply'; });
       res.before = aggregate(before);
       res.after = aggregate(res.used.map(function (u) { return u.b; }));
-      res.verdict = compareVerdict(res.before, res.after);
+      res.verdict = compareVerdict(res.before, res.after, res.used.some(function (u) { return stuck(u.b); }));
     }
     // A slot the data says to stop: completed sessions since the fix where nothing went out in it.
     if (f.slots) {
@@ -2291,8 +2323,11 @@ function campaignMessages(C) {
     list.forEach(function (b) { del += b.delivered || 0; clicks += b.clicks || 0; cost += b.cost || 0; read += b.read || 0; });
     return '<tr><td class="name">' + label + '</td><td class="r num">' + list.length + '</td><td class="r num">' + pct(del ? clicks / del : null, 2) + '</td><td class="r num">' + inr(clicks ? cost / clicks : null) + '</td><td class="r num">—</td><td class="r num">' + pct(del ? read / del : null, 0) + '</td></tr>';
   }
-  function compareVerdict(bf, af) {
-    if (af.fresh && af.clickDel < 300) return { cls: 'data', label: 'Numbers still coming in', text: 'The sheet last updated ' + (af.fresh > 1 ? 'these sends' : 'this send') + ' less than a day after it went out, and reads and clicks keep arriving for about a day. The comparison appears once they settle (usually the next day).' };
+  function compareVerdict(bf, af, isStuck) {
+    var them = af.fresh > 1 ? 'these sends' : 'this send';
+    if (af.fresh && af.clickDel < 300) return isStuck ?
+      { cls: 'data', label: 'Early numbers only', text: 'The sheet stopped updating ' + them + ' soon after ' + (af.fresh > 1 ? 'they' : 'it') + ' went out, so reads and clicks are stuck at an early count. The comparison appears once the sync refreshes ' + (af.fresh > 1 ? 'them' : 'it') + '.' } :
+      { cls: 'data', label: 'Numbers still coming in', text: 'The sheet last updated ' + them + ' less than a day after it went out, and reads and clicks keep arriving for about a day. The comparison appears once they settle (usually the next day).' };
     if (af.exp < 5 || af.clickDel < 300) return { cls: 'data', label: 'Too early', text: af.n + ' send' + (af.n > 1 ? 's' : '') + ' with the new brackets so far. Give it 2–3 sessions before judging.' };
     if (!bf.n || bf.index === null || af.index === null) return { cls: 'data', label: 'No baseline', text: 'There are no earlier sends in this slot to compare with.' };
     var r = af.index / bf.index;
@@ -2477,9 +2512,9 @@ function campaignMessages(C) {
   function sendTable(sends) {
     return '<div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Session · slot</th><th>Broadcast</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Replies</th><th class="r">Cost</th><th class="r">Cost / click</th><th class="r">vs similar</th></tr></thead><tbody>' +
       sends.slice().sort(function (a, b) { return b.t - a.t; }).map(function (b) {
-        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="small">' + esc(sessionLabel(b)) + (b.slot ? ' · ' + esc(b.slot.name) : ' · not in schedule') + '</td><td class="name">' + esc(b.name) + '</td>' +
-          '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + int(b.replies) +
-          '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.cpc) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
+        return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="small">' + esc(sessionLabel(b)) + (b.slot ? ' · ' + esc(b.slot.name) : ' · not in schedule') + '</td><td class="name">' + esc(b.name) + freshPill(b) + '</td>' +
+          '<td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null) + '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + provPct(b) + '</td><td class="r num">' + int(b.replies) +
+          '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + provCpc(b) + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   function showMessage(id) {
@@ -2517,7 +2552,7 @@ function campaignMessages(C) {
     var val = function (b) {
       var small = (b.delivered || 0) < 100 ? (sort.dir < 0 ? -2 : 2) : 0;
       switch (sort.key) {
-        case 'clickRate': return small || (rate(b) === null ? -1 : rate(b));
+        case 'clickRate': return small || (rateSoFar(b) === null ? -1 : rateSoFar(b));
         case 'readRate': return small || (b.delivered ? b.read / b.delivered : -1);
         case 'index': return b.index === null ? (sort.dir < 0 ? -9 : 9) : b.index;
         case 'cpc': return b.cpc === null || b.cpc === undefined ? (sort.dir < 0 ? -1 : 1e9) : b.cpc;
@@ -2532,17 +2567,17 @@ function campaignMessages(C) {
     var th = function (key, label, right) {
       return '<th class="sort' + (right ? ' r' : '') + '" data-sort="' + key + '" aria-sort="' + (sort.key === key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + label + (sort.key === key ? ' <span class="arrow">' + (sort.dir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
     };
-    var html = '<div class="strip">' + stat('Broadcasts', int(a.n)) + stat('Delivered', int(a.delivered), pct(a.readRate, 0) + ' read') + stat('Clicks', int(a.clicks), pct(a.ctr, 2) + ' click rate') +
+    var html = stuckBanner() + '<div class="strip">' + stat('Broadcasts', int(a.n)) + stat('Delivered', int(a.delivered), pct(a.readRate, 0) + ' read') + stat('Clicks', int(a.clicks), pct(a.ctr, 2) + ' click rate') +
       stat('Spend', inr(a.cost), inr(a.cpm) + ' per 1,000 delivered') + stat('Cost per click', inr(a.cpc), (a.overspend >= 1 ? inr(a.overspend) + ' above average' : '')) + '</div>';
     html += '<div class="table-wrap"><table class="list"><thead><tr>' + th('t', 'Sent') + th('slot', 'Session · slot') + th('msg', 'Message (doc) · template') + th('name', 'Broadcast') + th('audience', 'Audience', 1) + th('delivered', 'Delivered', 1) +
       th('readRate', 'Read rate', 1) + th('clicks', 'Clicks', 1) + th('clickRate', 'Click rate', 1) + th('cost', 'Cost', 1) + th('cpc', 'Cost / click', 1) + th('overspend', 'Above avg', 1) + th('index', 'vs similar', 1) + '</tr></thead><tbody>' +
       shown.map(function (b) {
-        var flags = (b.fresh ? ' <span class="pill">numbers still coming in</span>' : '') + (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') + (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '');
+        var flags = freshPill(b) + (b.goal === 'reply' ? ' <span class="pill">reply ask</span>' : '') + (b.qa && b.qa.length ? ' <span class="pill warn">rule check</span>' : '') + (b.check ? ' <span class="pill warn">' + esc(b.check) + '</span>' : '');
         return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + '<div class="faint small">' + esc(timeLabel(b.t)) + '</div></td>' +
           '<td class="small">' + esc(b.family === 'genie' ? sessionLabel(b) : familyLabel(b.family)) + '<div class="faint">' + esc(b.slot ? b.slot.name : b.family === 'genie' ? 'not in schedule' : '') + '</div></td>' +
           '<td class="name small">' + esc(b.family === 'genie' ? msgName(b) : '—') + (b.doc ? '<div class="faint">' + esc(b.doc.templates.join(', ')) + '</div>' : b.family === 'genie' ? '<div class="faint">not in the docs</div>' : '') + '</td>' +
           '<td class="name">' + esc(b.name) + flags + '</td><td class="r num">' + int(b.audience) + '</td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null, 0) + '</td>' +
-          '<td class="r num">' + (b.goal === 'reply' ? int(b.replies) + ' rep' : int(b.clicks)) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.cpc) + '</td>' +
+          '<td class="r num">' + (b.goal === 'reply' ? int(b.replies) + ' rep' : int(b.clicks)) + '</td><td class="r num">' + provPct(b) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + provCpc(b) + '</td>' +
           '<td class="r num">' + (b.overspend >= 1 ? inr(b.overspend) : '—') + '</td><td class="r num"><span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>' + (rows.length > shown.length ? '<div><button class="btn" type="button" id="showAllBtn">Show all ' + rows.length + '</button></div>' : '');
     $('#bResults').innerHTML = html;
@@ -2563,7 +2598,7 @@ function campaignMessages(C) {
       html += '<section class="section"><div class="section-head"><h2>' + esc(f.label) + '</h2></div><div class="table-wrap"><table class="list"><thead><tr><th>Sent</th><th>Broadcast</th><th class="r">Delivered</th><th class="r">Read rate</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">Cost</th><th class="r">Cost / click</th></tr></thead><tbody>' +
         list.map(function (b) {
           return '<tr class="click" data-ids="' + esc(b.id) + '" tabindex="0"><td>' + esc(dayLabel(b.t)) + ' · ' + esc(timeLabel(b.t)) + '</td><td class="name">' + esc(b.name) + '</td><td class="r num">' + int(b.delivered) + '</td><td class="r num">' + pct(b.delivered ? b.read / b.delivered : null, 0) +
-            '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + pct(rate(b), 2) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + inr(b.clicks ? b.cost / b.clicks : null) + '</td></tr>';
+            '</td><td class="r num">' + int(b.clicks) + '</td><td class="r num">' + provPct(b) + '</td><td class="r num">' + inr(b.cost) + '</td><td class="r num">' + provCpc(b) + '</td></tr>';
         }).join('') + '</tbody></table></div></section>';
     });
     $('#main').innerHTML = html + '</div>';
@@ -2800,7 +2835,7 @@ function campaignMessages(C) {
         '<div class="table-wrap"><table class="list plan"><thead><tr><th>Slot</th><th>Purpose (from the doc)</th><th>What was sent (AiSensy)</th><th>Status</th><th class="r">Result</th></tr></thead><tbody>' +
         inst.slots.map(function (s, i) {
           var b = s.items[0];
-          var result = b ? (b.goal === 'reply' ? pct(hasReplies(b) ? b.replies / b.delivered : null, 1) + ' replies' : pct(rate(b), 2) + ' clicks') +
+          var result = b ? (b.goal === 'reply' ? pct(hasReplies(b) ? b.replies / b.delivered : null, 1) + ' replies' : provPct(b) + ' clicks') +
             ' <span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>' : '—';
           return '<tr' + (b ? ' class="click" data-ids="' + esc(s.items.map(function (x) { return x.id; }).join(',')) + '" tabindex="0"' : '') + '>' +
             '<td class="name"><b>' + esc(s.name) + '</b><div class="faint small">' + esc(s.audience || '') + '</div></td>' +
@@ -2901,10 +2936,11 @@ function campaignMessages(C) {
         (b.slot && b.slot.template ? '<p class="small muted">Schedule slot: ' + esc(b.slot.name) + ' · usual template ' + esc(b.slot.template) + ' · ' + esc(b.slot.audience) + '</p>' : '') +
         (b.qa && b.qa.length ? '<ul class="qa-list small">' + b.qa.map(function (q) { return '<li><span class="pill warn">Rule ' + q.rule + '</span> ' + esc(q.text) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
         '<div class="kv">' +
-        kv('Clicks', int(b.clicks)) + kv('Click rate', pct(rate(b), 2)) + kv('vs similar', '<span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>') +
+        (b.fresh ? '<p class="small warnline">' + esc(snapNote(b)) + '</p>' : '') +
+        kv('Clicks', int(b.clicks)) + kv('Click rate', provPct(b)) + kv('vs similar', '<span class="idx ' + idxClass(b.index) + '">' + vsSimilar(b.index) + '</span>') +
         kv('Audience', int(b.audience)) + kv('Delivered', int(b.delivered)) + kv('Failed', int(b.failed)) +
         kv('Read rate', pct(b.delivered ? b.read / b.delivered : null)) + kv('Click-to-read', pct(b.read && b.clicks !== null ? b.clicks / b.read : null)) + kv('Replies', int(b.replies) + (hasReplies(b) ? ' (' + pct(b.replies / b.delivered, 1) + ')' : '')) +
-        kv('Cost', inr(b.cost)) + kv('Cost / click', inr(b.clicks ? b.cost / b.clicks : null)) + kv('Cost / read', inr(b.read ? b.cost / b.read : null)) +
+        kv('Cost', inr(b.cost)) + kv('Cost / click', provCpc(b)) + kv('Cost / read', inr(b.read ? b.cost / b.read : null)) +
         (b.family === 'genie' && b.goal !== 'reply' ? kv('Spent above avg', b.overspend >= 1 ? inr(b.overspend) : '—') + kv('Part of campaign', esc(b.area)) + kv('Cost / 1,000 delivered', inr(b.delivered ? b.cost / b.delivered * 1000 : null)) : '') +
         '</div><div class="bubble">' + esc(cleanText(b.content) || 'No message text in the sheet.') + '</div>';
     });
