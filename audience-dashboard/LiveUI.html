@@ -1,0 +1,172 @@
+<!-- Live sessions page. Included into Index.html; uses its styles and window.AD helpers. -->
+<style>
+.live-top { display: grid; grid-template-columns: 1fr 380px; gap: 16px; align-items: start; }
+.sess { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; background: var(--surface); }
+.sess.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.sess-head { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.sess-head input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; flex: none; }
+.sess-title { font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-total { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.badge.live { background: var(--good-soft); color: var(--good); }
+.badge.today { background: var(--accent-soft); color: var(--accent); }
+.badge.past { background: var(--surface-2); color: var(--text-3); }
+.sess-tabs { display: grid; gap: 2px; margin: 8px 0 0 28px; }
+.sess-tab { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; cursor: pointer; }
+.sess-tab input { width: 15px; height: 15px; accent-color: var(--accent); margin: 0; }
+.sess-tab .lb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-tab .ct { color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; white-space: nowrap; }
+.pick-box { position: sticky; top: 12px; }
+.pick-list { font-size: 13px; color: var(--text-2); margin: 6px 0 0; padding-left: 18px; }
+.pick-list li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .live-top { grid-template-columns: 1fr; } .pick-box { position: static; } }
+</style>
+
+<div class="live-top">
+  <section class="card">
+    <div class="src-head" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <h2>Live sessions</h2>
+        <p class="hint" style="margin:0">Read straight from <a id="lvSheet" href="#" target="_blank" rel="noopener">the sheet ↗</a> — always includes everyone registered so far. <span id="lvChecked"></span></p>
+      </div>
+      <button class="btn small" id="lvRefresh">↻ Refresh</button>
+    </div>
+    <input type="text" id="lvSearch" placeholder="Search sessions (e.g. 3 Nov, Faceless)" style="margin-top:12px">
+    <div id="lvList"><div class="empty"><span class="spin"></span> Reading sessions…</div></div>
+    <div class="actions"><button class="btn small ghost" id="lvMore">Show older sessions</button></div>
+  </section>
+
+  <aside class="card pick-box">
+    <h2>Reminder list</h2>
+    <p class="hint" style="margin-bottom:6px">Tick a session (both its tabs are combined) or individual tabs. Duplicates, buyers, opt-outs, reminder-team removals and test entries are removed.</p>
+    <div id="lvPicked" class="tagline">Nothing selected yet.</div>
+    <label class="check"><input type="checkbox" id="lvPhoneOnly" checked>
+      <span>Only contacts with a phone number<small>Needed for WhatsApp</small></span></label>
+    <div class="actions"><button class="btn primary" id="lvGet" disabled>Get clean list</button><button class="btn ghost" id="lvClear">Clear</button></div>
+    <div id="lvResult"></div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var V = { data: null, picked: new Set(), showAll: false, last: null };
+  function A() { return window.AD; }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function allTabs() {
+    var m = {};
+    (V.data ? V.data.sessions : []).forEach(function (s) { s.tabs.forEach(function (t) { m[t.name] = t; }); });
+    (V.data ? V.data.other : []).forEach(function (t) { m[t.name] = t; });
+    return m;
+  }
+
+  function load() {
+    var a = A();
+    return a.call('getLiveSessions').then(function (d) {
+      V.data = d;
+      a.$('lvSheet').textContent = d.sheetName + ' ↗'; a.$('lvSheet').href = d.sheetUrl;
+      a.$('lvChecked').textContent = 'Counts checked ' + a.ago(d.checkedAt) + '.';
+      var known = allTabs();
+      V.picked.forEach(function (n) { if (!known[n]) V.picked.delete(n); });
+      if (!V.picked.size && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(t.name); });
+      render(); renderPicked();
+    }).catch(function (e) { a.$('lvList').innerHTML = '<div class="empty">' + a.esc(a.errMsg(e)) + '</div>'; });
+  }
+
+  function badge(s) {
+    var t = today();
+    if (s.date > t) return '<span class="badge live">Upcoming</span>';
+    if (s.date === t) return '<span class="badge today">Today</span>';
+    return '<span class="badge past">Done</span>';
+  }
+
+  function render() {
+    var a = A(), q = a.$('lvSearch').value.trim().toLowerCase();
+    var list = V.data.sessions.filter(function (s) { return !q || s.title.toLowerCase().indexOf(q) >= 0 || s.tabs.some(function (t) { return t.name.toLowerCase().indexOf(q) >= 0; }); });
+    var shown = q || V.showAll ? list : list.slice(0, 8);
+    a.$('lvMore').classList.toggle('hidden', !!q || V.showAll || list.length <= 8);
+    var html = shown.map(function (s, si) {
+      var usable = s.tabs.filter(function (t) { return t.usable; });
+      var all = usable.length && usable.every(function (t) { return V.picked.has(t.name); });
+      var some = usable.some(function (t) { return V.picked.has(t.name); });
+      var total = usable.reduce(function (x, t) { return x + t.rows; }, 0);
+      return '<div class="sess' + (some ? ' picked' : '') + '" data-k="' + a.esc(s.key) + '">' +
+        '<label class="sess-head"><input type="checkbox" data-sess="' + a.esc(s.key) + '"' + (all ? ' checked' : '') + '>' +
+        '<span class="sess-title" title="' + a.esc(s.title) + '">' + a.esc(s.title) + '</span>' + badge(s) +
+        '<span class="sess-total">' + a.fmt(total) + '</span></label>' +
+        '<div class="sess-tabs">' + s.tabs.map(function (t) {
+          if (!t.usable) return '<div class="sess-tab" style="color:var(--text-3)"><span></span><span class="lb">' + a.esc(t.label) + '</span><span class="ct">no data yet</span></div>';
+          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(t.name) ? ' checked' : '') + '>' +
+            '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows' +
+            (t.lastEntry ? ' · last ' + a.esc(t.lastEntry) : '') + '</span></label>';
+        }).join('') + '</div></div>';
+    }).join('');
+    if (!q && V.showAll && V.data.other.length) {
+      html += '<details style="margin-top:14px"><summary class="tagline" style="cursor:pointer">Other tabs with contacts (' + V.data.other.length + ')</summary>' +
+        '<div class="sess-tabs" style="margin-left:0">' + V.data.other.map(function (t) {
+          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(t.name) ? ' checked' : '') + '><span class="lb">' +
+            a.esc(t.name) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span></label>';
+        }).join('') + '</div></details>';
+    }
+    a.$('lvList').innerHTML = html || '<div class="empty">' + (q ? 'No session matches.' : 'No session tabs found.') + '</div>';
+  }
+
+  function renderPicked() {
+    var a = A(), m = allTabs(), names = Array.from(V.picked);
+    var rows = names.reduce(function (x, n) { return x + ((m[n] || {}).rows || 0); }, 0);
+    a.$('lvPicked').innerHTML = names.length ? '<b>' + names.length + ' tab' + (names.length > 1 ? 's' : '') + ' · ' + a.fmt(rows) + ' rows</b><ul class="pick-list">' +
+      names.map(function (n) { return '<li title="' + a.esc(n) + '">' + a.esc(n) + '</li>'; }).join('') + '</ul>' : 'Nothing selected yet.';
+    a.$('lvGet').disabled = !names.length;
+  }
+
+  function changed() { V.last = null; A().$('lvResult').innerHTML = ''; render(); renderPicked(); }
+
+  function bind() {
+    var a = A();
+    a.$('lvList').addEventListener('change', function (e) {
+      var k = e.target.getAttribute('data-sess'), n = e.target.getAttribute('data-tab');
+      if (k) {
+        var s = V.data.sessions.filter(function (x) { return x.key === k; })[0];
+        s.tabs.forEach(function (t) { if (t.usable) { if (e.target.checked) V.picked.add(t.name); else V.picked.delete(t.name); } });
+      } else if (n) {
+        if (e.target.checked) V.picked.add(n); else V.picked.delete(n);
+      }
+      changed();
+    });
+    a.$('lvSearch').addEventListener('input', render);
+    a.$('lvMore').addEventListener('click', function () { V.showAll = true; render(); });
+    a.$('lvClear').addEventListener('click', function () { V.picked.clear(); changed(); });
+    a.$('lvPhoneOnly').addEventListener('change', function () { V.last = null; a.$('lvResult').innerHTML = ''; });
+    a.$('lvRefresh').addEventListener('click', function () {
+      var btn = this; a.busy(btn, true, 'Refreshing…');
+      load().then(function () { a.busy(btn, false); });
+    });
+    a.$('lvGet').addEventListener('click', function () {
+      var names = Array.from(V.picked); if (!names.length) return;
+      var btn = this; a.busy(btn, true, 'Reading latest data…');
+      a.call('getLiveList', names, a.$('lvPhoneOnly').checked).then(function (r) {
+        V.last = r;
+        var lines = r.steps.map(function (s) {
+          if (s.add) return '<div class="line plus"><span class="l">' + a.esc(s.label) + '</span><span class="n">' + a.fmt(s.count) + '</span></div>';
+          return '<div class="line minus"><span class="l">− ' + a.esc(s.label) + '</span><span class="n">−' + a.fmt(-s.count) + '</span></div>';
+        }).join('');
+        a.$('lvResult').innerHTML = '<div class="result"><div class="lines">' + lines + '</div><div class="total"><div><div class="cap">Ready to message · as of ' +
+          new Date(r.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) + '</div><div class="big">' + a.fmt(r.final) + '</div></div>' +
+          '<button class="btn primary" id="lvDl"' + (r.final ? '' : ' disabled') + '>⬇ Download ' + a.fmt(r.final) + '</button></div></div>';
+        load();
+      }).catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
+    a.$('lvResult').addEventListener('click', function (e) {
+      if (e.target.id !== 'lvDl' || !V.last) return;
+      var names = Array.from(V.picked);
+      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || 'Live list';
+      var stamp = new Date(V.last.at);
+      a.downloadCsv(title + ' – reminder ' + stamp.getDate() + '-' + (stamp.getMonth() + 1) + ' ' + stamp.getHours() + 'h' + ('0' + stamp.getMinutes()).slice(-2) + ' – ' + V.last.final,
+        V.last.rows, ['Name', 'Email', 'Phone', 'Source tab']);
+    });
+  }
+
+  var bound = false;
+  window.Live = { show: function () { if (!bound) { bind(); bound = true; } load(); } };
+})();
+</script>

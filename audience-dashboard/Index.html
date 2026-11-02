@@ -250,7 +250,8 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <div class="sub">Upload webinar audiences, remove buyers & duplicates, build clean WhatsApp lists.</div>
     </div>
     <nav class="seg pages" id="pages">
-      <button type="button" class="on" data-page="pageAud">Audiences</button>
+      <button type="button" class="on" data-page="pageLive">Live sessions</button>
+      <button type="button" data-page="pageAud">Audiences</button>
       <button type="button" data-page="pageLeads">Lead sheets (UTM)</button>
     </nav>
     <div class="top-links">
@@ -262,7 +263,8 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   <div id="loadingPage" class="loading-page"><span class="spin"></span>&nbsp; Loading audiences…</div>
 
   <main id="app" class="hidden">
-   <div id="pageAud">
+   <div id="pageLive"><?!= include('LiveUI') ?></div>
+   <div id="pageAud" class="hidden">
     <section class="stats">
       <div class="stat">
         <div class="label">Saved audiences</div>
@@ -839,6 +841,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
         $(x.dataset.page).classList.toggle('hidden', x !== b);
       });
       if (b.dataset.page === 'pageLeads' && window.Leads) window.Leads.show();
+      if (b.dataset.page === 'pageLive' && window.Live) window.Live.show();
     });
   });
 
@@ -846,7 +849,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   window.AD = { $: $, fmt: fmt, esc: esc, call: call, toast: toast, errMsg: errMsg, busy: busy, ago: ago,
     dateShort: dateShort, downloadCsv: downloadCsv, reload: function () { return load(); } };
 
-  load();
+  load().then(function () { if (window.Live) window.Live.show(); });
 })();
 </script>
 </body>

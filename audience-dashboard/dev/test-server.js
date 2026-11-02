@@ -97,4 +97,34 @@ const built = ctx.buildList(['Web 1', 'Web 2'], ['Web 3'], true);
 eq(built.rows.map(r => r[0]), ['A', 'C']);
 eq(built.mergedTotal, 4);
 assert.strictEqual(ctx.getState().audiences.length, 3);
+// live sessions: session tabs of the live sheet, read fresh every time
+const reg = (i, ts) => [ts || '03/11/2026 10:0' + i, 'R' + i, `r${i}@x.com`, '+91' + (9200000000 + i)];
+const busTab = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([1, 2, 3, 4].map(i => reg(i)));
+busTab.push(['t', 'Buyer', 'buyer@x.com', '']); busTab.push(['t', 'Staff', 'x+test@flexifunnels.com', '+919111111111']);
+const regTab = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([3, 4, 5].map(i => reg(i)));
+const live = at(ctx.CONFIG.LIVE_SHEET_ID, env.make('August 2026 UTM', {
+  '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines': busTab,
+  '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team': regTab,
+  '1 Nov 2026 11 AM Flexi Genie 10 Mins Busines': [['timestamp_incoming_webhook', 'first_name', 'email', 'phone'], reg(9)],
+  '3 Nov 2026 7:30 PM New Session Busines': [],               // just created, no rows yet
+  'Pivot Table 11': [['Row Labels', 'Count']],
+}));
+let ls = ctx.getLiveSessions();
+eq(ls.sessions.map(s => s.title), ['3 Nov 2026 7:30 PM Flexi Genie 10 Mins', '1 Nov 2026 11 AM Flexi Genie 10 Mins Busines']);
+eq(ls.sessions[0].tabs.map(t => [t.label, t.rows]), [['Busines', 6], ['Reg Team', 3]]);
+assert.strictEqual(ls.sessions[0].tabs[0].lastEntry, 't'); // timestamp cell of the last row
+let lst = ctx.getLiveList(ls.sessions[0].tabs.map(t => t.name), true);
+eq(lst.rows.map(r => r[1]), ['r1@x.com', 'r2@x.com', 'r3@x.com', 'r4@x.com', 'r5@x.com']); // 3,4 in both tabs -> once
+assert.strictEqual(lst.rows[4][3], '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team');
+const st2 = k => lst.steps.find(s => s.label === k).count;
+eq([st2('Rows in selected tabs'), st2('Duplicates (same email or phone)'), st2('Buyers'), st2('Internal / test emails')], [9, -2, -1, -1]);
+// new registrations arrive -> next call includes them (no caching of data)
+live.getSheetByName('3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team').appendRow(reg(6, '03/11/2026 18:00'));
+lst = ctx.getLiveList(ls.sessions[0].tabs.map(t => t.name), true);
+assert.strictEqual(lst.final, 6);
+// the empty new tab gets its header later and then shows up
+live.getSheetByName('3 Nov 2026 7:30 PM New Session Busines').appendRow(['timestamp_incoming_webhook', 'first_name', 'email', 'phone']);
+live.getSheetByName('3 Nov 2026 7:30 PM New Session Busines').appendRow(reg(7));
+ls = ctx.getLiveSessions();
+assert.ok(ls.sessions.some(s => s.title === '3 Nov 2026 7:30 PM New Session Busines'));
 console.log('Server tests passed.');

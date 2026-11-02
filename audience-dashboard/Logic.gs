@@ -89,6 +89,72 @@ function sniffColumns(rows) {
   return { name: first > 0 ? first - 1 : -1, email: best.email, phone: best.phone };
 }
 
+/**
+ * Live session tabs are named like "3 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines"
+ * and "3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team". Returns
+ * { date: 'YYYY-MM-DD', time: '7:30 PM', key } or null when the name does not
+ * start with a date. Tabs with the same key belong to the same session.
+ */
+var MONTHS_ = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function parseSessionTab(name, defaultYear) {
+  var m = String(name).trim().match(/^(\d{1,2})(?:\s*-\s*\d{1,2})?\s+([a-z]{3,9})\.?,?\s+(?:(\d{4}),?\s*)?(.*)$/i);
+  if (!m) return null;
+  var mon = MONTHS_[m[2].slice(0, 3).toLowerCase()];
+  var year = m[3] ? +m[3] : defaultYear;
+  if (!mon || !year) return null;
+  var rest = m[4];
+  var t = rest.match(/^(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(.*)$/i);
+  var time = t ? t[1].toUpperCase().replace(/\./g, '').replace(/\s*(AM|PM)$/, ' $1') : '';
+  if (t) rest = t[2];
+  var first = (rest.toLowerCase().match(/[a-z0-9]+/) || [''])[0];
+  var date = year + '-' + ('0' + mon).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return { date: date, time: time, key: date + '|' + time + '|' + first };
+}
+
+/** Minutes after midnight for '7:30 PM' / '11 AM' (for sorting sessions). */
+function timeMinutes(time) {
+  var m = String(time || '').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/);
+  if (!m) return -1;
+  return (+m[1] % 12 + (m[3] === 'PM' ? 12 : 0)) * 60 + (+m[2] || 0);
+}
+
+/**
+ * Group tab names into sessions, newest first.
+ * Returns { sessions: [{ key, date, time, title, tabs: [{ name, label }] }], other: [names] }.
+ */
+function groupSessions(names, defaultYear) {
+  var byKey = {}, order = [], other = [];
+  names.forEach(function (n) {
+    var p = parseSessionTab(n, defaultYear);
+    if (!p) { other.push(n); return; }
+    if (!byKey[p.key]) { byKey[p.key] = { key: p.key, date: p.date, time: p.time, names: [] }; order.push(p.key); }
+    byKey[p.key].names.push(n);
+  });
+  var sessions = order.map(function (k) {
+    var g = byKey[k];
+    var trimmed = g.names.map(function (n) { return n.trim(); });
+    var prefix = trimmed.length > 1 ? commonPrefix_(trimmed).replace(/\S*$/, '') : trimmed[0];
+    var title = prefix.trim().replace(/[\s,(-]+$/, '') || trimmed[0];
+    return { key: k, date: g.date, time: g.time, title: title,
+      tabs: g.names.map(function (n) { var rest = n.trim().slice(prefix.length).trim(); return { name: n, label: rest || n.trim() }; }) };
+  });
+  sessions.sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return timeMinutes(b.time) - timeMinutes(a.time);
+  });
+  return { sessions: sessions, other: other };
+}
+
+function commonPrefix_(list) {
+  var p = list[0];
+  for (var i = 1; i < list.length; i++) {
+    var j = 0;
+    while (j < p.length && j < list[i].length && p.charAt(j).toLowerCase() === list[i].charAt(j).toLowerCase()) j++;
+    p = p.slice(0, j);
+  }
+  return p;
+}
+
 /** Keys used for matching a cleaned row [name, email, phone]. */
 function rowKeys(row) {
   var keys = [];
@@ -179,6 +245,7 @@ function pickColumns(table, cols) {
 
 if (typeof module !== 'undefined') {
   module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns, findHeader: findHeader, sniffColumns: sniffColumns,
+    parseSessionTab: parseSessionTab, groupSessions: groupSessions,
     keySetOf: keySetOf, matchesSet: matchesSet, cleanAndDedupe: cleanAndDedupe,
     removeMatching: removeMatching, pickColumns: pickColumns };
 }

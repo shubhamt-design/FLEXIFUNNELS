@@ -21,6 +21,7 @@ var CONFIG = {
   ],
   ALLOWED_DOMAIN: 'flexifunnels.com',  // only these emails can use the dashboard
   COUNTRY_CODE: '91',                  // added to 10-digit numbers
+  LIVE_SHEET_ID: '1M-1GJ_W6xyTehUH_o_uikYy49rp-SP_WUsxmBNNR_Wo', // "August 2026 UTM": live session tabs
   SOURCE_SEARCH: 'UTM',                // lead sheets: every spreadsheet with this in its name
   IGNORE_EMAIL_DOMAINS: ['flexifunnels.com'], // test / staff entries skipped when pulling leads
   APP_TITLE: 'Audience Dashboard'

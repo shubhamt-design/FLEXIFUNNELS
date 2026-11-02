@@ -2,6 +2,7 @@
 
 A Google Sheets–backed dashboard for webinar audiences:
 
+- **Live sessions** (opens first): every session tab of "August 2026 UTM" (`CONFIG.LIVE_SHEET_ID`), grouped by session — e.g. "3 Nov 2026 7:30 PM Flexi Genie 10 Mins" with its *Busines* and *Reg Team* tabs. Tick a session and click **Get clean list**: the tabs are read at that moment (everyone registered so far), combined, cleaned of duplicates, buyers, opt-outs, reminder-team removals and test emails, and downloaded. No copying or uploading.
 - **Upload** a list (CSV / Excel / Google Drive link) under a fixed name. Duplicates and buyers are removed automatically.
 - **Build a broadcast list**: pick one audience — or several to **merge** — pick old audiences to subtract, see the final unique count, then download a clean CSV for the WhatsApp tool.
 - **Do-not-contact lists stay current**: every hour the buyers sheet, the opted-out sheet and the reminder-team removal sheet are re-read, and anyone on them is removed from *every* saved audience. Add more sheets in `CONFIG.EXCLUDE_SHEETS`.
@@ -31,6 +32,8 @@ Do this signed in as the account that should own the dashboard (`arman@flexifunn
    - `Code.gs` → paste [`Code.gs`](Code.gs)
    - **+ → Script**, name it `Lists` → paste [`Lists.gs`](Lists.gs)
    - **+ → Script**, name it `Sources` → paste [`Sources.gs`](Sources.gs)
+   - **+ → Script**, name it `Live` → paste [`Live.gs`](Live.gs)
+   - **+ → HTML**, name it `LiveUI` → paste [`LiveUI.html`](LiveUI.html)
    - **+ → HTML**, name it `LeadsUI` → paste [`LeadsUI.html`](LeadsUI.html)
    - **+ → Script**, name it `Logic` → paste [`Logic.gs`](Logic.gs)
    - **+ → HTML**, name it `Index` → paste [`Index.html`](Index.html)
@@ -68,9 +71,12 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 | `Code.gs` | Server part 1: config, setup, access check, uploads, Drive links |
 | `Lists.gs` | Server part 2: build list, delete, hourly buyer sync, storage helpers |
 | `Sources.gs` | Lead sheets: find UTM sheets, combine tabs, pull batches, remember used contacts |
+| `Live.gs` | Live sessions: groups the session tabs of the live sheet and builds clean reminder lists from them |
+| `LiveUI.html` | The "Live sessions" page |
 | `LeadsUI.html` | The "Lead sheets (UTM)" page (included into `Index.html`) |
 | `Logic.gs` | Cleaning / matching rules (no Google services, unit-tested) |
 | `Index.html` | The dashboard UI |
 | `dev/test.js` | `node dev/test.js` — tests for the cleaning rules |
+| `dev/test-sessions.js` | `node dev/test-sessions.js` — session grouping on the real tab names |
 | `dev/test-server.js` | `node dev/test-server.js` — runs the server code end-to-end on fake sheets (`dev/gas-sim.js`) |
 | `dev/preview.js` | `node dev/preview.js` — builds `dev/preview.html` with fake data to preview the UI in a browser |

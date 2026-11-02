@@ -17,6 +17,7 @@ function makeEnv(initial) {
       }
       return out;
     }
+    getDisplayValue() { return String(this.getValues()[0][0]); }
     getDisplayValues() { return this.getValues().map(r => r.map(String)); }
     setValues(v) {
       if (v.length !== this.nr || v[0].length !== this.nc) throw new Error('setValues size mismatch');
@@ -80,7 +81,7 @@ function makeEnv(initial) {
   };
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..');
-  ['Logic.gs', 'Code.gs', 'Lists.gs', 'Sources.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
+  ['Logic.gs', 'Code.gs', 'Lists.gs', 'Sources.gs', 'Live.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
   return { ctx, files, SS, props, make: (name, tabs) => new SS(name, tabs) };
 }
 module.exports = makeEnv;

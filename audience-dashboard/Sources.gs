@@ -166,12 +166,11 @@ function getSourcesState() {
 /* Pool: all chosen tabs combined, cleaned, minus used                 */
 /* ------------------------------------------------------------------ */
 
-function buildPool_(sourceId, tabNames, phoneOnly) {
-  var src = findSource_(sourceId);
-  var ss = SpreadsheetApp.openById(sourceId);
-  var raw = [], steps = [];
-  src.tabs.forEach(function (t) {
-    if (!t.cols || !t.rows || tabNames.indexOf(t.name) < 0) return;
+/** Read name / email / phone of the chosen tabs; each row tagged with its tab name. */
+function readTabsRaw_(ss, tabs, tabNames) {
+  var raw = [];
+  tabs.forEach(function (t) {
+    if (!t.cols || tabNames.indexOf(t.name) < 0) return;
     var sh = ss.getSheetByName(t.name);
     if (!sh) return;
     var n = sh.getLastRow() - t.start + 1;
@@ -183,23 +182,30 @@ function buildPool_(sourceId, tabNames, phoneOnly) {
     }
   });
   if (!raw.length) throw new Error('No contacts found in the selected tabs.');
-  steps.push({ label: 'Rows in selected tabs', count: raw.length, add: true });
+  return raw;
+}
 
+/**
+ * The standard clean-up used everywhere: duplicates, buyers / opt-outs /
+ * reminder team, optional extra set (e.g. already used), internal test
+ * emails and (optionally) rows without a phone. Returns { rows, steps }.
+ */
+function cleanStandard_(raw, phoneOnly, extra) {
+  var steps = [{ label: 'Rows in selected tabs', count: raw.length, add: true }];
   var cleaned = cleanAndDedupe(raw, CONFIG.COUNTRY_CODE);
   steps.push({ label: 'Duplicates (same email or phone)', count: -cleaned.duplicates });
   steps.push({ label: 'No valid email or phone', count: -cleaned.invalid });
   var rows = cleaned.rows;
-
   readExclusions_().lists.forEach(function (l) {
     var res = removeMatching(rows, l.keys);
     steps.push({ label: l.label, count: -res.removed });
     rows = res.rows;
   });
-
-  var used = removeMatching(rows, readUsedKeys_());
-  steps.push({ label: 'Already used in earlier batches', count: -used.removed });
-  rows = used.rows;
-
+  if (extra) {
+    var ex = removeMatching(rows, extra.keys);
+    steps.push({ label: extra.label, count: -ex.removed });
+    rows = ex.rows;
+  }
   var domains = CONFIG.IGNORE_EMAIL_DOMAINS || [];
   if (domains.length) {
     var before = rows.length;
@@ -213,7 +219,14 @@ function buildPool_(sourceId, tabNames, phoneOnly) {
     steps.push({ label: 'No phone number', count: -(rows.length - withPhone.length) });
     rows = withPhone;
   }
-  return { source: src, rows: rows, steps: steps };
+  return { rows: rows, steps: steps };
+}
+
+function buildPool_(sourceId, tabNames, phoneOnly) {
+  var src = findSource_(sourceId);
+  var raw = readTabsRaw_(SpreadsheetApp.openById(sourceId), src.tabs.filter(function (t) { return t.rows; }), tabNames);
+  var res = cleanStandard_(raw, phoneOnly, { keys: readUsedKeys_(), label: 'Already used in earlier batches' });
+  return { source: src, rows: res.rows, steps: res.steps };
 }
 
 function readUsedKeys_() {

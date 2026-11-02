@@ -55,6 +55,22 @@
     releaseBatch: function () { return wait(true); },
     scanSourcesNow: function () { return wait({ sheets: 35 }); },
     addSourceByLink: function () { return wait({ name: 'Sheet' }); },
+    getLiveSessions: function () {
+      function sess(key, date, time, title, tabs) { return { key: key, date: date, time: time, title: title, tabs: tabs }; }
+      function tab(name, label, rows, last) { return { name: name, label: label, rows: rows, usable: rows > 0, lastEntry: last }; }
+      var t = '3 Nov 2026 7:30 PM Flexi Genie 10 Mins ';
+      return wait({ sheetName: 'August 2026 UTM', sheetUrl: '#', checkedAt: new Date().toISOString(), other: [{ name: 'Sheet96', rows: 120, usable: true }], sessions: [
+        sess('a', '2026-11-03', '7:30 PM', t.trim(), [tab(t + 'Busines', 'Busines', 412, '02/11/2026 21:14:05'), tab(t + 'Reg Team', 'Reg Team', 1208, '02/11/2026 21:16:40')]),
+        sess('b', '2026-11-01', '7:30 PM', '1 Nov 2026 7:30 PM Flexi Genie 10 Mins', [tab('1 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines', 'Busines', 388, '01/11/2026 19:28:11'), tab('1 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team', 'Reg Team', 1102, '01/11/2026 19:29:50')]),
+        sess('c', '2026-11-01', '11 AM', '1 Nov 2026 11 AM Flexi Genie 10 Mins', [tab('1 Nov 2026 11 AM Flexi Genie 10 Mins Busines', 'Busines', 2346, '01/11/2026 10:58:02'), tab('1 Nov 2026 11 AM Flexi Genie 10 Mins Reg Team', 'Reg Team', 640, '01/11/2026 10:55:31')]),
+        sess('d', '2026-10-29', '', '29 Oct 2026 8 Figure Faceless Product Encore', [tab('29 Oct 2026 8 Figure Faceless Product Encore', '29 Oct 2026 8 Figure Faceless Product Encore', 870), tab('29 Oct 2026 8 Figure Faceless Product Encore Reg', 'Reg', 315)]),
+        sess('e', '2026-10-28', '7:30 PM', '28 Oct 2026 7:30 PM Flexi Genie 10 Mins', [tab('28 Oct 2026 7:30 PM Flexi Genie 10 Mins Busines', 'Busines', 401), tab('28 Oct 2026 7:30 PM Flexi Genie 10 Mins Reg Team', 'Reg Team', 990)])] });
+    },
+    getLiveList: function (names) {
+      return wait({ at: new Date().toISOString(), final: 1402, perTab: {}, rows: [['A', 'a@x.com', '919840402282', names[0]]], steps: [{ label: 'Rows in selected tabs', count: 1620, add: true },
+        { label: 'Duplicates (same email or phone)', count: -164 }, { label: 'No valid email or phone', count: -3 }, { label: 'Buyers', count: -21 }, { label: 'Opted-out', count: -12 },
+        { label: 'Removed by reminder team', count: -4 }, { label: 'Internal / test emails', count: -6 }, { label: 'No phone number', count: -8 }] }, 900);
+    },
     syncBuyersNow: function () { return wait({ removed: 0 }); }
   };
 })();
