@@ -114,6 +114,23 @@ h1,h2,h3{font-family:var(--f-head);font-weight:800;line-height:1.06;letter-spaci
 .live .note{color:#A9A7C4;font-size:14px;margin-top:14px;font-weight:500}
 .live-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;align-items:start}
 
+/* book a call */
+.book{padding:8px 0 64px}
+.book-card{background:var(--ink);color:#fff;border-radius:28px;padding:48px 44px;display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:center;position:relative;overflow:hidden;box-shadow:0 30px 60px -34px rgba(20,18,43,.7)}
+.book-card::after{content:"";position:absolute;right:-90px;bottom:-90px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,210,63,.28),transparent 70%);pointer-events:none}
+.book-card .k{display:inline-flex;align-items:center;gap:9px;font-family:var(--f-head);font-weight:800;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--c3);margin-bottom:14px}
+.book-card h2{font-size:clamp(26px,3.2vw,40px);line-height:1.12;margin-bottom:14px}
+.book-card h2 .flow{color:var(--ink)}
+.book-card p{color:#C9C7DE;font-size:16.5px;max-width:52ch}
+.book-card ul{list-style:none;display:grid;gap:10px;margin-top:18px}
+.book-card li{position:relative;padding-left:24px;color:#E4E2F0;font-size:15.5px}
+.book-card li::before{content:"";position:absolute;left:2px;top:7px;width:11px;height:11px;border-radius:4px;background:var(--c5)}
+.book-cta{position:relative;z-index:1;text-align:center}
+.book-cta .join{width:100%}
+.book-cta small{display:block;margin-top:12px;color:#A9A7C4;font-size:13.5px;font-weight:600}
+@media(max-width:900px){.book-card{grid-template-columns:1fr;padding:34px 26px}}
+@media(max-width:560px){.book{padding:0 0 44px}.book-card{padding:28px 20px;border-radius:22px}}
+
 /* learn */
 .learn{padding:56px 0 64px;background:var(--paper-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .learn h2.big,.who h2.big{font-size:clamp(26px,3.4vw,42px);margin-bottom:10px}
@@ -172,7 +189,7 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
 
 <div class="topbar">
   <div class="brand"><img class="ff-logo" src="https://img.flexifunnels.com/images/943/logo_8pzzx_1258.png" alt="FlexiFunnels" width="1258" height="257"><span class="sep"></span><span class="t">Meta Ads Masterclass 2027</span></div>
-  <a class="join-mini" href="#day2">Watch Day 2 &rarr;</a>
+  <a class="join-mini" href="https://sb.flexifunnels.com/1on1-flexifunnels-demo#book" target="_blank" rel="noopener">Book a Call &rarr;</a>
 </div>
 
 <!-- HERO -->
@@ -248,6 +265,29 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
   </div>
 </section>
 
+<!-- BOOK A CALL -->
+<section class="book" id="book-call">
+  <div class="wrap">
+    <div class="book-card reveal">
+      <div>
+        <div class="k">Interested in FlexiFunnels?</div>
+        <h2>Book a free 1-on-1 call with the <span class="flow">FlexiFunnels team</span></h2>
+        <p>Liked what you saw in the masterclass? Talk to the team and see how FlexiFunnels can run your pages, funnels, checkout and ad tracking in one place.</p>
+        <ul>
+          <li>A walkthrough built around your business</li>
+          <li>Answers to your questions about funnels and Meta ads tracking</li>
+          <li>Clear next steps to get started</li>
+        </ul>
+      </div>
+      <div class="book-cta">
+        <a class="join" href="https://sb.flexifunnels.com/1on1-flexifunnels-demo#book" target="_blank" rel="noopener">Book Your Free Call
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <small>Free &middot; 1-on-1 with the FlexiFunnels team</small>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- WHAT YOU'LL LEARN -->
 <section class="learn">
   <div class="wrap">
@@ -287,9 +327,9 @@ footer .legal{font-size:11.5px;color:#6E6C8A;margin:18px auto 0;max-width:720px;
 <!-- CLOSING -->
 <section class="closing">
   <div class="wrap reveal">
-    <h2>Watch both sessions, <span class="flow">then take action</span>.</h2>
-    <p>Saurabh's advice: watch this masterclass again after two months and after six months. It makes more sense each time you run ads.</p>
-    <a class="join" href="#day1">Start with Day 1
+    <h2>Ready to put this into action? <span class="flow">Let's talk</span>.</h2>
+    <p>Book a free 1-on-1 call and the FlexiFunnels team will help you set up the funnel behind your ads.</p>
+    <a class="join" href="https://sb.flexifunnels.com/1on1-flexifunnels-demo#book" target="_blank" rel="noopener">Book a Free Call With the Team
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
 </section>
