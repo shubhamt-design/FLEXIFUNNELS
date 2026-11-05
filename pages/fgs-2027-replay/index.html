@@ -42,6 +42,15 @@ section{padding:72px 0}
 .btn-gold{background:var(--gold);color:var(--gold-ink);box-shadow:0 10px 24px -8px rgba(226,169,47,.6)}
 .btn-gold:hover{background:#cf961d}
 
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;background:var(--red);color:#fff;font-size:14px}
+.topbar .wrap{display:flex;align-items:center;justify-content:center;gap:14px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
+.topbar b{letter-spacing:.06em}
+.dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;margin-right:6px;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.mini-cd{font-variant-numeric:tabular-nums;font-weight:800;background:rgba(0,0,0,.2);padding:4px 10px;border-radius:8px}
+.topbar a{background:#fff;color:var(--red);text-decoration:none;font-weight:800;padding:7px 14px;border-radius:8px}
+
 /* hero */
 .hero{background:radial-gradient(1200px 500px at 50% -10%,#24305c 0%,var(--navy) 60%);color:#fff;padding:40px 0 64px;text-align:center}
 .hero .logo{height:64px;width:auto;margin:0 auto 22px}
@@ -61,6 +70,13 @@ section{padding:72px 0}
 .fact b{color:var(--gold)}
 .hero-cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
 
+/* reveal cards */
+.reveal{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:40px}
+.rcard{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px;box-shadow:var(--shadow)}
+.rcard .ic{font-size:28px}
+.rcard h3{font-size:22px;margin:10px 0 6px}
+.rcard p{color:var(--muted);font-size:15px}
+
 /* chapters */
 .chapters-bg{background:var(--mist)}
 .chapters{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:36px}
@@ -77,11 +93,69 @@ section{padding:72px 0}
 .tk h3{font-size:20px;margin:10px 0 8px}
 .tk p{font-size:15px;color:var(--muted)}
 
+/* tickets */
+.tickets-bg{background:var(--navy);color:#fff}
+.tickets-bg .sub{color:#B8BED0}
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:44px;align-items:stretch}
+.tier{background:var(--navy-2);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;position:relative}
+.tier.hot{background:#fff;color:var(--ink);border:3px solid var(--gold);transform:translateY(-10px)}
+.tier .badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--gold-ink);font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;white-space:nowrap;letter-spacing:.05em}
+.tier h3{font-size:24px}
+.tier .who{font-size:13px;opacity:.7;margin-top:2px}
+.price{margin:16px 0 6px;font-family:var(--f-display);font-weight:800;font-size:30px}
+.price .mp{font-size:20px;display:block;color:var(--gold)}
+.price s{font-size:16px;opacity:.55;font-weight:600;margin-right:6px}
+.tier .note{font-size:13px;opacity:.75;min-height:38px}
+.tier ul{list-style:none;margin:16px 0 22px;flex:1}
+.tier li{font-size:14px;padding:7px 0 7px 26px;position:relative;border-bottom:1px dashed rgba(255,255,255,.12)}
+.tier.hot li{border-color:var(--line)}
+.tier li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800}
+.tier .btn{width:100%;font-size:15px;padding:15px 16px}
+.token{margin:40px auto 0;max-width:820px;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.3);border-radius:18px;padding:22px 24px;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.token p{color:#C9CEDC;font-size:15px;max-width:520px}
+.token b{color:#fff}
+.pubprice{text-align:center;margin-top:22px;font-size:13px;color:#9AA1B5}
+
+/* chat wall */
+.wall{columns:3 300px;column-gap:18px;margin-top:40px}
+.msg{break-inside:avoid;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;margin-bottom:18px;box-shadow:var(--shadow)}
+.msg .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:14px;flex:none}
+.msg .nm{font-weight:700;font-size:14px}
+.msg .tm{font-size:12px;color:var(--muted)}
+.msg p{font-size:15px}
+.msg .win{display:inline-block;background:var(--green-soft);color:var(--green-ink);font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;margin-bottom:8px}
+.disc{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+
+/* booked ticker */
+.ticker{background:var(--gold-soft);border-top:1px solid #efdca8;border-bottom:1px solid #efdca8;overflow:hidden;padding:14px 0}
+.ticker-track{display:flex;gap:28px;width:max-content;animation:scroll 50s linear infinite}
+.ticker span{font-size:14px;color:var(--gold-ink);white-space:nowrap}
+.ticker b{font-weight:800}
+@keyframes scroll{to{transform:translateX(-50%)}}
+
+/* speakers */
+.spk{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:40px}
+.sp{text-align:center}
+.sp .ph{aspect-ratio:1;border-radius:16px;background:linear-gradient(180deg,#24305c,var(--navy));overflow:hidden;display:flex;align-items:flex-end;justify-content:center}
+.sp .ph img{width:100%;height:100%;object-fit:cover;object-position:top}
+.sp b{display:block;font-size:14px;margin-top:8px}
+.sp small{font-size:12px;color:var(--muted)}
+
+/* faq */
+.faq{margin-top:36px}
+details{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+summary{list-style:none;cursor:pointer;padding:20px 54px 20px 22px;font-weight:700;font-size:17px;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:22px;top:50%;transform:translateY(-50%);font-size:26px;color:var(--cta);font-weight:500}
+details[open] summary::after{content:"–"}
+details p{padding:0 22px 20px;color:var(--muted)}
+
 /* final */
 .final{background:radial-gradient(900px 400px at 50% 0%,#24305c,var(--navy) 70%);color:#fff;text-align:center}
 .final h2{max-width:860px;margin:0 auto}
 .final .sub{color:#C9CEDC}
-.cdx{display:none;gap:12px;justify-content:center;margin:30px 0}
+.cd{display:flex;gap:12px;justify-content:center;margin:30px 0}
 .cd div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 10px;min-width:78px}
 .cd b{display:block;font-family:var(--f-display);font-size:34px;font-variant-numeric:tabular-nums}
 .cd small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
@@ -93,8 +167,6 @@ footer img{height:30px;width:auto;margin:0 auto 16px}
 footer p{max-width:820px;margin:0 auto 10px}
 footer nav a{margin:0 8px;color:#B8BED0}
 
-.covered{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:36px}
-.final .btn{margin-top:26px}
 /* responsive */
 @media (max-width:980px){
   .reveal,.tiers{grid-template-columns:repeat(2,1fr)}
@@ -116,12 +188,22 @@ footer nav a{margin:0 8px;color:#B8BED0}
 </head>
 <body>
 
+<!-- STICKY TOP BAR -->
+<div class="topbar">
+  <div class="wrap">
+    <span><span class="dot"></span><b>REPLAY IS LIVE</b> · Comes down in</span>
+    <span class="mini-cd" id="miniCd">--:--:--</span>
+    <a href="#tickets">Book My Seat</a>
+  </div>
+</div>
+
+<!-- HERO -->
 <header class="hero">
   <div class="wrap">
     <img class="logo" src="https://img.flexifunnels.io/images/943/uxotg_1370_kymje1370k5ndm1370eyodm1370FGScopy.png" alt="Funnel Growth Summit">
     <span class="pill"><span class="rec"></span> REPLAY · FGS 2027 Live Reveal · 5 Nov 2026</span>
-    <h1>Watch The <em>Full Replay</em> Of The FGS 2027 Reveal</h1>
-    <p class="lede">RB &amp; SB revealed FGS 2027: AI Marketing Edition. Dates, venue, and the ideas on trust, clipping and networking that the chat couldn't stop talking about.</p>
+    <h1>Missed The Live Reveal? Watch The <em>Full Replay</em> Of FGS 2027: AI Marketing Edition</h1>
+    <p class="lede">RB &amp; SB revealed the dates, the venue, every ticket tier and the FlexiFunnels-only offer. Watch it below before the replay and the member pricing come down.</p>
 
     <div class="player" id="player">
       <iframe id="vimeo" src="https://player.vimeo.com/video/1243882734?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479&amp;autoplay=1&amp;muted=1" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen title="5 Nov 2026 FGS EVENT REVEAL WEBINAR"></iframe>
@@ -130,35 +212,208 @@ footer nav a{margin:0 8px;color:#B8BED0}
     <div class="facts">
       <div class="fact">📅 <b>17, 18 &amp; 19 Feb 2027</b></div>
       <div class="fact">📍 <b>Talkatora Stadium</b>, New Delhi</div>
+      <div class="fact">🎟️ Gold ticket <b>FREE</b> for FlexiFunnels members</div>
     </div>
 
     <div class="hero-cta">
-      <a class="btn" href="https://sb.flexifunnels.com/1on1-flexifunnels-demo#book">📞 Book My Call</a>
+      <a class="btn stack" href="#tickets">Yes, Book My FGS 2027 Seat<small>FlexiFunnels member pricing · while the replay is up</small></a>
+      <a class="btn btn-ghost" href="#chapters">Jump To What Was Covered</a>
     </div>
   </div>
 </header>
 
-<section class="chapters-bg" id="chapters">
+<!-- WHAT WAS REVEALED -->
+<section>
   <div class="wrap">
-    <div class="center"><span class="eyebrow">What was covered</span></div>
-    <h2>Short On Time? Jump Straight To It</h2>
-    <p class="sub">Tap a chapter to jump to that moment in the replay.</p>
-    <div class="chapters">
-      <button class="chap" data-t="1140"><span class="t">19:00</span><div><h4>Welcome &amp; what FGS means to you</h4><p>Members share what past editions did for them.</p></div></button>
-      <button class="chap" data-t="2580"><span class="t">43:00</span><div><h4>The date reveal: 17, 18 &amp; 19 February 2027</h4><p>Edition 07: AI Marketing Edition.</p></div></button>
-      <button class="chap" data-t="2940"><span class="t">49:00</span><div><h4>Trust: the real currency of business</h4><p>Why trust is what makes every other strategy work.</p></div></button>
-      <button class="chap" data-t="2953"><span class="t">49:13</span><div><h4>The Clipping Strategy</h4><p>Turn long content into short clips that multiply your reach.</p></div></button>
-      <button class="chap" data-t="3375"><span class="t">56:15</span><div><h4>Venue reveal: New Delhi</h4><p>Talkatora Stadium.</p></div></button>
-      <button class="chap" data-t="5790"><span class="t">1:36:30</span><div><h4>Your network is your net worth</h4><p>How connections turn into collaborators, partnerships and clients.</p></div></button>
+    <div class="center"><span class="eyebrow">The big reveal</span></div>
+    <h2>Here's Everything <span class="mark">Announced Live</span></h2>
+    <p class="sub">The short version, in case you're watching on the go.</p>
+    <div class="reveal">
+      <div class="rcard"><div class="ic">📅</div><h3>17–19 Feb 2027</h3><p>Three full days. Edition 07 of India's biggest funnel, online business &amp; AI marketing event.</p></div>
+      <div class="rcard"><div class="ic">🏟️</div><h3>Talkatora Stadium</h3><p>New Delhi. The city where so many FGS attendees say their journey started.</p></div>
+      <div class="rcard"><div class="ic">🎁</div><h3>Gold = FREE</h3><p>FlexiFunnels members get the Gold ticket (₹12,000 value) free. You only pay the cover charges.</p></div>
+      <div class="rcard"><div class="ic">📸</div><h3>Gold Plus upgraded</h3><p>Added live: Gold Plus now includes photos with <b>both</b> RB &amp; SB.</p></div>
     </div>
   </div>
 </section>
 
+<!-- CHAPTERS -->
+<section class="chapters-bg" id="chapters">
+  <div class="wrap">
+    <div class="center"><span class="eyebrow">Replay chapters</span></div>
+    <h2>Short On Time? Jump Straight To It</h2>
+    <p class="sub">Tap a chapter to jump to that moment in the replay.</p>
+    <div class="chapters">
+      <button class="chap" data-t="1140"><span class="t">19:00</span><div><h4>Welcome &amp; what FGS means to you</h4><p>The chat floods in: "life changing", "pure energy", "wrong beliefs broken".</p></div></button>
+      <button class="chap" data-t="1500"><span class="t">25:00</span><div><h4>The FGS journey: past editions &amp; results</h4><p>Members share their stories from Silver to Diamond, and from first client to ₹1 Cr club.</p></div></button>
+      <button class="chap" data-t="2580"><span class="t">43:00</span><div><h4>The date reveal: 17, 18 &amp; 19 February 2027</h4><p>The moment the dates for Edition 07 go public.</p></div></button>
+      <button class="chap" data-t="2940"><span class="t">49:00</span><div><h4>Trust: the real currency of business</h4><p>Why trust compounds faster than any ad budget.</p></div></button>
+      <button class="chap" data-t="2953"><span class="t">49:13</span><div><h4>The Clipping Strategy</h4><p>How to turn one piece of content into reach across every platform.</p></div></button>
+      <button class="chap" data-t="3375"><span class="t">56:15</span><div><h4>Venue reveal: New Delhi</h4><p>Talkatora Stadium, and why the room matters.</p></div></button>
+      <button class="chap" data-t="5790"><span class="t">1:36:30</span><div><h4>Networking = net worth</h4><p>How FGS connections turn into collaborators, partnerships and paychecks.</p></div></button>
+      <button class="chap" data-t="6290"><span class="t">1:44:50</span><div><h4>The offer: Gold ticket FREE for members</h4><p>Every tier explained: Gold, Gold Plus, VIP and Diamond.</p></div></button>
+      <button class="chap" data-t="8180"><span class="t">2:16:20</span><div><h4>Live bonus: photos with RB &amp; SB in Gold Plus</h4><p>Added on the spot after members asked for it.</p></div></button>
+      <button class="chap" data-t="9160"><span class="t">2:32:40</span><div><h4>Gold Plus breakdown</h4><p>Ground-level seating, only 249 seats, 3 extra courses, 8 weeks of support.</p></div></button>
+    </div>
+  </div>
+</section>
+
+<!-- TAKEAWAYS -->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="eyebrow">What was covered</span></div>
+    <h2>6 Big Ideas From The Reveal Webinar</h2>
+    <p class="sub">Worth the watch even before you book a seat.</p>
+    <div class="take">
+      <div class="tk"><div class="n">01</div><h3>AI is changing the game</h3><p>FGS 2027 is the AI Marketing Edition: build leads, sales and funnels faster with AI as your co-founder.</p></div>
+      <div class="tk"><div class="n">02</div><h3>Trust beats tactics</h3><p>The businesses that win long-term are the ones people believe in. Trust is what makes every other strategy work.</p></div>
+      <div class="tk"><div class="n">03</div><h3>The Clipping Strategy</h3><p>Turn long content into short clips that multiply your reach without multiplying your effort.</p></div>
+      <div class="tk"><div class="n">04</div><h3>Your network is your net worth</h3><p>For two decades the word in the West has been networking. At FGS, connections turn into collaborators and clients.</p></div>
+      <div class="tk"><div class="n">05</div><h3>Proximity to people who are ahead</h3><p>Being in the room with 1000s of action-takers resets what you believe is possible for your business.</p></div>
+      <div class="tk"><div class="n">06</div><h3>Take business as business</h3><p>Not a hobby. Show up, invest in yourself, implement, and come back the next year with results.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKETS -->
+<section class="tickets-bg" id="tickets">
+  <div class="wrap">
+    <div class="center"><span class="eyebrow" style="color:var(--gold)">FlexiFunnels member pricing</span></div>
+    <h2>Choose Your Seat For FGS 2027</h2>
+    <p class="sub">17, 18 &amp; 19 February 2027 · Talkatora Stadium, New Delhi. These are the special FlexiFunnels-member links shared on the webinar.</p>
+
+    <div class="tiers">
+      <div class="tier">
+        <h3>Gold</h3>
+        <div class="who">For every FlexiFunnels member</div>
+        <div class="price"><s>₹12,000</s>FREE</div>
+        <div class="note">You only pay the cover charges.</div>
+        <ul>
+          <li>All 3 days of FGS 2027</li>
+          <li>Every main-stage session</li>
+          <li>Networking with 1000s of action-takers</li>
+          <li>3 weeks of post-event support</li>
+        </ul>
+        <a class="btn" href="https://sb.flexifunnels.com/ff-gold">Claim My FREE Gold</a>
+      </div>
+
+      <div class="tier hot">
+        <span class="badge">★ MOST BOOKED LIVE</span>
+        <h3>Gold Plus</h3>
+        <div class="who">The member favourite</div>
+        <div class="price"><s>₹15,000</s><span class="mp">Member price</span></div>
+        <div class="note">Only 249 seats in this category.</div>
+        <ul>
+          <li>Everything in Gold</li>
+          <li><b>Ground-level seating</b></li>
+          <li><b>Photos with RB &amp; SB</b> (added live)</li>
+          <li>3 extra courses</li>
+          <li><b>8 weeks</b> of support instead of 3</li>
+        </ul>
+        <a class="btn" href="https://sb.flexifunnels.com/ff-gold-plus">Book Gold Plus</a>
+      </div>
+
+      <div class="tier">
+        <h3>VIP</h3>
+        <div class="who">Closer seating, more access</div>
+        <div class="price"><s>₹55,000</s><span class="mp">Member price</span></div>
+        <div class="note">Reserve now with a token amount if you prefer.</div>
+        <ul>
+          <li>Everything in Gold Plus</li>
+          <li>Premium VIP seating</li>
+          <li>Closer access to speakers &amp; hosts</li>
+          <li>VIP-only networking</li>
+        </ul>
+        <a class="btn" href="https://sb.flexifunnels.com/ff-vip">Book VIP</a>
+      </div>
+
+      <div class="tier">
+        <h3>Diamond</h3>
+        <div class="who">The closest you can get</div>
+        <div class="price"><s>₹2,00,000</s><span class="mp">Member price</span></div>
+        <div class="note">Reserve now with a token amount if you prefer.</div>
+        <ul>
+          <li>Everything in VIP</li>
+          <li>Closest seating to the stage</li>
+          <li>Highest level of access</li>
+          <li>Diamond-only experiences</li>
+        </ul>
+        <a class="btn btn-gold" href="https://sb.flexifunnels.com/ff-diamond">Book Diamond</a>
+      </div>
+    </div>
+
+    <div class="token">
+      <p><b>Want VIP or Diamond but need time?</b> Pay a token amount now to lock your seat at member pricing and complete the balance later.</p>
+      <a class="btn btn-ghost" href="https://sb.flexifunnels.com/fgs-custom">Pay Token Amount</a>
+    </div>
+    <p class="pubprice">Struck-through prices are the public (non-member) prices announced on the webinar. Your member price is shown at checkout. Tickets are sent closer to the event.</p>
+  </div>
+</section>
+
+<!-- BOOKED TICKER -->
+<div class="ticker" aria-label="Booked during the live webinar">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- CHAT WALL -->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="eyebrow">Straight from the live chat</span></div>
+    <h2>What Members Said <span class="mark">During The Webinar</span></h2>
+    <p class="sub">Real messages from the live reveal on 5 Nov 2026, lightly trimmed for length.</p>
+    <div class="wall" id="wall"></div>
+    <p class="disc">Results are individual experiences shared by past attendees. They are not typical and not a guarantee of what you will earn.</p>
+    <div class="center" style="margin-top:28px"><a class="btn" href="#tickets">I Want To Be In The Room Too</a></div>
+  </div>
+</section>
+
+<!-- SPEAKERS -->
+<section class="chapters-bg">
+  <div class="wrap">
+    <div class="center"><span class="eyebrow">Past FGS stages</span></div>
+    <h2>The Names That Have Shared The FGS Stage</h2>
+    <p class="sub">22,000+ attendees across previous editions. The 2027 lineup is being revealed soon.</p>
+    <div class="spk">
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.io/images/943/u4mze_700_axnzu700Layer3copy3.webp" alt="Saurabh Bhatnagar"></div><b>Saurabh Bhatnagar</b><small>Co-founder &amp; CEO, FlexiFunnels</small></div>
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.io/images/943/k5ode_634_uyoda634Layer21.webp" alt="Rahul Bhatnagar"></div><b>Rahul Bhatnagar</b><small>Author, Entrepreneur, Mentor</small></div>
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.io/images/943/320/c0mtc_495_Neilcopyremovebgpreview.png" alt="Neil Patel"></div><b>Neil Patel</b><small>Co-founder, NP Digital</small></div>
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.com/images/943/320/Amanremovebgpreview_c5odm_500.png" alt="Aman Gupta"></div><b>Aman Gupta</b><small>Co-founder, boAt</small></div>
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.io/images/943/320/mzoty_902_Anik.png" alt="Anik Singal"></div><b>Anik Singal</b><small>CEO, Lurn Inc.</small></div>
+      <div class="sp"><div class="ph"><img loading="lazy" src="https://img.flexifunnels.com/images/943/320/ddddremovebgpreview_kxmjc_490.png" alt="Dr. A. Velumani"></div><b>Dr. A. Velumani</b><small>Founder, Thyrocare</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="wrap narrow">
+    <div class="center"><span class="eyebrow">Questions from the chat</span></div>
+    <h2>Everything People Asked Live</h2>
+    <div class="faq">
+      <details open><summary>Is the Gold ticket really free?</summary><p>Yes, for FlexiFunnels members. The Gold ticket (worth ₹12,000 + GST) is free; you only pay the cover charges at checkout. That's why the checkout page shows a small amount to pay.</p></details>
+      <details><summary>When and where is FGS 2027?</summary><p>17, 18 &amp; 19 February 2027 at Talkatora Stadium, New Delhi. It's an in-person event.</p></details>
+      <details><summary>I've booked. Where is my ticket?</summary><p>You'll get a confirmation email right after payment. Your actual event tickets will be sent closer to the event.</p></details>
+      <details><summary>What's the difference between Gold and Gold Plus?</summary><p>Gold Plus adds ground-level seating (only 249 seats), 3 extra courses, photos with both RB &amp; SB, and 8 weeks of support instead of 3.</p></details>
+      <details><summary>Can I book Gold now and upgrade later?</summary><p>Yes, many members did exactly that on the webinar. For upgrade pricing on your specific booking, email <a href="mailto:help@flexifunnels.com">help@flexifunnels.com</a> with your order email.</p></details>
+      <details><summary>I want VIP or Diamond but can't pay the full amount today.</summary><p>Use the <a href="https://sb.flexifunnels.com/fgs-custom">token / custom payment link</a> to reserve your seat with a token amount, then pay the balance later.</p></details>
+      <details><summary>I'm not a FlexiFunnels member. What are the prices?</summary><p>Public prices announced on the webinar: Gold ₹12,000, Gold Plus ₹15,000, VIP ₹55,000, Diamond ₹2,00,000. Write to <a href="mailto:help@flexifunnels.com">help@flexifunnels.com</a> to book.</p></details>
+      <details><summary>The checkout isn't working for me. What do I do?</summary><p>Try once more using the email you bought FlexiFunnels with. If it still fails, email <a href="mailto:help@flexifunnels.com">help@flexifunnels.com</a> and the team will sort it out.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
 <section class="final">
   <div class="wrap">
-    <h2>Want Help Applying This To Your Business?</h2>
-    <p class="sub">Book a 1-on-1 call with the FlexiFunnels team.</p>
-    <a class="btn" href="https://sb.flexifunnels.com/1on1-flexifunnels-demo#book">📞 Book My Call</a>
+    <h2>The Replay &amp; Member Pricing Come Down Soon. Your Seat Doesn't Have To.</h2>
+    <p class="sub">See you at Talkatora Stadium, New Delhi, on 17–19 February 2027.</p>
+    <div class="cd" id="bigCd">
+      <div><b id="cdD">00</b><small>Days</small></div>
+      <div><b id="cdH">00</b><small>Hrs</small></div>
+      <div><b id="cdM">00</b><small>Mins</small></div>
+      <div><b id="cdS">00</b><small>Secs</small></div>
+    </div>
+    <a class="btn" href="#tickets">Book My FGS 2027 Seat Now</a>
     <p class="help">Questions? Email <a href="mailto:help@flexifunnels.com">help@flexifunnels.com</a></p>
   </div>
 </section>
@@ -166,7 +421,8 @@ footer nav a{margin:0 8px;color:#B8BED0}
 <footer>
   <div class="wrap">
     <img src="https://img.flexifunnels.com/images/943/480/FlexiFunnelsfullwhiteixntm1893_g1odk_1893.webp" alt="FlexiFunnels">
-    <p>This site is not a part of the Facebook website or Facebook Inc. Photos on this page are from previous editions of Funnel Growth Summit.</p>
+    <p>Organised by FlexiFunnels. Any earnings or results shared on this page are personal experiences of past attendees and are not typical. Your results depend on your effort, skills and market conditions.</p>
+    <p>This site is not a part of the Facebook website or Facebook Inc. Photos and videos on this page are from previous editions of Funnel Growth Summit.</p>
     <p>© 2026 Misfits Change Makers Pvt Ltd. This page is made using FlexiFunnels.</p>
     <nav><a href="https://official.flexifunnels.com/terms-of-use">Terms</a><a href="https://official.flexifunnels.com/privacy-policy">Privacy</a><a href="https://official.flexifunnels.com/DPA">DPA</a></nav>
   </div>
@@ -174,6 +430,11 @@ footer nav a{margin:0 8px;color:#B8BED0}
 
 <script src="https://player.vimeo.com/api/player.js"></script>
 <script>
+var CONFIG = {
+  replayEndsAt: "2026-11-08T23:59:00+05:30"  // replay + member pricing deadline (IST)
+};
+
+// --- Vimeo player + chapters ---
 var player = null;
 try { player = new Vimeo.Player(document.getElementById("vimeo")); } catch (e) {}
 document.querySelectorAll(".chap").forEach(function(b){
@@ -184,6 +445,55 @@ document.querySelectorAll(".chap").forEach(function(b){
     player.setCurrentTime(t).then(function(){ return player.setMuted(false); }).then(function(){ return player.play(); }).catch(function(){});
   });
 });
+
+// --- Countdown ---
+var end = new Date(CONFIG.replayEndsAt).getTime();
+function pad(n){ return String(n).padStart(2, "0"); }
+function tick(){
+  var d = Math.max(0, end - Date.now()), s = Math.floor(d / 1000);
+  var D = Math.floor(s / 86400), H = Math.floor(s % 86400 / 3600), M = Math.floor(s % 3600 / 60), S = s % 60;
+  document.getElementById("cdD").textContent = pad(D);
+  document.getElementById("cdH").textContent = pad(H);
+  document.getElementById("cdM").textContent = pad(M);
+  document.getElementById("cdS").textContent = pad(S);
+  document.getElementById("miniCd").textContent = (D ? D + "d " : "") + pad(H) + ":" + pad(M) + ":" + pad(S);
+}
+tick(); setInterval(tick, 1000);
+
+// --- Live chat wall (from the 5 Nov 2026 webinar chat) ---
+var msgs = [
+  {n:"Surendra Kumar Sharma", t:"7:47 PM", w:"5 years of FGS", m:"2022 EBW2 online → 2023 FGS online SILVER → 2024 FGS GOLD → 2025 FGS VIP, 10L achiever's award → 2025 Rise & Shine → 2027 FGS DIAMOND."},
+  {n:"Shubham Yadav", t:"8:04 PM", w:"₹50 lakh in 1.5 yrs", m:"I am at 50 lakhs in 1.5 years with you."},
+  {n:"Sheeba Roosevelt", t:"7:41 PM", w:"₹1 lakh in 75 days", m:"I made 1 lakh in 75 days."},
+  {n:"Darshan G", t:"8:04 PM", m:"FGS has changed my life. I am doing so many amazing things because of this event. The level of energy that we feel here is just unmatched. Never miss FGS. I attended in 2 locations last time."},
+  {n:"Harish Singh", t:"9:56 PM", m:"Jo value, learning, networking and atmosphere milta hai, invest ka 1000+ guna hota hai sir. Aisi learning and event quality maine abhi tak India me kahin nahi dekhi. That was my best event."},
+  {n:"Ganesh Ram", t:"7:40 PM", w:"First client", m:"Meri life ka 1st client FGS se hi mila tha. Thank you sir."},
+  {n:"Shamser Singh", t:"10:39 PM", m:"I was part of FGS 2023. We get 1000 times the value for what we pay on the ticket. Thanks, duo brothers RB & SB. The real gems of India's digital marketing industry!"},
+  {n:"Bhavik Patel", t:"8:05 PM", w:"₹25 lakh in 2 yrs", m:"25 lac total in 2 years (2025 and 2026)."},
+  {n:"Muskaan Pathan", t:"9:12 PM", m:"My Gold Plus ticket is officially booked! Delhi is the place where I first discovered my vision for the digital world. Now I'm heading back with even bigger dreams. Delhi, here I come again!"},
+  {n:"Sprint Solutionz", t:"8:59 PM", m:"100% agree that FGS connections have given me my collaborators with whom I am consistently working."},
+  {n:"Rahul Chaudhary", t:"7:40 PM", m:"Just go, don't overthink. It's the best event for fast success."},
+  {n:"Deepak Kumar", t:"7:49 PM", w:"1 Cr Club", m:"Mazza to aaya tha FGS me. Last year main bhi 1 Cr Club aur Diamond me tha."},
+  {n:"Prasad EVC", t:"9:58 PM", m:"As a digital marketing agency owner, this is a great opportunity to network. If I get introduced here, there's no question of credibility, since everyone in this community trusts each other. I want to grow my business 10x next year."},
+  {n:"Balmukund Kanodia", t:"9:58 PM", m:"Paid the token amount and reserved my seat in the VIP category. Will make the travel bookings right now!"},
+  {n:"Mritunjai Tiwary", t:"9:53 PM", m:"It's a no-brainer deal. Let's take business as business, not a hobby."}
+];
+var colors = ["#FF5A1F","#0FA972","#E2A92F","#6366F1","#D7262E","#0B1226"];
+var wall = document.getElementById("wall");
+msgs.forEach(function(x, i){
+  var el = document.createElement("div"); el.className = "msg";
+  var ini = x.n.split(" ").map(function(w){return w[0];}).slice(0,2).join("").toUpperCase();
+  el.innerHTML = '<div class="hd"><div class="av" style="background:' + colors[i % colors.length] + '">' + ini + '</div><div><div class="nm"></div><div class="tm">' + x.t + ' · live chat</div></div></div>' + (x.w ? '<span class="win"></span>' : '') + '<p></p>';
+  el.querySelector(".nm").textContent = x.n;
+  if (x.w) el.querySelector(".win").textContent = x.w;
+  el.querySelector("p").textContent = x.m;
+  wall.appendChild(el);
+});
+
+// --- Booked-live ticker ---
+var booked = [["Shashank Singh","Gold Plus"],["Sandeep Marwah","Gold Plus"],["Muskaan Pathan","Gold Plus"],["Bhumika Rupchandani","Gold Plus"],["Hiren Varma","Gold"],["Priti Mehta, Mumbai","Gold Plus"],["Balmukund Kanodia","VIP"],["Sanjeev Duggal","Gold Plus"],["Shamser Singh","Gold Plus"],["Vinod","Gold Plus"],["Anand Kumar","Gold"],["Daksh","Gold"],["Dhiraj","Booked"],["Rinkal Satra","Booked"],["Jiwan Kumar Jindal","Booked"],["Nitin Jain","Booked"]];
+var html = booked.map(function(b){ return "<span>🎟️ <b>" + b[0] + "</b> booked " + b[1] + "</span>"; }).join("");
+document.getElementById("ticker").innerHTML = html + html;
 </script>
 </body>
 </html>
