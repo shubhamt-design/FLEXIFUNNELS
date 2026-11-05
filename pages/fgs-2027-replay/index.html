@@ -455,7 +455,7 @@ function videoSrc(start){
 }
 function play(start){
   var src = videoSrc(start), p = document.getElementById("player");
-  if (!src){ alert("The replay video is being uploaded. Please check back in a few minutes."); return; }
+  if (!src){ var l = p.querySelector(".lbl"); if (l) l.textContent = "⏳ Replay is being processed. Check back in a few minutes."; return; }
   p.innerHTML = '<iframe src="' + src + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="FGS 2027 reveal replay"></iframe>';
 }
 document.getElementById("playBtn").addEventListener("click", function(){ play(0); });
