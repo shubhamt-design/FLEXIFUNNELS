@@ -9,11 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ============ CONFIG NOTES ============
-   Edit the CONFIG object in the <script> at the bottom:
-   - videoYouTubeId / videoVimeoId : replay video
-   - replayEndsAt                  : when the replay + offer comes down (IST)
-   ===================================== */
 :root{
   --navy:#0B1226; --navy-2:#111A36; --ink:#0B1226; --paper:#F7F6F2; --mist:#EFEDE6; --line:#E2DFD6; --white:#FFFFFF;
   --cta:#FF5A1F; --cta-hover:#E24A12; --gold:#E2A92F; --gold-deep:#B47F14; --gold-soft:#FBF0D3; --gold-ink:#4A3200;
@@ -129,11 +124,7 @@ footer nav a{margin:0 8px;color:#B8BED0}
     <p class="lede">RB &amp; SB revealed FGS 2027: AI Marketing Edition. Dates, venue, and the ideas on trust, clipping and networking that the chat couldn't stop talking about.</p>
 
     <div class="player" id="player">
-      <img src="https://media.flexifunnels.io/943/images/2045915727-0c46eee9c0b0235451a85d2f29158ddec10ebadf55b59670b-3a260fe7.jpg" alt="FGS 2027 reveal webinar replay">
-      <button class="play" id="playBtn" type="button" aria-label="Play replay">
-        <span class="circle"></span>
-        <span class="lbl">▶ Watch the full replay</span>
-      </button>
+      <iframe id="vimeo" src="https://player.vimeo.com/video/1243882734?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479&amp;autoplay=1&amp;muted=1" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen title="5 Nov 2026 FGS EVENT REVEAL WEBINAR"></iframe>
     </div>
 
     <div class="facts">
@@ -181,29 +172,16 @@ footer nav a{margin:0 8px;color:#B8BED0}
   </div>
 </footer>
 
+<script src="https://player.vimeo.com/api/player.js"></script>
 <script>
-/* ================= CONFIG ================= */
-var CONFIG = {
-  videoYouTubeId: "",   // e.g. "dQw4w9WgXcQ"  (set ONE of these two)
-  videoVimeoId:   ""    // e.g. "123456789"
-};
-/* ========================================== */
-function videoSrc(start){
-  start = start || 0;
-  if (CONFIG.videoYouTubeId) return "https://www.youtube-nocookie.com/embed/" + CONFIG.videoYouTubeId + "?autoplay=1&rel=0&start=" + start;
-  if (CONFIG.videoVimeoId)   return "https://player.vimeo.com/video/" + CONFIG.videoVimeoId + "?autoplay=1#t=" + start + "s";
-  return "";
-}
-function play(start){
-  var src = videoSrc(start), p = document.getElementById("player");
-  if (!src){ var l = p.querySelector(".lbl"); if (l) l.textContent = "⏳ Replay is being processed. Check back in a few minutes."; return; }
-  p.innerHTML = '<iframe src="' + src + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="FGS 2027 reveal replay"></iframe>';
-}
-document.getElementById("playBtn").addEventListener("click", function(){ play(0); });
+var player = null;
+try { player = new Vimeo.Player(document.getElementById("vimeo")); } catch (e) {}
 document.querySelectorAll(".chap").forEach(function(b){
   b.addEventListener("click", function(){
+    var t = parseInt(b.dataset.t, 10);
     document.getElementById("player").scrollIntoView({behavior:"smooth", block:"center"});
-    play(parseInt(b.dataset.t, 10));
+    if (!player) return;
+    player.setCurrentTime(t).then(function(){ return player.setMuted(false); }).then(function(){ return player.play(); }).catch(function(){});
   });
 });
 </script>
