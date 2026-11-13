@@ -142,4 +142,9 @@ const mixed = ctx.getLiveList(liveTabs.concat([{ src: 'past', name: '12 NOV 2026
 eq(mixed.rows.map(r => r[1]).slice(-2), ['m1@x.com', 'm2@x.com']);        // R1 already in live list, buyer removed
 assert.strictEqual(mixed.final, 8);
 assert.strictEqual(mixed.steps.find(s => s.label === 'Buyers').count, -2);
+// past lists only, no live registrants
+const pastOnly = ctx.getLiveList([{ src: 'past', name: '12 NOV 2026 10 Mins Workshop missed' }, { src: 'past', name: '11 NOV 2026 10 Mins Workshop missed' }], true);
+eq(pastOnly.rows.map(r => r[1]), ['m1@x.com', 'm2@x.com']);   // buyer removed, R1 has no phone, both lists merged
+assert.strictEqual(pastOnly.steps.find(s => s.label === 'No phone number').count, -1);
+eq(pastOnly.steps[0], { label: 'Rows in selected tabs', count: 4, add: true });
 console.log('Server tests passed.');

@@ -96,7 +96,9 @@
       a.$('lvChecked').textContent = 'Counts checked ' + a.ago(d.checkedAt) + '.';
       var known = allTabs();
       V.picked.forEach(function (n) { if (!known[n]) V.picked.delete(n); });
-      if (!V.picked.size && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(t.name); });
+      // pre-tick the newest session only the first time the page opens, never again after the user changes picks
+      if (!V.autoPicked && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(t.name); });
+      V.autoPicked = true;
       render(); renderPicked();
     }).catch(function (e) { a.$('lvList').innerHTML = '<div class="empty">' + a.esc(a.errMsg(e)) + '</div>'; });
   }
@@ -240,7 +242,7 @@
     a.$('lvResult').addEventListener('click', function (e) {
       if (e.target.id !== 'lvDl' || !V.last) return;
       var names = Array.from(V.picked), np = V.pastPicked.size;
-      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || (names.length ? 'Live list' : 'Past lists');
+      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || (names.length ? 'Live list' : (np === 1 ? Array.from(V.pastPicked)[0] : np + ' past lists merged'));
       if (np && names.length) title += ' + ' + np + ' past list' + (np > 1 ? 's' : '');
       var stamp = new Date(V.last.at);
       a.downloadCsv(title + ' – reminder ' + stamp.getDate() + '-' + (stamp.getMonth() + 1) + ' ' + stamp.getHours() + 'h' + ('0' + stamp.getMinutes()).slice(-2) + ' – ' + V.last.final,
