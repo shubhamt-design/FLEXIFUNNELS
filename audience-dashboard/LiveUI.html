@@ -17,12 +17,20 @@
 .sess-tab .lb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sess-tab .ct { color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; white-space: nowrap; }
 .pick-box { position: sticky; top: 12px; }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.kinds button { border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.kinds button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.day { margin-top: 12px; }
+.day-head { font-size: 12px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.day .sess-tabs { margin-left: 0; }
+.pick-sub { font-size: 12px; font-weight: 700; color: var(--text-2); margin-top: 8px; }
 .pick-list { font-size: 13px; color: var(--text-2); margin: 6px 0 0; padding-left: 18px; }
 .pick-list li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 900px) { .live-top { grid-template-columns: 1fr; } .pick-box { position: static; } }
 </style>
 
 <div class="live-top">
+ <div>
   <section class="card">
     <div class="src-head" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div>
@@ -36,9 +44,26 @@
     <div class="actions"><button class="btn small ghost" id="lvMore">Show older sessions</button></div>
   </section>
 
+  <section class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <h2>Add past webinar audience</h2>
+        <p class="hint" style="margin:0">From <a id="pvSheet" href="#" target="_blank" rel="noopener">the past webinar sheet ↗</a>. Tick lists to add to the reminder list — everything is combined and cleaned together.</p>
+      </div>
+      <button class="btn small" id="pvLoad">Show past lists</button>
+    </div>
+    <div id="pvBody" class="hidden">
+      <div class="kinds" id="pvKinds"></div>
+      <input type="text" id="pvSearch" placeholder="Search (e.g. 12 Nov, Faceless)" style="margin-top:10px">
+      <div id="pvList"></div>
+      <div class="actions"><button class="btn small ghost" id="pvMore">Show older dates</button></div>
+    </div>
+  </section>
+ </div>
+
   <aside class="card pick-box">
     <h2>Reminder list</h2>
-    <p class="hint" style="margin-bottom:6px">Tick a session (both its tabs are combined) or individual tabs. Duplicates, buyers, opt-outs, reminder-team removals and test entries are removed.</p>
+    <p class="hint" style="margin-bottom:6px">Tick a live session (both its tabs are combined) and any past lists. Duplicates, buyers, opt-outs, reminder-team removals and test entries are removed.</p>
     <div id="lvPicked" class="tagline">Nothing selected yet.</div>
     <label class="check"><input type="checkbox" id="lvPhoneOnly" checked>
       <span>Only contacts with a phone number<small>Needed for WhatsApp</small></span></label>
@@ -50,7 +75,10 @@
 <script>
 (function () {
   'use strict';
-  var V = { data: null, picked: new Set(), showAll: false, last: null };
+  var V = { data: null, picked: new Set(), showAll: false, last: null,
+    past: null, pastPicked: new Set(), kind: 'missed', pastAll: false };
+  var KINDS = [['missed', 'Missed'], ['attended (no buyers)', 'Attended (no buyers)'], ['attended (with buyers)', 'Attended (with buyers)'],
+    ['pitch', 'Pitch'], ['non-pitch', 'Non-pitch'], ['', 'All']];
   function A() { return window.AD; }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function allTabs() {
@@ -111,12 +139,51 @@
     a.$('lvList').innerHTML = html || '<div class="empty">' + (q ? 'No session matches.' : 'No session tabs found.') + '</div>';
   }
 
+  function pastTabs() {
+    var m = {};
+    if (V.past) { V.past.days.forEach(function (d) { d.tabs.forEach(function (t) { m[t.name] = t; }); }); V.past.other.forEach(function (t) { m[t.name] = t; }); }
+    return m;
+  }
   function renderPicked() {
-    var a = A(), m = allTabs(), names = Array.from(V.picked);
-    var rows = names.reduce(function (x, n) { return x + ((m[n] || {}).rows || 0); }, 0);
-    a.$('lvPicked').innerHTML = names.length ? '<b>' + names.length + ' tab' + (names.length > 1 ? 's' : '') + ' · ' + a.fmt(rows) + ' rows</b><ul class="pick-list">' +
-      names.map(function (n) { return '<li title="' + a.esc(n) + '">' + a.esc(n) + '</li>'; }).join('') + '</ul>' : 'Nothing selected yet.';
-    a.$('lvGet').disabled = !names.length;
+    var a = A(), m = allTabs(), pm = pastTabs(), live = Array.from(V.picked), past = Array.from(V.pastPicked);
+    function sum(list, map) { return list.reduce(function (x, n) { return x + ((map[n] || {}).rows || 0); }, 0); }
+    function block(title, list, map) {
+      return '<div class="pick-sub">' + title + ' · ' + list.length + ' tab' + (list.length > 1 ? 's' : '') + ' · ' + a.fmt(sum(list, map)) + ' rows</div><ul class="pick-list">' +
+        list.map(function (n) { return '<li title="' + a.esc(n) + '">' + a.esc(n) + '</li>'; }).join('') + '</ul>';
+    }
+    var html = (live.length ? block('Live registrants', live, m) : '') + (past.length ? block('Past webinar lists', past, pm) : '');
+    a.$('lvPicked').innerHTML = html ? html + '<div class="tagline" style="margin-top:6px"><b>' + a.fmt(sum(live, m) + sum(past, pm)) + ' rows in total</b> before cleaning</div>' : 'Nothing selected yet.';
+    a.$('lvGet').disabled = !(live.length || past.length);
+  }
+
+  /* ---------- past webinar lists ---------- */
+  function loadPast() {
+    var a = A();
+    a.$('pvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading past lists…</div>';
+    return a.call('getPastLists').then(function (d) {
+      V.past = d;
+      a.$('pvSheet').textContent = d.sheetName + ' ↗'; a.$('pvSheet').href = d.sheetUrl;
+      var known = pastTabs(); V.pastPicked.forEach(function (n) { if (!known[n]) V.pastPicked.delete(n); });
+      renderPast(); renderPicked();
+    }).catch(function (e) { a.$('pvList').innerHTML = '<div class="empty">' + a.esc(a.errMsg(e)) + '</div>'; });
+  }
+  function fmtDate(iso) { return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
+  function renderPast() {
+    var a = A();
+    a.$('pvKinds').innerHTML = KINDS.map(function (k) { return '<button type="button" data-kind="' + k[0] + '"' + (V.kind === k[0] ? ' class="on"' : '') + '>' + k[1] + '</button>'; }).join('');
+    var q = a.$('pvSearch').value.trim().toLowerCase();
+    function keep(t) { return (!V.kind || t.kind === V.kind) && (!q || t.name.toLowerCase().indexOf(q) >= 0); }
+    function row(t) {
+      return '<label class="sess-tab"><input type="checkbox" data-past="' + a.esc(t.name) + '"' + (V.pastPicked.has(t.name) ? ' checked' : '') + '>' +
+        '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span></label>';
+    }
+    var days = V.past.days.map(function (d) { return { date: d.date, tabs: d.tabs.filter(keep) }; }).filter(function (d) { return d.tabs.length; });
+    var shown = q || V.pastAll ? days : days.slice(0, 7);
+    a.$('pvMore').classList.toggle('hidden', !!q || V.pastAll || days.length <= 7);
+    var html = shown.map(function (d) { return '<div class="day"><div class="day-head">' + fmtDate(d.date) + '</div><div class="sess-tabs">' + d.tabs.map(row).join('') + '</div></div>'; }).join('');
+    var other = V.past.other.filter(keep);
+    if (other.length && (V.pastAll || q || !V.kind)) html += '<div class="day"><div class="day-head">Other tabs</div><div class="sess-tabs">' + other.map(function (t) { t.label = t.name; return row(t); }).join('') + '</div></div>';
+    a.$('pvList').innerHTML = html || '<div class="empty">No lists match.</div>';
   }
 
   function changed() { V.last = null; A().$('lvResult').innerHTML = ''; render(); renderPicked(); }
@@ -135,16 +202,30 @@
     });
     a.$('lvSearch').addEventListener('input', render);
     a.$('lvMore').addEventListener('click', function () { V.showAll = true; render(); });
-    a.$('lvClear').addEventListener('click', function () { V.picked.clear(); changed(); });
+    a.$('lvClear').addEventListener('click', function () { V.picked.clear(); V.pastPicked.clear(); if (V.past) renderPast(); changed(); });
+    a.$('pvLoad').addEventListener('click', function () {
+      var btn = this; a.$('pvBody').classList.remove('hidden'); btn.textContent = '↻ Refresh';
+      a.busy(btn, true, 'Loading…'); loadPast().then(function () { a.busy(btn, false); });
+    });
+    a.$('pvKinds').addEventListener('click', function (e) { var k = e.target.getAttribute('data-kind'); if (k === null) return; V.kind = k; renderPast(); });
+    a.$('pvSearch').addEventListener('input', renderPast);
+    a.$('pvMore').addEventListener('click', function () { V.pastAll = true; renderPast(); });
+    a.$('pvList').addEventListener('change', function (e) {
+      var n = e.target.getAttribute('data-past'); if (!n) return;
+      if (e.target.checked) V.pastPicked.add(n); else V.pastPicked.delete(n);
+      changed();
+    });
     a.$('lvPhoneOnly').addEventListener('change', function () { V.last = null; a.$('lvResult').innerHTML = ''; });
     a.$('lvRefresh').addEventListener('click', function () {
       var btn = this; a.busy(btn, true, 'Refreshing…');
       load().then(function () { a.busy(btn, false); });
     });
     a.$('lvGet').addEventListener('click', function () {
-      var names = Array.from(V.picked); if (!names.length) return;
+      var items = Array.from(V.picked).map(function (n) { return { src: 'live', name: n }; })
+        .concat(Array.from(V.pastPicked).map(function (n) { return { src: 'past', name: n }; }));
+      if (!items.length) return;
       var btn = this; a.busy(btn, true, 'Reading latest data…');
-      a.call('getLiveList', names, a.$('lvPhoneOnly').checked).then(function (r) {
+      a.call('getLiveList', items, a.$('lvPhoneOnly').checked).then(function (r) {
         V.last = r;
         var lines = r.steps.map(function (s) {
           if (s.add) return '<div class="line plus"><span class="l">' + a.esc(s.label) + '</span><span class="n">' + a.fmt(s.count) + '</span></div>';
@@ -158,8 +239,9 @@
     });
     a.$('lvResult').addEventListener('click', function (e) {
       if (e.target.id !== 'lvDl' || !V.last) return;
-      var names = Array.from(V.picked);
-      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || 'Live list';
+      var names = Array.from(V.picked), np = V.pastPicked.size;
+      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || (names.length ? 'Live list' : 'Past lists');
+      if (np && names.length) title += ' + ' + np + ' past list' + (np > 1 ? 's' : '');
       var stamp = new Date(V.last.at);
       a.downloadCsv(title + ' – reminder ' + stamp.getDate() + '-' + (stamp.getMonth() + 1) + ' ' + stamp.getHours() + 'h' + ('0' + stamp.getMinutes()).slice(-2) + ' – ' + V.last.final,
         V.last.rows, ['Name', 'Email', 'Phone', 'Source tab']);

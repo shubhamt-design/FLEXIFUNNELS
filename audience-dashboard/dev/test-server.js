@@ -127,4 +127,19 @@ live.getSheetByName('3 Nov 2026 7:30 PM New Session Busines').appendRow(['timest
 live.getSheetByName('3 Nov 2026 7:30 PM New Session Busines').appendRow(reg(7));
 ls = ctx.getLiveSessions();
 assert.ok(ls.sessions.some(s => s.title === '3 Nov 2026 7:30 PM New Session Busines'));
+// past webinar lists, combined with live registrants
+const pastSS = at(ctx.CONFIG.PAST_SHEET_ID, env.make('Active Campaign List Upload 11 - 2026', {
+  '12 NOV 2026 10 Mins Workshop missed': [['Name', 'Email', 'Phone', 'Time'], ['M1', 'm1@x.com', '9300000001', '0'], ['R1 again', 'R1@x.com', '', '0'], ['Buyer', '', '9000000001', '0']],
+  '12 NOV 2026 10 Mins Workshop pitch': [['Name', 'Email', 'Phone', 'Time'], ['P1', 'p1@x.com', '9300000002', '265']],
+  '11 NOV 2026 10 Mins Workshop missed': [['Name', 'Email', 'Phone', 'Time'], ['M2', 'm2@x.com', '9300000003', '0']],
+  '_tmp_counts': [['a', 'b']],
+}));
+const pl = ctx.getPastLists();
+eq(pl.days.map(d => d.date), ['2026-11-12', '2026-11-11']);
+eq(pl.days[0].tabs.map(t => [t.kind, t.rows]), [['missed', 3], ['pitch', 1]]);
+const liveTabs = ls.sessions.find(s => s.title === '3 Nov 2026 7:30 PM Flexi Genie 10 Mins').tabs.map(t => ({ src: 'live', name: t.name }));
+const mixed = ctx.getLiveList(liveTabs.concat([{ src: 'past', name: '12 NOV 2026 10 Mins Workshop missed' }, { src: 'past', name: '11 NOV 2026 10 Mins Workshop missed' }]), true);
+eq(mixed.rows.map(r => r[1]).slice(-2), ['m1@x.com', 'm2@x.com']);        // R1 already in live list, buyer removed
+assert.strictEqual(mixed.final, 8);
+assert.strictEqual(mixed.steps.find(s => s.label === 'Buyers').count, -2);
 console.log('Server tests passed.');

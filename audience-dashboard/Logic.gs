@@ -97,18 +97,45 @@ function sniffColumns(rows) {
  */
 var MONTHS_ = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 function parseSessionTab(name, defaultYear) {
-  var m = String(name).trim().match(/^(\d{1,2})(?:\s*-\s*\d{1,2})?\s+([a-z]{3,9})\.?,?\s+(?:(\d{4}),?\s*)?(.*)$/i);
+  // year: 4 digits, or 2 digits 20-39 ("1 NOV 26 encore ...")
+  var m = String(name).trim().match(/^(\d{1,2})(?:\s*-\s*\d{1,2})?\s+([a-z]{3,9})\.?,?(?:\s*(\d{4}|[23]\d(?=[\s,])),?)?\s+(.*)$/i);
   if (!m) return null;
   var mon = MONTHS_[m[2].slice(0, 3).toLowerCase()];
-  var year = m[3] ? +m[3] : defaultYear;
+  var year = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : defaultYear;
   if (!mon || !year) return null;
-  var rest = m[4];
+  var rest = m[4], afterDate = m[4].trim();
   var t = rest.match(/^(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(.*)$/i);
   var time = t ? t[1].toUpperCase().replace(/\./g, '').replace(/\s*(AM|PM)$/, ' $1') : '';
   if (t) rest = t[2];
   var first = (rest.toLowerCase().match(/[a-z0-9]+/) || [''])[0];
   var date = year + '-' + ('0' + mon).slice(-2) + '-' + ('0' + m[1]).slice(-2);
-  return { date: date, time: time, key: date + '|' + time + '|' + first };
+  return { date: date, time: time, key: date + '|' + time + '|' + first, rest: afterDate };
+}
+
+/** Kind of a past-webinar tab, from its name. */
+function tabKind(name) {
+  var n = String(name).toLowerCase();
+  if (/missed/.test(n)) return 'missed';
+  if (/non-?\s*pitch/.test(n)) return 'non-pitch';
+  if (/pitch/.test(n)) return 'pitch';
+  if (/w\/o\s*buyer|without buyer|no buyer/.test(n)) return 'attended (no buyers)';
+  if (/att/.test(n)) return 'attended (with buyers)';
+  return '';
+}
+
+/**
+ * Group past-webinar tabs by date, newest first:
+ * { days: [{ date, tabs: [{ name, label, kind }] }], other: [names] }.
+ */
+function groupByDate(names, defaultYear) {
+  var byDate = {}, other = [];
+  names.forEach(function (n) {
+    var p = parseSessionTab(n, defaultYear);
+    if (!p) { other.push(n); return; }
+    (byDate[p.date] = byDate[p.date] || []).push({ name: n, label: p.rest || n.trim(), kind: tabKind(n) });
+  });
+  var days = Object.keys(byDate).sort().reverse().map(function (d) { return { date: d, tabs: byDate[d] }; });
+  return { days: days, other: other };
 }
 
 /** Minutes after midnight for '7:30 PM' / '11 AM' (for sorting sessions). */
@@ -245,7 +272,7 @@ function pickColumns(table, cols) {
 
 if (typeof module !== 'undefined') {
   module.exports = { normEmail: normEmail, normPhone: normPhone, detectColumns: detectColumns, findHeader: findHeader, sniffColumns: sniffColumns,
-    parseSessionTab: parseSessionTab, groupSessions: groupSessions,
+    parseSessionTab: parseSessionTab, groupSessions: groupSessions, groupByDate: groupByDate, tabKind: tabKind,
     keySetOf: keySetOf, matchesSet: matchesSet, cleanAndDedupe: cleanAndDedupe,
     removeMatching: removeMatching, pickColumns: pickColumns };
 }

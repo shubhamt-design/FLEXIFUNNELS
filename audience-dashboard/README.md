@@ -3,6 +3,7 @@
 A Google Sheets–backed dashboard for webinar audiences:
 
 - **Live sessions** (opens first): every session tab of "August 2026 UTM" (`CONFIG.LIVE_SHEET_ID`), grouped by session — e.g. "3 Nov 2026 7:30 PM Flexi Genie 10 Mins" with its *Busines* and *Reg Team* tabs. Tick a session and click **Get clean list**: the tabs are read at that moment (everyone registered so far), combined, cleaned of duplicates, buyers, opt-outs, reminder-team removals and test emails, and downloaded. No copying or uploading.
+- **Add past webinar audience** (same page): the tabs of "Active Campaign List Upload 11 - 2026" (`CONFIG.PAST_SHEET_ID`), grouped by date and filterable by type (missed / attended / pitch / non-pitch). Tick any of them together with a live session; everything is combined and cleaned in one go when you click **Get clean list**.
 - **Upload** a list (CSV / Excel / Google Drive link) under a fixed name. Duplicates and buyers are removed automatically.
 - **Build a broadcast list**: pick one audience — or several to **merge** — pick old audiences to subtract, see the final unique count, then download a clean CSV for the WhatsApp tool.
 - **Do-not-contact lists stay current**: every hour the buyers sheet, the opted-out sheet and the reminder-team removal sheet are re-read, and anyone on them is removed from *every* saved audience. Add more sheets in `CONFIG.EXCLUDE_SHEETS`.

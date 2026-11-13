@@ -66,10 +66,19 @@
         sess('d', '2026-10-29', '', '29 Oct 2026 8 Figure Faceless Product Encore', [tab('29 Oct 2026 8 Figure Faceless Product Encore', '29 Oct 2026 8 Figure Faceless Product Encore', 870), tab('29 Oct 2026 8 Figure Faceless Product Encore Reg', 'Reg', 315)]),
         sess('e', '2026-10-28', '7:30 PM', '28 Oct 2026 7:30 PM Flexi Genie 10 Mins', [tab('28 Oct 2026 7:30 PM Flexi Genie 10 Mins Busines', 'Busines', 401), tab('28 Oct 2026 7:30 PM Flexi Genie 10 Mins Reg Team', 'Reg Team', 990)])] });
     },
+    getPastLists: function () {
+      var kinds = [['attendee(with buyers)', 'attended (with buyers)', 3100], ['attendee (w/o buyers)', 'attended (no buyers)', 2950], ['pitch', 'pitch', 410], ['non-pitch', 'non-pitch', 2540], ['missed', 'missed', 9786]];
+      var days = ['2026-11-12', '2026-11-11', '2026-11-10', '2026-11-09', '2026-11-07'].map(function (d, i) {
+        var lbl = ['12 NOV', '11 NOV', '10 NOV', '9 NOV', '07 NOV'][i] + ' 2026 10 Mins Workshop ';
+        return { date: d, tabs: kinds.map(function (k) { return { name: lbl + k[0], label: '10 Mins Workshop ' + k[0], kind: k[1], rows: k[2] - i * 37, usable: true }; }) };
+      });
+      return wait({ sheetName: 'Active Campaign List Upload 11 - 2026', sheetUrl: '#', days: days, other: [{ name: 'Attendees 21 Oct-11 Nov (no buyers, unique)', label: 'Attendees 21 Oct-11 Nov (no buyers, unique)', kind: 'attended (no buyers)', rows: 7999, usable: true }] }, 700);
+    },
     getLiveList: function (names) {
-      return wait({ at: new Date().toISOString(), final: 1402, perTab: {}, rows: [['A', 'a@x.com', '919840402282', names[0]]], steps: [{ label: 'Rows in selected tabs', count: 1620, add: true },
-        { label: 'Duplicates (same email or phone)', count: -164 }, { label: 'No valid email or phone', count: -3 }, { label: 'Buyers', count: -21 }, { label: 'Opted-out', count: -12 },
-        { label: 'Removed by reminder team', count: -4 }, { label: 'Internal / test emails', count: -6 }, { label: 'No phone number', count: -8 }] }, 900);
+      var past = names.filter(function (n) { return n.src === 'past'; }).length;
+      return wait({ at: new Date().toISOString(), final: 1402 + past * 7400, perTab: {}, rows: [['A', 'a@x.com', '919840402282', names[0]]], steps: [{ label: 'Rows in selected tabs', count: 1620 + past * 9700, add: true },
+        { label: 'Duplicates (same email or phone)', count: -164 - past * 2018 }, { label: 'No valid email or phone', count: -3 }, { label: 'Buyers', count: -21 - past * 160 }, { label: 'Opted-out', count: -12 },
+        { label: 'Removed by reminder team', count: -4 }, { label: 'Internal / test emails', count: -6 }, { label: 'No phone number', count: -8 - past * 122 }] }, 900);
     },
     syncBuyersNow: function () { return wait({ removed: 0 }); }
   };

@@ -58,6 +58,7 @@ function makeEnv(initial) {
     deleteSheet(s) { this.sheets = this.sheets.filter(x => x !== s); }
   }
   const props = {};
+  const cacheStore = {};
   const triggers = [];
   const ctx = {
     console,
@@ -72,6 +73,7 @@ function makeEnv(initial) {
     },
     MimeType: { GOOGLE_SHEETS: 'application/vnd.google-apps.spreadsheet', CSV: 'text/csv', PLAIN_TEXT: 'text/plain' },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = String(v); } }) },
+    CacheService: { getScriptCache: () => ({ get: k => cacheStore[k] || null, put: (k, v) => { if (v.length > 100000) throw new Error('too big'); cacheStore[k] = v; } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => 'arman@flexifunnels.com' }) },
     Utilities: { formatDate: (d) => 'T' + (ctx.__clock = (ctx.__clock || 0) + 1) },

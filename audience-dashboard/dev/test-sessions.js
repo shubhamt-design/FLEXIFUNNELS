@@ -21,4 +21,16 @@ assert.strictEqual(by['2026-09-28||8'].tabs.length, 2);                        /
 assert.strictEqual(by['2026-09-19||ai'].tabs.length, 2);                       // 19-20 Sept
 assert.strictEqual(by['2026-08-18||flexigenie'].tabs.length, 2);               // no year in name
 assert.deepStrictEqual(g.other.sort(), ['20260804_214045_FunnelBuilderAgentLaunch1101476_subscriber', 'Copy of 19 Oct 2026 7:30 PM Flexi Genie 10 Mins Busines', 'Pivot Table - 19-20 Sept 2026 AI Income event', 'Pivot Table 11', 'Sheet96', '[GET] Webhook — 1786605113688'].sort());
+// past-webinar sheet ("Active Campaign List Upload 11 - 2026")
+const past = ['Sheet62', 'Attendees 21 Oct-11 Nov (no buyers, unique)', '12 NOV 2026 10 Mins Workshop attendee(with buyers)', '12 NOV 2026 10 Mins Workshop attendee (w/o buyers)',
+  '12 NOV 2026 10 Mins Workshop pitch', '12 NOV 2026 10 Mins Workshop non-pitch', '12 NOV 2026 10 Mins Workshop missed', '1 NOV 26 encore 10 Mins Workshop att(with buyers)',
+  '01 NOV 26 encore 10 Mins Workshop att (w/o buyers)', '01 NOV 2026 encore 10 Mins Workshop missed', '30 Sep2026 10 Mins Workshop pitch', '11 OCT 2026 10 Mins Workshop missed1', '_tmp_counts'];
+const pd = L.groupByDate(past, 2026);
+assert.deepStrictEqual(pd.days.map(d => d.date), ['2026-11-12', '2026-11-01', '2026-10-11', '2026-09-30']);
+assert.deepStrictEqual(pd.days[0].tabs.map(t => t.kind), ['attended (with buyers)', 'attended (no buyers)', 'pitch', 'non-pitch', 'missed']);
+assert.strictEqual(pd.days[0].tabs[4].label, '10 Mins Workshop missed');
+assert.strictEqual(pd.days[1].tabs.length, 3);                      // "1 NOV 26" + "01 NOV 2026" together
+assert.strictEqual(pd.days[2].tabs[0].kind, 'missed');              // "missed1"
+assert.strictEqual(pd.days[3].tabs[0].label, '10 Mins Workshop pitch'); // "Sep2026"
+assert.ok(pd.other.includes('Attendees 21 Oct-11 Nov (no buyers, unique)'));
 console.log('Session grouping tests passed.', g.sessions.length, 'sessions');
