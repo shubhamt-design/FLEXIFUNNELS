@@ -23,6 +23,11 @@
 .day { margin-top: 12px; }
 .day-head { font-size: 12px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .day .sess-tabs { margin-left: 0; }
+.src-switch { display: flex; gap: 4px; background: var(--surface-2); border-radius: 12px; padding: 4px; margin-bottom: 12px; position: sticky; top: 0; z-index: 5; }
+.src-switch button { flex: 1; border: 0; background: transparent; color: var(--text-2); font: inherit; font-weight: 650; font-size: 14px; padding: 10px 12px; border-radius: 9px; cursor: pointer; }
+.src-switch button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.src-switch .n { display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; }
+.src-switch .n:empty { display: none; }
 .pick-sub { font-size: 12px; font-weight: 700; color: var(--text-2); margin-top: 8px; }
 .pick-list { font-size: 13px; color: var(--text-2); margin: 6px 0 0; padding-left: 18px; }
 .pick-list li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -31,7 +36,11 @@
 
 <div class="live-top">
  <div>
-  <section class="card">
+  <div class="src-switch" id="srcSwitch">
+    <button type="button" class="on" data-src="live">Live registrants<span class="n" id="cntLive"></span></button>
+    <button type="button" data-src="past">Past webinar lists<span class="n" id="cntPast"></span></button>
+  </div>
+  <section class="card" id="lvCard">
     <div class="src-head" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div>
         <h2>Live sessions</h2>
@@ -44,15 +53,15 @@
     <div class="actions"><button class="btn small ghost" id="lvMore">Show older sessions</button></div>
   </section>
 
-  <section class="card" style="margin-top:16px">
+  <section class="card hidden" id="pvCard">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div>
-        <h2>Add past webinar audience</h2>
+        <h2>Past webinar lists</h2>
         <p class="hint" style="margin:0">From <a id="pvSheet" href="#" target="_blank" rel="noopener">the past webinar sheet ↗</a>. Tick lists to add to the reminder list — everything is combined and cleaned together.</p>
       </div>
-      <button class="btn small" id="pvLoad">Show past lists</button>
+      <button class="btn small" id="pvLoad">↻ Refresh</button>
     </div>
-    <div id="pvBody" class="hidden">
+    <div id="pvBody">
       <div class="kinds" id="pvKinds"></div>
       <input type="text" id="pvSearch" placeholder="Search (e.g. 12 Nov, Faceless)" style="margin-top:10px">
       <div id="pvList"></div>
@@ -156,6 +165,8 @@
     var html = (live.length ? block('Live registrants', live, m) : '') + (past.length ? block('Past webinar lists', past, pm) : '');
     a.$('lvPicked').innerHTML = html ? html + '<div class="tagline" style="margin-top:6px"><b>' + a.fmt(sum(live, m) + sum(past, pm)) + ' rows in total</b> before cleaning</div>' : 'Nothing selected yet.';
     a.$('lvGet').disabled = !(live.length || past.length);
+    a.$('cntLive').textContent = live.length || '';
+    a.$('cntPast').textContent = past.length || '';
   }
 
   /* ---------- past webinar lists ---------- */
@@ -206,8 +217,17 @@
     a.$('lvMore').addEventListener('click', function () { V.showAll = true; render(); });
     a.$('lvClear').addEventListener('click', function () { V.picked.clear(); V.pastPicked.clear(); if (V.past) renderPast(); changed(); });
     a.$('pvLoad').addEventListener('click', function () {
-      var btn = this; a.$('pvBody').classList.remove('hidden'); btn.textContent = '↻ Refresh';
-      a.busy(btn, true, 'Loading…'); loadPast().then(function () { a.busy(btn, false); });
+      var btn = this; a.busy(btn, true, 'Loading…'); loadPast().then(function () { a.busy(btn, false); });
+    });
+    a.$('srcSwitch').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-src]'); if (!b) return;
+      var past = b.getAttribute('data-src') === 'past';
+      a.$('srcSwitch').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      a.$('lvCard').classList.toggle('hidden', past);
+      a.$('pvCard').classList.toggle('hidden', !past);
+      if (past && !V.past && !V.pastLoading) { V.pastLoading = true; loadPast().then(function () { V.pastLoading = false; }); }
+      var top = a.$('srcSwitch').getBoundingClientRect().top;
+      if (top < 0) window.scrollBy(0, top - 12);
     });
     a.$('pvKinds').addEventListener('click', function (e) { var k = e.target.getAttribute('data-kind'); if (k === null) return; V.kind = k; renderPast(); });
     a.$('pvSearch').addEventListener('input', renderPast);
