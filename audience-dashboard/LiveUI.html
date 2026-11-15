@@ -118,9 +118,6 @@
       V.dataBy[key] = d;
       var known = allTabs();
       V.picked.forEach(function (k) { if (splitKey(k).src === key && !known[k]) V.picked.delete(k); });
-      // pre-tick the newest session of the first sheet only the first time the page opens
-      if (!V.autoPicked && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(pk(t.name, key)); });
-      V.autoPicked = true;
       if (key === V.cur) showCur();
       renderPicked();
     }).catch(function (e) { a.$('lvList').innerHTML = '<div class="empty">' + a.esc(a.errMsg(e)) + '</div>'; });
