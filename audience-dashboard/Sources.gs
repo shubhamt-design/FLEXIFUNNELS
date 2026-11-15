@@ -327,6 +327,44 @@ function addBatchToAudiences(batchId) {
   }
 }
 
+/**
+ * Save every pulled batch that is not on the Audiences page yet.
+ * Reads the Used-leads sheet once. Can be run from the editor or the page.
+ */
+function addAllBatchesToAudiences() {
+  var user = guard_();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(300000);
+  try {
+    var bs = db_().getSheetByName(BATCHES_TAB);
+    if (!bs || bs.getLastRow() < 2) return { added: [] };
+    var batches = bs.getRange(2, 1, bs.getLastRow() - 1, BATCHES_HEADER.length).getValues();
+    var missing = [];
+    batches.forEach(function (r, i) {
+      if (r[0] && !(r[7] && findMetaRow_(r[7]) > 0)) missing.push({ row: i + 2, r: r });
+    });
+    if (!missing.length) return { added: [] };
+    // contacts of all batches in one read
+    var used = usedSheet_(), n = used.getLastRow() - 1, byBatch = {};
+    if (n > 0) used.getRange(2, 1, n, USED_HEADER.length).getValues().forEach(function (u) {
+      (byBatch[u[0]] = byBatch[u[0]] || []).push([u[1], u[2], String(u[3]), u[4]]);
+    });
+    if (!bs.getRange(1, 8).getValue()) bs.getRange(1, 8).setValue('Audience');
+    var added = [];
+    missing.forEach(function (m) {
+      var rows = byBatch[m.r[0]] || [];
+      if (!rows.length) return;
+      var audience = saveRowsAsAudience_(m.r[1], rows, 'Lead sheets: ' + m.r[2] + ' (batch ' + m.r[0] + ')', user);
+      bs.getRange(m.row, 8).setValue(audience);
+      added.push(audience);
+    });
+    if (added.length) log_(user, 'Saved batches as audiences', added.length + ': ' + added.join(', '));
+    return { added: added };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** Undo a batch: its contacts become available again. */
 function releaseBatch(batchId) {
   var user = guard_();

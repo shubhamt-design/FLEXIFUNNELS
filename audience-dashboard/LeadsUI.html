@@ -78,6 +78,7 @@
   <div class="tbl-head">
     <div>
       <h2>Pulled batches</h2>
+      <button class="btn small hidden" id="lsAddAll" style="margin:-4px 0 8px">+ Add all missing batches to Audiences</button>
       <p class="hint">Contacts in these batches are skipped in every future pull, and each batch is also saved on the Audiences page. Release a batch if it was never sent, so its contacts can be pulled again. <a id="lsUsedLink" href="#" target="_blank" rel="noopener">Used-leads sheet ↗</a></p>
     </div>
   </div>
@@ -212,6 +213,13 @@
         .catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
     });
 
+    a.$('lsAddAll').addEventListener('click', function () {
+      var btn = this; a.busy(btn, true, 'Saving batches…');
+      a.call('addAllBatchesToAudiences').then(function (r) {
+        a.toast(r.added.length ? 'Added ' + r.added.length + ' batch' + (r.added.length > 1 ? 'es' : '') + ' to Audiences.' : 'All batches are already in Audiences.');
+        a.reload(); return load();
+      }).catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
+    });
     a.$('lsBatches').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
       var id = btn.getAttribute('data-dl') || btn.getAttribute('data-rel') || btn.getAttribute('data-aud');
@@ -236,6 +244,9 @@
 
   function renderBatches() {
     var a = A(), list = L.state.batches || [];
+    var missing = list.filter(function (b) { return !b.audience; }).length;
+    a.$('lsAddAll').classList.toggle('hidden', !missing);
+    a.$('lsAddAll').textContent = '+ Add ' + (missing === 1 ? 'the 1 missing batch' : 'all ' + missing + ' missing batches') + ' to Audiences';
     a.$('lsBatches').innerHTML = list.length ? '<tr><th>Batch</th><th>Sheet</th><th class="num">Contacts</th><th>Pulled</th><th>In Audiences</th><th></th></tr>' +
       list.map(function (b) {
         return '<tr><td><div class="nm">' + a.esc(b.name) + '</div><div class="muted">' + a.esc(b.tabs) + '</div></td><td>' + a.esc(b.sheet) + '</td>' +

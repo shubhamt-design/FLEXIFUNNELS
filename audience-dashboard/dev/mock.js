@@ -58,6 +58,7 @@
     getBatchRows: function () { return wait([['A', 'a@x.com', '919840402282', 'Tab']]); },
     releaseBatch: function () { return wait(true); },
     addBatchToAudiences: function () { return wait({ audience: 'Flexi Genie webinar – 11 Oct' }); },
+    addAllBatchesToAudiences: function () { return wait({ added: ['Flexi Genie webinar – 11 Oct'] }); },
     scanSourcesNow: function () { return wait({ sheets: 35 }); },
     addSourceByLink: function () { return wait({ name: 'Sheet' }); },
     getLiveSources: function () { return wait([{ key: 'aug', label: 'August 2026 UTM' }, { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet' }], 100); },

@@ -209,4 +209,14 @@ assert.ok(ctx.ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() ==
 // catalog: names + cached counts, newest first
 const bigCat = ctx.getSheetCatalog().find(c => c.key === 'big');
 eq(bigCat.tabs.slice(0, 3).map(t => t.name), ['14 Nov 2026 7:30 PM', '13 Nov 2026 7:30 PM', '12 Nov 2026 7:30 PM']);
+// add all missing batches in one go
+const bsTab2 = env.files[ctx.PropertiesService.getScriptProperties().getProperty('DB_ID')].getSheetByName('_Batches');
+const before = ctx.getSourcesState().batches;
+before.forEach((b, i) => { if (b.audience) { ctx.deleteAudience(b.audience); } });
+for (let r = 2; r <= bsTab2.getLastRow(); r++) bsTab2.getRange(r, 8).setValue('');
+assert.ok(ctx.getSourcesState().batches.every(b => !b.audience));
+const addAll = ctx.addAllBatchesToAudiences();
+assert.strictEqual(addAll.added.length, before.length);
+assert.ok(ctx.getSourcesState().batches.every(b => b.audience));
+eq(ctx.addAllBatchesToAudiences(), { added: [] });                                     // nothing left to add
 console.log('Server tests passed.');
