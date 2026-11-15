@@ -36,10 +36,7 @@
 
 <div class="live-top">
  <div>
-  <div class="src-switch" id="srcSwitch">
-    <button type="button" class="on" data-src="live">Live registrants<span class="n" id="cntLive"></span></button>
-    <button type="button" data-src="past">Past webinar lists<span class="n" id="cntPast"></span></button>
-  </div>
+  <div class="src-switch" id="srcSwitch"><button type="button" class="on">Loading…</button></div>
   <section class="card" id="lvCard">
     <div class="src-head" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div>
@@ -72,7 +69,7 @@
 
   <aside class="card pick-box">
     <h2>Reminder list</h2>
-    <p class="hint" style="margin-bottom:6px">Tick a live session (both its tabs are combined) and any past lists. Duplicates, buyers, opt-outs, reminder-team removals and test entries are removed.</p>
+    <p class="hint" style="margin-bottom:6px">Tick live sessions (from any sheet above) and any past lists. Duplicates, buyers, opt-outs, reminder-team removals and test entries are removed.</p>
     <div id="lvPicked" class="tagline">Nothing selected yet.</div>
     <label class="check"><input type="checkbox" id="lvPhoneOnly" checked>
       <span>Only contacts with a phone number<small>Needed for WhatsApp</small></span></label>
@@ -84,32 +81,57 @@
 <script>
 (function () {
   'use strict';
-  var V = { data: null, picked: new Set(), showAll: false, last: null,
+  var V = { data: null, dataBy: {}, sources: null, cur: null, picked: new Set(), showAll: false, last: null,
     past: null, pastPicked: new Set(), kind: 'missed', pastAll: false };
   var KINDS = [['missed', 'Missed'], ['attended (no buyers)', 'Attended (no buyers)'], ['attended (with buyers)', 'Attended (with buyers)'],
     ['pitch', 'Pitch'], ['non-pitch', 'Non-pitch'], ['', 'All']];
   function A() { return window.AD; }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function pk(name, src) { return (src || V.cur) + '::' + name; }        // pick key: "sheetKey::tab name"
+  function splitKey(k) { var i = k.indexOf('::'); return { src: k.slice(0, i), name: k.slice(i + 2) }; }
+  function srcLabel(key) { return ((V.sources || []).filter(function (s) { return s.key === key; })[0] || {}).label || key; }
   function allTabs() {
     var m = {};
-    (V.data ? V.data.sessions : []).forEach(function (s) { s.tabs.forEach(function (t) { m[t.name] = t; }); });
-    (V.data ? V.data.other : []).forEach(function (t) { m[t.name] = t; });
+    Object.keys(V.dataBy).forEach(function (key) {
+      var d = V.dataBy[key];
+      d.sessions.forEach(function (s) { s.tabs.forEach(function (t) { m[pk(t.name, key)] = t; }); });
+      d.other.forEach(function (t) { m[pk(t.name, key)] = t; });
+    });
     return m;
   }
 
-  function load() {
+  /* Build the switch: one button per live sheet + past lists. */
+  function loadSources() {
     var a = A();
-    return a.call('getLiveSessions').then(function (d) {
-      V.data = d;
-      a.$('lvSheet').textContent = d.sheetName + ' ↗'; a.$('lvSheet').href = d.sheetUrl;
-      a.$('lvChecked').textContent = 'Counts checked ' + a.ago(d.checkedAt) + '.';
+    return a.call('getLiveSources').then(function (list) {
+      V.sources = list; V.cur = V.cur || list[0].key;
+      a.$('srcSwitch').innerHTML = list.map(function (s) {
+        return '<button type="button" data-src="' + a.esc(s.key) + '"' + (s.key === V.cur ? ' class="on"' : '') + '>' + a.esc(s.label) + '<span class="n" data-cnt="' + a.esc(s.key) + '"></span></button>';
+      }).join('') + '<button type="button" data-src="past">Past webinar lists<span class="n" data-cnt="past"></span></button>';
+    });
+  }
+
+  function load() {
+    var a = A(), key = V.cur;
+    if (!V.dataBy[key]) a.$('lvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading sessions…</div>';
+    return a.call('getLiveSessions', key).then(function (d) {
+      V.dataBy[key] = d;
       var known = allTabs();
-      V.picked.forEach(function (n) { if (!known[n]) V.picked.delete(n); });
-      // pre-tick the newest session only the first time the page opens, never again after the user changes picks
-      if (!V.autoPicked && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(t.name); });
+      V.picked.forEach(function (k) { if (splitKey(k).src === key && !known[k]) V.picked.delete(k); });
+      // pre-tick the newest session of the first sheet only the first time the page opens
+      if (!V.autoPicked && d.sessions[0]) d.sessions[0].tabs.forEach(function (t) { if (t.usable) V.picked.add(pk(t.name, key)); });
       V.autoPicked = true;
-      render(); renderPicked();
+      if (key === V.cur) showCur();
+      renderPicked();
     }).catch(function (e) { a.$('lvList').innerHTML = '<div class="empty">' + a.esc(a.errMsg(e)) + '</div>'; });
+  }
+  function showCur() {
+    var a = A(), d = V.dataBy[V.cur];
+    V.data = d;
+    if (!d) return;
+    a.$('lvSheet').textContent = d.sheetName + ' ↗'; a.$('lvSheet').href = d.sheetUrl;
+    a.$('lvChecked').textContent = 'Counts checked ' + a.ago(d.checkedAt) + '.';
+    render();
   }
 
   function badge(s) {
@@ -126,24 +148,27 @@
     a.$('lvMore').classList.toggle('hidden', !!q || V.showAll || list.length <= 8);
     var html = shown.map(function (s, si) {
       var usable = s.tabs.filter(function (t) { return t.usable; });
-      var all = usable.length && usable.every(function (t) { return V.picked.has(t.name); });
-      var some = usable.some(function (t) { return V.picked.has(t.name); });
+      var all = usable.length && usable.every(function (t) { return V.picked.has(pk(t.name)); });
+      var some = usable.some(function (t) { return V.picked.has(pk(t.name)); });
       var total = usable.reduce(function (x, t) { return x + t.rows; }, 0);
+      // one-tab sessions (e.g. Sakshi's sheet): a single line, no repeated tab row
+      var single = s.tabs.length === 1 && usable.length === 1 ? s.tabs[0] : null;
       return '<div class="sess' + (some ? ' picked' : '') + '" data-k="' + a.esc(s.key) + '">' +
         '<label class="sess-head"><input type="checkbox" data-sess="' + a.esc(s.key) + '"' + (all ? ' checked' : '') + '>' +
         '<span class="sess-title" title="' + a.esc(s.title) + '">' + a.esc(s.title) + '</span>' + badge(s) +
         '<span class="sess-total">' + a.fmt(total) + '</span></label>' +
+        (single ? (single.lastEntry ? '<div class="sess-tabs"><span class="ct" style="font-size:12px;color:var(--text-2)">last registration ' + a.esc(single.lastEntry) + '</span></div>' : '') + '</div>' :
         '<div class="sess-tabs">' + s.tabs.map(function (t) {
           if (!t.usable) return '<div class="sess-tab" style="color:var(--text-3)"><span></span><span class="lb">' + a.esc(t.label) + '</span><span class="ct">no data yet</span></div>';
-          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(t.name) ? ' checked' : '') + '>' +
+          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(pk(t.name)) ? ' checked' : '') + '>' +
             '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows' +
             (t.lastEntry ? ' · last ' + a.esc(t.lastEntry) : '') + '</span></label>';
-        }).join('') + '</div></div>';
+        }).join('') + '</div></div>');
     }).join('');
     if (!q && V.showAll && V.data.other.length) {
       html += '<details style="margin-top:14px"><summary class="tagline" style="cursor:pointer">Other tabs with contacts (' + V.data.other.length + ')</summary>' +
         '<div class="sess-tabs" style="margin-left:0">' + V.data.other.map(function (t) {
-          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(t.name) ? ' checked' : '') + '><span class="lb">' +
+          return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(pk(t.name)) ? ' checked' : '') + '><span class="lb">' +
             a.esc(t.name) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span></label>';
         }).join('') + '</div></details>';
     }
@@ -158,15 +183,20 @@
   function renderPicked() {
     var a = A(), m = allTabs(), pm = pastTabs(), live = Array.from(V.picked), past = Array.from(V.pastPicked);
     function sum(list, map) { return list.reduce(function (x, n) { return x + ((map[n] || {}).rows || 0); }, 0); }
-    function block(title, list, map) {
-      return '<div class="pick-sub">' + title + ' · ' + list.length + ' tab' + (list.length > 1 ? 's' : '') + ' · ' + a.fmt(sum(list, map)) + ' rows</div><ul class="pick-list">' +
-        list.map(function (n) { return '<li title="' + a.esc(n) + '">' + a.esc(n) + '</li>'; }).join('') + '</ul>';
+    function block(title, list, map, show) {
+      return '<div class="pick-sub">' + a.esc(title) + ' · ' + list.length + ' tab' + (list.length > 1 ? 's' : '') + ' · ' + a.fmt(sum(list, map)) + ' rows</div><ul class="pick-list">' +
+        list.map(function (n) { var t = show(n); return '<li title="' + a.esc(t) + '">' + a.esc(t) + '</li>'; }).join('') + '</ul>';
     }
-    var html = (live.length ? block('Live registrants', live, m) : '') + (past.length ? block('Past webinar lists', past, pm) : '');
+    var html = '', counts = { past: past.length };
+    (V.sources || []).forEach(function (s) {
+      var mine = live.filter(function (k) { return splitKey(k).src === s.key; });
+      counts[s.key] = mine.length;
+      if (mine.length) html += block(s.label, mine, m, function (k) { return splitKey(k).name; });
+    });
+    if (past.length) html += block('Past webinar lists', past, pm, function (n) { return n; });
     a.$('lvPicked').innerHTML = html ? html + '<div class="tagline" style="margin-top:6px"><b>' + a.fmt(sum(live, m) + sum(past, pm)) + ' rows in total</b> before cleaning</div>' : 'Nothing selected yet.';
     a.$('lvGet').disabled = !(live.length || past.length);
-    a.$('cntLive').textContent = live.length || '';
-    a.$('cntPast').textContent = past.length || '';
+    a.$('srcSwitch').querySelectorAll('[data-cnt]').forEach(function (el) { el.textContent = counts[el.getAttribute('data-cnt')] || ''; });
   }
 
   /* ---------- past webinar lists ---------- */
@@ -207,9 +237,9 @@
       var k = e.target.getAttribute('data-sess'), n = e.target.getAttribute('data-tab');
       if (k) {
         var s = V.data.sessions.filter(function (x) { return x.key === k; })[0];
-        s.tabs.forEach(function (t) { if (t.usable) { if (e.target.checked) V.picked.add(t.name); else V.picked.delete(t.name); } });
+        s.tabs.forEach(function (t) { if (t.usable) { if (e.target.checked) V.picked.add(pk(t.name)); else V.picked.delete(pk(t.name)); } });
       } else if (n) {
-        if (e.target.checked) V.picked.add(n); else V.picked.delete(n);
+        if (e.target.checked) V.picked.add(pk(n)); else V.picked.delete(pk(n));
       }
       changed();
     });
@@ -221,11 +251,15 @@
     });
     a.$('srcSwitch').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-src]'); if (!b) return;
-      var past = b.getAttribute('data-src') === 'past';
+      var src = b.getAttribute('data-src'), past = src === 'past';
       a.$('srcSwitch').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
       a.$('lvCard').classList.toggle('hidden', past);
       a.$('pvCard').classList.toggle('hidden', !past);
       if (past && !V.past && !V.pastLoading) { V.pastLoading = true; loadPast().then(function () { V.pastLoading = false; }); }
+      if (!past && src !== V.cur) {
+        V.cur = src; V.showAll = false; a.$('lvSearch').value = '';
+        if (V.dataBy[src]) showCur(); else load();
+      }
       var top = a.$('srcSwitch').getBoundingClientRect().top;
       if (top < 0) window.scrollBy(0, top - 12);
     });
@@ -243,7 +277,7 @@
       load().then(function () { a.busy(btn, false); });
     });
     a.$('lvGet').addEventListener('click', function () {
-      var items = Array.from(V.picked).map(function (n) { return { src: 'live', name: n }; })
+      var items = Array.from(V.picked).map(splitKey)
         .concat(Array.from(V.pastPicked).map(function (n) { return { src: 'past', name: n }; }));
       if (!items.length) return;
       var btn = this; a.busy(btn, true, 'Reading latest data…');
@@ -261,8 +295,11 @@
     });
     a.$('lvResult').addEventListener('click', function (e) {
       if (e.target.id !== 'lvDl' || !V.last) return;
-      var names = Array.from(V.picked), np = V.pastPicked.size;
-      var title = names.length === 1 ? names[0] : (V.data.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === names[0]; }); })[0] || {}).title || (names.length ? 'Live list' : (np === 1 ? Array.from(V.pastPicked)[0] : np + ' past lists merged'));
+      var keys = Array.from(V.picked), np = V.pastPicked.size, first = keys[0] ? splitKey(keys[0]) : null;
+      var firstData = first && V.dataBy[first.src];
+      var sess = firstData && firstData.sessions.filter(function (s) { return s.tabs.some(function (t) { return t.name === first.name; }); })[0];
+      var names = keys;
+      var title = keys.length === 1 ? first.name : (sess && sess.title) || (keys.length ? 'Live list' : (np === 1 ? Array.from(V.pastPicked)[0] : np + ' past lists merged'));
       if (np && names.length) title += ' + ' + np + ' past list' + (np > 1 ? 's' : '');
       var stamp = new Date(V.last.at);
       a.downloadCsv(title + ' – reminder ' + stamp.getDate() + '-' + (stamp.getMonth() + 1) + ' ' + stamp.getHours() + 'h' + ('0' + stamp.getMinutes()).slice(-2) + ' – ' + V.last.final,
@@ -271,6 +308,10 @@
   }
 
   var bound = false;
-  window.Live = { show: function () { if (!bound) { bind(); bound = true; } load(); } };
+  window.Live = { show: function () {
+    if (!bound) { bind(); bound = true; }
+    (V.sources ? Promise.resolve() : loadSources()).then(load)
+      .catch(function (e) { A().$('lvList').innerHTML = '<div class="empty">' + A().esc(A().errMsg(e)) + '</div>'; });
+  } };
 })();
 </script>

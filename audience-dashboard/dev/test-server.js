@@ -102,7 +102,7 @@ const reg = (i, ts) => [ts || '03/11/2026 10:0' + i, 'R' + i, `r${i}@x.com`, '+9
 const busTab = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([1, 2, 3, 4].map(i => reg(i)));
 busTab.push(['t', 'Buyer', 'buyer@x.com', '']); busTab.push(['t', 'Staff', 'x+test@flexifunnels.com', '+919111111111']);
 const regTab = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([3, 4, 5].map(i => reg(i)));
-const live = at(ctx.CONFIG.LIVE_SHEET_ID, env.make('August 2026 UTM', {
+const live = at(ctx.CONFIG.LIVE_SHEETS[0].id, env.make('August 2026 UTM', {
   '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines': busTab,
   '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team': regTab,
   '1 Nov 2026 11 AM Flexi Genie 10 Mins Busines': [['timestamp_incoming_webhook', 'first_name', 'email', 'phone'], reg(9)],
@@ -147,4 +147,28 @@ const pastOnly = ctx.getLiveList([{ src: 'past', name: '12 NOV 2026 10 Mins Work
 eq(pastOnly.rows.map(r => r[1]), ['m1@x.com', 'm2@x.com']);   // buyer removed, R1 has no phone, both lists merged
 assert.strictEqual(pastOnly.steps.find(s => s.label === 'No phone number').count, -1);
 eq(pastOnly.steps[0], { label: 'Rows in selected tabs', count: 4, add: true });
+// second live sheet ("Sakshi 10 Min Data Sheet"): one tab per session
+const sak = at(ctx.CONFIG.LIVE_SHEETS[1].id, env.make('Sakshi 10 Min Data Sheet', {
+  '17 Nov 2026 7:30 PM': [['timestamp_incoming_webhook', 'first_name', 'email', 'phone', 'profession']],
+  '15 Nov 2026 11 AM': [['timestamp_incoming_webhook', 'first_name', 'email', 'phone', 'profession'],
+    ['12/11/2026', 'Test', 'anita.d@flexifunnels.com', '+917302716741', 'Student'], ['12/11/2026', 'S1', 's1@x.com', '+917828765453', 'Job'],
+    ['12/11/2026', 'R1 dup', 'r1@x.com', '', 'Other']],
+  'Sheet1': [],
+}));
+eq(ctx.getLiveSources().map(x => x.key), ['aug', 'sakshi']);
+const sk = ctx.getLiveSessions('sakshi');
+eq(sk.sessions.map(x => [x.title, x.tabs[0].rows]), [['17 Nov 2026 7:30 PM', 0], ['15 Nov 2026 11 AM', 3]]); // upcoming session shows before anyone registers
+const skList = ctx.getLiveList([{ src: 'sakshi', name: '15 Nov 2026 11 AM' }, { src: 'aug', name: '3 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team' }], false);
+eq(skList.rows.map(r => r[1]).sort(), ['r1@x.com', 'r3@x.com', 'r4@x.com', 'r5@x.com', 'r6@x.com', 's1@x.com']); // test email removed, email-only R1 kept (phone filter off)
+assert.strictEqual(ctx.getLiveSessions().src, 'aug');                                  // default = first live sheet
+
+// Audiences page: sheet tabs in the dropdowns, mixed with saved audiences
+const cat = ctx.getSheetCatalog();
+eq(cat.map(c => c.key), ['aug', 'sakshi', 'past']);
+assert.ok(cat[2].tabs.some(t => t.name === '12 NOV 2026 10 Mins Workshop missed' && t.rows === 3));
+const mixedBuild = ctx.buildList(['src:sakshi::15 Nov 2026 11 AM', 'src:past::11 NOV 2026 10 Mins Workshop missed', 'Web 2'],
+  ['src:past::12 NOV 2026 10 Mins Workshop pitch'], true);
+eq(mixedBuild.steps.filter(x => x.add).map(x => x.label), ['15 Nov 2026 11 AM', '11 NOV 2026 10 Mins Workshop missed', 'Web 2']);
+eq(mixedBuild.rows.map(r => r[1]).sort(), ['', 'd@x.com', 'm2@x.com', 's1@x.com']);   // '' = phone-only contact C from Web 2
+assert.strictEqual(mixedBuild.steps.find(x => x.label === 'Internal / test emails').count, -1);
 console.log('Server tests passed.');

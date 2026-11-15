@@ -1,16 +1,27 @@
 /**
  * Audience Dashboard — live sessions + past webinar lists.
  *
- * LIVE: session tabs of CONFIG.LIVE_SHEET_ID ("August 2026 UTM"), grouped by
- *   session (e.g. "... 10 Mins Busines" + "... 10 Mins Reg Team").
+ * LIVE: session tabs of each sheet in CONFIG.LIVE_SHEETS ("August 2026 UTM",
+ *   "Sakshi 10 Min Data Sheet"), grouped by session
+ *   (e.g. "... 10 Mins Busines" + "... 10 Mins Reg Team").
  * PAST: tabs of CONFIG.PAST_SHEET_ID ("Active Campaign List Upload 11 - 2026"),
  *   grouped by date (attended / pitch / non-pitch / missed).
  * Both are read at the moment a list is built, so nothing is ever out of date.
  * Nothing in those sheets is changed.
  */
 
+/** Spreadsheet ID for a source key: 'past', a CONFIG.LIVE_SHEETS key, or 'live' (= the first live sheet). */
 function sheetIdFor_(src) {
-  return src === 'past' ? CONFIG.PAST_SHEET_ID : CONFIG.LIVE_SHEET_ID;
+  if (src === 'past') return CONFIG.PAST_SHEET_ID;
+  var live = CONFIG.LIVE_SHEETS.filter(function (s) { return s.key === src; })[0] || (src === 'live' ? CONFIG.LIVE_SHEETS[0] : null);
+  if (!live) throw new Error('Unknown sheet: ' + src);
+  return live.id;
+}
+
+/** The live sheets, for the switch on the Live sessions page. */
+function getLiveSources() {
+  guard_();
+  return CONFIG.LIVE_SHEETS.map(function (s) { return { key: s.key, label: s.label }; });
 }
 
 /** Header position + row count of each tab. Header positions are cached for 6 h. */
@@ -39,10 +50,10 @@ function tabInfo_(ss, names) {
   return info;
 }
 
-/** Live sessions (newest first) with live row counts. */
-function getLiveSessions() {
+/** Live sessions (newest first) with live row counts, for one live sheet. */
+function getLiveSessions(src) {
   guard_();
-  var ss = SpreadsheetApp.openById(CONFIG.LIVE_SHEET_ID);
+  var ss = SpreadsheetApp.openById(sheetIdFor_(src || 'live'));
   var names = ss.getSheets().map(function (s) { return s.getName(); });
   var info = tabInfo_(ss, names);
   var g = groupSessions(names, new Date().getFullYear());
@@ -58,8 +69,8 @@ function getLiveSessions() {
   }).filter(function (s) { return s.tabs.some(function (t) { return t.usable; }); });
   var other = g.other.map(function (n) { var x = info[n] || {}; return { name: n, rows: x.rows || 0, usable: !!x.cols }; })
     .filter(function (t) { return t.usable && t.rows; });
-  return { sheetName: ss.getName(), sheetUrl: ss.getUrl(), checkedAt: new Date().toISOString(),
-    sessions: sessions, other: other };
+  return { src: src || CONFIG.LIVE_SHEETS[0].key, sheetName: ss.getName(), sheetUrl: ss.getUrl(),
+    checkedAt: new Date().toISOString(), sessions: sessions, other: other };
 }
 
 /** Past webinar lists, grouped by date (newest first). */
@@ -77,22 +88,44 @@ function getPastLists() {
   return { sheetName: ss.getName(), sheetUrl: ss.getUrl(), days: days, other: other };
 }
 
+/** Raw rows of some tabs of a source sheet (tagged with the tab name). */
+function readSheetTabs_(src, names) {
+  var ss = SpreadsheetApp.openById(sheetIdFor_(src));
+  var info = tabInfo_(ss, names);
+  var tabs = names.map(function (n) { return info[n]; }).filter(function (t) { return t && t.cols && t.rows; });
+  return tabs.length ? readTabsRaw_(ss, tabs, names) : [];
+}
+
+/**
+ * Every tab with contacts in the live sheets and the past sheet, for the
+ * Audiences page dropdowns: [{ key, label, tabs: [{ name, rows }] }].
+ */
+function getSheetCatalog() {
+  guard_();
+  return CONFIG.LIVE_SHEETS.map(function (s) { return { key: s.key, id: s.id }; })
+    .concat([{ key: 'past', id: CONFIG.PAST_SHEET_ID }])
+    .map(function (s) {
+      var ss = SpreadsheetApp.openById(s.id);
+      var names = ss.getSheets().map(function (x) { return x.getName(); });
+      var info = tabInfo_(ss, names);
+      return { key: s.key, label: ss.getName(), tabs: names.map(function (n) { return { name: n, rows: (info[n] || {}).rows || 0 }; })
+        .filter(function (t) { return t.rows > 0; }) };
+    });
+}
+
 /**
  * Everyone in the chosen tabs right now, combined and cleaned.
- * items: [{ src: 'live' | 'past', name }] (plain strings = live tabs).
+ * items: [{ src: <live sheet key> | 'live' | 'past', name }] (plain strings = first live sheet).
  */
 function getLiveList(items, phoneOnly) {
   guard_();
   items = (items || []).map(function (x) { return typeof x === 'string' ? { src: 'live', name: x } : x; });
   if (!items.length) throw new Error('Tick at least one tab.');
-  var raw = [];
-  ['live', 'past'].forEach(function (src) {
+  var raw = [], srcs = [];
+  items.forEach(function (x) { if (srcs.indexOf(x.src) < 0) srcs.push(x.src); });
+  srcs.forEach(function (src) {
     var names = items.filter(function (x) { return x.src === src; }).map(function (x) { return x.name; });
-    if (!names.length) return;
-    var ss = SpreadsheetApp.openById(sheetIdFor_(src));
-    var info = tabInfo_(ss, names);
-    var tabs = names.map(function (n) { return info[n]; }).filter(function (t) { return t && t.cols && t.rows; });
-    if (tabs.length) raw = raw.concat(readTabsRaw_(ss, tabs, names));
+    raw = raw.concat(readSheetTabs_(src, names));
   });
   if (!raw.length) throw new Error('No contacts found in the selected tabs.');
   var res = cleanStandard_(raw, phoneOnly);

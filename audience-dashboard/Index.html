@@ -140,6 +140,8 @@ input[type=text]:focus, select:focus, .ms-btn:focus { outline: 2px solid var(--a
 .ms-panel .search { padding: 8px; border-bottom: 1px solid var(--border); }
 .ms-panel .search input { height: 32px; }
 .ms-list { max-height: 260px; overflow: auto; padding: 4px; }
+.ms-group { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; padding: 12px 8px 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+.ms-list .ms-group:first-child { border-top: 0; margin-top: 0; }
 .ms-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
 .ms-item:hover { background: var(--surface-2); }
 .ms-item input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
@@ -289,9 +291,9 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       <!-- STEP 1: BUILD LIST -->
       <div class="card">
         <h2><span class="step">1</span> Build a broadcast list</h2>
-        <p class="hint">Pick one audience or merge several, subtract the audiences you've already messaged. Overlaps, buyers and opt-outs are always removed.</p>
+        <p class="hint">Pick saved audiences or any tab of the connected sheets (merge several), subtract the ones you've already messaged. Overlaps, buyers and opt-outs are always removed.</p>
 
-        <label class="f">Audiences to send to <span class="opt">— pick one, or several to merge</span></label>
+        <label class="f">Audiences to send to <span class="opt">— saved audiences or sheet tabs; pick several to merge</span></label>
         <div class="ms" id="msSend">
           <button type="button" class="ms-btn"><span class="ph">Choose audience(s) to message…</span></button>
           <div class="ms-panel">
@@ -494,6 +496,29 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   function newestFirst() { return S.audiences.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; }); }
   function find(name) { for (var i = 0; i < S.audiences.length; i++) if (S.audiences[i].name === name) return S.audiences[i]; return null; }
 
+  /* Picker options: saved audiences, then every tab of the connected sheets
+     (live registrations + past webinar lists), read fresh when the list is built. */
+  function options() {
+    var out = newestFirst().map(function (a) { return { id: a.name, label: a.name, count: a.contacts, group: 'Saved audiences' }; });
+    (S.catalog || []).forEach(function (c) {
+      c.tabs.forEach(function (t) { out.push({ id: 'src:' + c.key + '::' + t.name, label: t.name, count: t.rows, group: c.label, sheet: true }); });
+    });
+    return out;
+  }
+  function optById(id) {
+    var o = options().filter(function (x) { return x.id === id; })[0];
+    if (o) return o;
+    var m = String(id).match(/^src:[^:]+::(.+)$/);
+    return m ? { id: id, label: m[1], count: 0, sheet: true } : null;
+  }
+  function loadCatalog() {
+    if (S.catalog || S.catalogLoading) return;
+    S.catalogLoading = true; renderPickers();
+    call('getSheetCatalog').then(function (c) { S.catalog = c; })
+      .catch(function (e) { S.catalogError = errMsg(e); })
+      .then(function () { S.catalogLoading = false; renderPickers(); });
+  }
+
   /* ---------- audience multi-select (used twice) ---------- */
   function makePicker(id, placeholder, other) {
     var root = $(id), btn = root.querySelector('.ms-btn'), search = root.querySelector('.search input'),
@@ -502,32 +527,39 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     function blocked() { return other ? other().selected : new Set(); } // picked in the other box
     function visible() {
       var q = search.value.trim().toLowerCase(), block = blocked();
-      return newestFirst().filter(function (a) { return !block.has(a.name) && (!q || a.name.toLowerCase().indexOf(q) >= 0); });
+      return options().filter(function (o) {
+        return !block.has(o.id) && (!q || o.label.toLowerCase().indexOf(q) >= 0 || o.group.toLowerCase().indexOf(q) >= 0);
+      });
     }
     p.render = function () {
       var q = search.value.trim();
-      var vis = visible();
-      list.innerHTML = vis.length ? vis.map(function (a) {
-        return '<label class="ms-item"><input type="checkbox" value="' + esc(a.name) + '"' + (p.selected.has(a.name) ? ' checked' : '') + '>' +
-          '<span class="nm">' + esc(a.name) + '</span><span class="ct">' + fmt(a.contacts) + '</span></label>';
-      }).join('') : '<div class="empty">' + (q ? 'No match' : (S.audiences.length ? 'No other audiences' : 'Upload an audience first')) + '</div>';
+      var vis = visible(), html = '', group = null;
+      vis.forEach(function (o) {
+        if (o.group !== group) { group = o.group; html += '<div class="ms-group">' + (o.sheet ? '📄 ' : '') + esc(group) + '</div>'; }
+        html += '<label class="ms-item"><input type="checkbox" value="' + esc(o.id) + '"' + (p.selected.has(o.id) ? ' checked' : '') + '>' +
+          '<span class="nm" title="' + esc(o.label) + '">' + esc(o.label) + '</span><span class="ct">' + fmt(o.count) + '</span></label>';
+      });
+      if (S.catalogLoading) html += '<div class="ms-group"><span class="spin"></span> Loading tabs from the connected sheets…</div>';
+      else if (S.catalogError) html += '<div class="ms-group">Could not load the connected sheets: ' + esc(S.catalogError) + '</div>';
+      list.innerHTML = html || '<div class="empty">' + (q ? 'No match' : 'Nothing to choose yet') + '</div>';
       var n = p.selected.size;
       count.textContent = n + ' selected';
-      btn.innerHTML = n ? '<span>' + n + ' audience' + (n > 1 ? 's' : '') + ' · ' + fmt(p.sum()) + ' contacts</span>'
+      btn.innerHTML = n ? '<span>' + n + ' list' + (n > 1 ? 's' : '') + ' · ' + fmt(p.sum()) + ' rows</span>'
         : '<span class="ph">' + placeholder + '</span>';
       var c = [];
-      p.selected.forEach(function (nm) {
-        var a = find(nm);
-        c.push('<span class="chip">' + esc(nm) + ' <span class="ct">' + fmt(a ? a.contacts : 0) + '</span><button type="button" data-rm="' + esc(nm) + '" aria-label="Remove ' + esc(nm) + '">×</button></span>');
+      p.selected.forEach(function (id) {
+        var o = optById(id) || { label: id, count: 0 };
+        c.push('<span class="chip">' + (o.sheet ? '📄 ' : '') + esc(o.label) + ' <span class="ct">' + fmt(o.count) + '</span><button type="button" data-rm="' + esc(id) + '" aria-label="Remove ' + esc(o.label) + '">×</button></span>');
       });
       chips.innerHTML = c.join('');
     };
-    p.sum = function () { var t = 0; p.selected.forEach(function (nm) { var a = find(nm); if (a) t += a.contacts; }); return t; };
-    p.prune = function () { p.selected.forEach(function (nm) { if (!find(nm)) p.selected.delete(nm); }); };
+    p.sum = function () { var t = 0; p.selected.forEach(function (id) { var o = optById(id); if (o) t += o.count; }); return t; };
+    // drop saved audiences that were deleted (sheet tabs are kept; they are re-read on build)
+    p.prune = function () { p.selected.forEach(function (id) { if (!/^src:/.test(id) && !find(id)) p.selected.delete(id); }); };
     function changed() { renderPickers(); clearBuild(); }
     btn.addEventListener('click', function () {
       document.querySelectorAll('.ms.open').forEach(function (x) { if (x !== root) x.classList.remove('open'); });
-      root.classList.toggle('open'); if (root.classList.contains('open')) search.focus();
+      root.classList.toggle('open'); if (root.classList.contains('open')) { search.focus(); loadCatalog(); }
     });
     document.addEventListener('click', function (e) { if (!root.contains(e.target)) root.classList.remove('open'); });
     search.addEventListener('input', p.render);
@@ -536,7 +568,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       if (e.target.checked) p.selected.add(e.target.value); else p.selected.delete(e.target.value);
       changed();
     });
-    root.querySelector('[data-act=all]').addEventListener('click', function () { visible().forEach(function (a) { p.selected.add(a.name); }); changed(); });
+    root.querySelector('[data-act=all]').addEventListener('click', function () { visible().forEach(function (o) { p.selected.add(o.id); }); changed(); });
     root.querySelector('[data-act=clear]').addEventListener('click', function () { p.selected.clear(); changed(); });
     chips.addEventListener('click', function (e) { var n = e.target.getAttribute('data-rm'); if (n) { p.selected.delete(n); changed(); } });
     return p;
@@ -547,8 +579,8 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     sendPicker.prune(); subPicker.prune();
     sendPicker.render(); subPicker.render();
     var n = sendPicker.selected.size;
-    $('mergeNote').textContent = n > 1 ? 'These ' + n + ' audiences will be merged into one list (' + fmt(sendPicker.sum()) +
-      ' contacts before removing overlaps). Click Build list to see the final count.' : '';
+    $('mergeNote').textContent = n > 1 ? 'These ' + n + ' lists will be merged into one (' + fmt(sendPicker.sum()) +
+      ' rows before removing overlaps). Click Build list to see the final count.' : '';
   }
 
   $('phoneOnly').addEventListener('change', clearBuild);
@@ -568,7 +600,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       });
       if (res.bases.length > 1) lines.splice(res.bases.length, 0,
         '<div class="line sub"><span class="l">Merged total</span><span class="n">' + fmt(res.mergedTotal) + '</span></div>');
-      var label = res.bases.length > 1 ? res.bases.length + ' audiences merged' : res.bases[0];
+      var label = res.bases.length > 1 ? res.bases.length + ' lists merged' : (optById(res.bases[0]) || {}).label || res.bases[0];
       var def = label + ' – broadcast ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
       $('buildResult').innerHTML =
         '<div class="result"><div class="lines">' + lines.join('') + '</div>' +
@@ -581,7 +613,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
   $('buildResult').addEventListener('click', function (e) {
     var b = S.lastBuild; if (!b) return;
     if (e.target.id === 'dlBuild') {
-      var nm = b.bases.length > 1 ? b.bases.length + ' audiences merged' : b.bases[0];
+      var nm = b.bases.length > 1 ? b.bases.length + ' lists merged' : (optById(b.bases[0]) || {}).label || b.bases[0];
       downloadCsv(nm + (b.subtract.length ? ' minus ' + b.subtract.length : '') + ' – ' + b.final + ' contacts ' + new Date().toISOString().slice(0, 10), b.rows);
     }
     if (e.target.id === 'saveBuild') {
@@ -842,6 +874,7 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
       });
       if (b.dataset.page === 'pageLeads' && window.Leads) window.Leads.show();
       if (b.dataset.page === 'pageLive' && window.Live) window.Live.show();
+      if (b.dataset.page === 'pageAud') loadCatalog();
     });
   });
 

@@ -15,7 +15,10 @@
         buyers: { count: 7520, lastSync: new Date(Date.now() - 18e5).toISOString(), sources: [{ label: 'Buyers', count: 3412, url: '#' }, { label: 'Opted-out', count: 2960, url: '#' }, { label: 'Removed by reminder team', count: 1148, url: '#' }] } });
     },
     buildList: function (bases, sub, phoneOnly) {
-      var steps = bases.map(function (n) { return { label: n, count: auds.find(function (x) { return x.name === n; }).contacts, add: true }; });
+      var steps = bases.map(function (n) {
+        var a = auds.find(function (x) { return x.name === n; });
+        return { label: a ? n : n.replace(/^src:[^:]+::/, ''), count: a ? a.contacts : 431, add: true };
+      });
       var merged = steps.reduce(function (s, x) { return s + x.count; }, 0);
       if (bases.length > 1) steps.push({ label: 'In more than one of these audiences', count: -Math.round(merged * .18) });
       if (sub.length) steps.push({ label: 'Already in subtracted audiences', count: -Math.round(merged * .2) });
@@ -55,7 +58,20 @@
     releaseBatch: function () { return wait(true); },
     scanSourcesNow: function () { return wait({ sheets: 35 }); },
     addSourceByLink: function () { return wait({ name: 'Sheet' }); },
-    getLiveSessions: function () {
+    getLiveSources: function () { return wait([{ key: 'aug', label: 'August 2026 UTM' }, { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet' }], 100); },
+    getSheetCatalog: function () {
+      return wait([
+        { key: 'aug', label: 'August 2026 UTM', tabs: [{ name: '17 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines', rows: 212 }, { name: '17 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team', rows: 640 }, { name: '15 Nov 2026 11 AM Flexi Genie 10 Mins Busines', rows: 1840 }] },
+        { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet', tabs: [{ name: '17 Nov 2026 7:30 PM', rows: 96 }, { name: '15 Nov 2026 11 AM', rows: 431 }] },
+        { key: 'past', label: 'Active Campaign List Upload 11 - 2026', tabs: [{ name: '12 NOV 2026 10 Mins Workshop missed', rows: 9786 }, { name: '12 NOV 2026 10 Mins Workshop pitch', rows: 410 }, { name: '11 NOV 2026 10 Mins Workshop missed', rows: 9749 }] }
+      ], 900);
+    },
+    getLiveSessions: function (src) {
+      if (src === 'sakshi') {
+        var st = function (k, d, tm, rows) { var title = d + ' ' + tm; return { key: k, date: k, time: tm, title: title, tabs: [{ name: title, label: title, rows: rows, usable: true, lastEntry: rows ? '15/11/2026 10:58' : '' }] }; };
+        return wait({ src: 'sakshi', sheetName: 'Sakshi 10 Min Data Sheet', sheetUrl: '#', checkedAt: new Date().toISOString(), other: [],
+          sessions: [st('2026-11-17', '17 Nov 2026', '7:30 PM', 96), st('2026-11-15b', '15 Nov 2026', '7:30 PM', 210), st('2026-11-15', '15 Nov 2026', '11 AM', 431), st('2026-11-12', '12 Nov 2026', '7:30 PM', 388), st('2026-11-11', '11 Nov 2026', '7:30 PM', 402)] }, 500);
+      }
       function sess(key, date, time, title, tabs) { return { key: key, date: date, time: time, title: title, tabs: tabs }; }
       function tab(name, label, rows, last) { return { name: name, label: label, rows: rows, usable: rows > 0, lastEntry: last }; }
       var t = '3 Nov 2026 7:30 PM Flexi Genie 10 Mins ';

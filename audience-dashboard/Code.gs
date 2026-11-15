@@ -21,7 +21,11 @@ var CONFIG = {
   ],
   ALLOWED_DOMAIN: 'flexifunnels.com',  // only these emails can use the dashboard
   COUNTRY_CODE: '91',                  // added to 10-digit numbers
-  LIVE_SHEET_ID: '1M-1GJ_W6xyTehUH_o_uikYy49rp-SP_WUsxmBNNR_Wo', // "August 2026 UTM": live session tabs
+  // Live registration sheets (one tab per session). Add a sheet by adding a line.
+  LIVE_SHEETS: [
+    { key: 'aug', label: 'August 2026 UTM', id: '1M-1GJ_W6xyTehUH_o_uikYy49rp-SP_WUsxmBNNR_Wo' },
+    { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet', id: '1t-I5_smVN1ETlVTu3y-eqU45p6dons7i5aojg1uSrBM' }
+  ],
   PAST_SHEET_ID: '1xQEivSCmMv4WBpN8fqlLrisj8EXJBy0YLXzWAX58NhI', // "Active Campaign List Upload 11 - 2026": past webinar lists
   SOURCE_SEARCH: 'UTM',                // lead sheets: every spreadsheet with this in its name
   IGNORE_EMAIL_DOMAINS: ['flexifunnels.com'], // test / staff entries skipped when pulling leads
