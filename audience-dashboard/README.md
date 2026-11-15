@@ -59,7 +59,7 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 - Found automatically every hour (and with **↻ Rescan Drive**): any spreadsheet the owner can open whose name contains `CONFIG.SOURCE_SEARCH` (`UTM`). Others can be added by link.
 - Tabs are detected by their header row (`first_name` / `email` / `phone`), even under a banner row; tabs without a header are recognised from their values. Tabs with no email/phone column (summaries, notes) are skipped.
 - A pull combines the ticked tabs **in tab order, top to bottom**, removes duplicates, buyers, opt-outs, the reminder-team list, emails at `CONFIG.IGNORE_EMAIL_DOMAINS` and anyone pulled before (from any sheet), then takes the first N.
-- Pulled contacts are stored in a separate spreadsheet, **Audience Dashboard – Used leads** (created by `setup`). **Release** a batch to make its contacts available again.
+- Pulled contacts are stored in a separate spreadsheet, **Audience Dashboard – Used leads** (created by `setup`), and each batch is also saved as an audience (Audiences page). **Release** a batch to make its contacts available again (its audience is removed too). Batches pulled before this existed get an **+ Add to Audiences** button.
 
 ## Speed
 

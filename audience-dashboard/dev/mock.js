@@ -45,7 +45,8 @@
         src('s2', 'TFP Signups: UTM', [{ name: 'TFP Facebook Ads (Training)', rows: 227903, cols: cols }, { name: 'TFP Google Ads (Special)', rows: 57066, cols: cols }, { name: 'Sheet21', rows: 9510, cols: cols }]),
         src('s3', 'PSP Signups: UTM', [{ name: 'PSP Facebook', rows: 41200, cols: cols }]),
         src('s4', 'June-July 2026 UTM', [{ name: 'Webinar 5 Jul', rows: 6100, cols: cols }])] ,
-        batches: [{ id: 'B1', name: 'Flexi Genie webinar – 11 Oct', sheet: 'TFP Signups: UTM', tabs: '2 tabs', pulled: 10000, createdAt: new Date(Date.now() - 6e8).toISOString(), by: 'arman@flexifunnels.com' }] });
+        batches: [{ id: 'B2', name: 'TFP all audience 9th batch', sheet: 'TFP Signups: UTM', tabs: '3 tabs', pulled: 7000, createdAt: new Date(Date.now() - 3e8).toISOString(), by: 'shubham.t@flexifunnels.com', audience: 'TFP all audience 9th batch' },
+          { id: 'B1', name: 'Flexi Genie webinar – 11 Oct', sheet: 'TFP Signups: UTM', tabs: '2 tabs', pulled: 10000, createdAt: new Date(Date.now() - 6e8).toISOString(), by: 'arman@flexifunnels.com', audience: '' }] });
     },
     previewPool: function (id, tabs) {
       var per = {}; tabs.forEach(function (t, i) { per[t] = 30000 - i * 9000; });
@@ -53,9 +54,10 @@
         { label: 'No valid email or phone', count: -310 }, { label: 'Buyers', count: -3122 }, { label: 'Opted-out', count: -2011 }, { label: 'Removed by reminder team', count: -640 },
         { label: 'Already used in earlier batches', count: -10000 }, { label: 'Internal / test emails', count: -86 }, { label: 'No phone number', count: -36360 }] }, 900);
     },
-    pullBatch: function (id, tabs, p, n, name) { var per = {}; per[tabs[0]] = n - 2000; if (tabs[1]) per[tabs[1]] = 2000; return wait({ id: 'B2', name: name, pulled: n, perTab: per, rows: [['A', 'a@x.com', '919840402282', tabs[0]]] }, 900); },
+    pullBatch: function (id, tabs, p, n, name) { var per = {}; per[tabs[0]] = n - 2000; if (tabs[1]) per[tabs[1]] = 2000; return wait({ id: 'B3', name: name, audience: name, pulled: n, perTab: per, rows: [['A', 'a@x.com', '919840402282', tabs[0]]] }, 900); },
     getBatchRows: function () { return wait([['A', 'a@x.com', '919840402282', 'Tab']]); },
     releaseBatch: function () { return wait(true); },
+    addBatchToAudiences: function () { return wait({ audience: 'Flexi Genie webinar – 11 Oct' }); },
     scanSourcesNow: function () { return wait({ sheets: 35 }); },
     addSourceByLink: function () { return wait({ name: 'Sheet' }); },
     getLiveSources: function () { return wait([{ key: 'aug', label: 'August 2026 UTM' }, { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet' }], 100); },

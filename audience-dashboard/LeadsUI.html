@@ -78,7 +78,7 @@
   <div class="tbl-head">
     <div>
       <h2>Pulled batches</h2>
-      <p class="hint">Contacts in these batches are skipped in every future pull. Release a batch if it was never sent, so its contacts can be pulled again. <a id="lsUsedLink" href="#" target="_blank" rel="noopener">Used-leads sheet ↗</a></p>
+      <p class="hint">Contacts in these batches are skipped in every future pull, and each batch is also saved on the Audiences page. Release a batch if it was never sent, so its contacts can be pulled again. <a id="lsUsedLink" href="#" target="_blank" rel="noopener">Used-leads sheet ↗</a></p>
     </div>
   </div>
   <div class="tbl-wrap"><table class="tbl" id="lsBatches"></table></div>
@@ -187,10 +187,12 @@
         var per = Object.keys(r.perTab).map(function (k) { return a.esc(k) + ': ' + a.fmt(r.perTab[k]); }).join(' · ');
         a.$('lsResult').innerHTML = '<div class="result"><div class="total"><div><div class="cap">Pulled for “' + a.esc(r.name) + '”' +
           (r.pulled < n ? ' (only ' + a.fmt(r.pulled) + ' fresh contacts were left)' : '') + '</div><div class="big">' + a.fmt(r.pulled) + '</div></div>' +
-          '<button class="btn primary" id="lsDl">⬇ Download ' + a.fmt(r.pulled) + ' contacts</button></div><div class="save tagline">From tabs — ' + per + '</div></div>';
+          '<button class="btn primary" id="lsDl">⬇ Download ' + a.fmt(r.pulled) + ' contacts</button></div><div class="save tagline">From tabs — ' + per +
+          (r.audience ? '<br>✓ Also saved in <b>Audiences</b> as “' + a.esc(r.audience) + '”' : '') + '</div></div>';
         a.$('lsBatch').value = '';
         clearPreview();
-        a.toast('Batch saved and marked as used.');
+        a.toast('Batch saved, marked as used and added to Audiences.');
+        a.reload();
         return load();
       }).catch(function (e) { a.toast(a.errMsg(e), true); }).then(function () { a.busy(btn, false); });
     });
@@ -212,16 +214,21 @@
 
     a.$('lsBatches').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
-      var id = btn.getAttribute('data-dl') || btn.getAttribute('data-rel');
+      var id = btn.getAttribute('data-dl') || btn.getAttribute('data-rel') || btn.getAttribute('data-aud');
       var b = (L.state.batches || []).filter(function (x) { return x.id === id; })[0]; if (!b) return;
-      if (btn.hasAttribute('data-dl')) {
+      if (btn.hasAttribute('data-aud')) {
+        a.busy(btn, true, 'Saving…');
+        a.call('addBatchToAudiences', id).then(function (r) { a.toast('Added to Audiences as "' + r.audience + '".'); a.reload(); return load(); })
+          .catch(function (err) { a.toast(a.errMsg(err), true); a.busy(btn, false); });
+      } else if (btn.hasAttribute('data-dl')) {
         a.busy(btn, true, '…');
         a.call('getBatchRows', id).then(function (rows) { a.downloadCsv(b.name + ' – ' + rows.length + ' contacts', rows, ['Name', 'Email', 'Phone', 'Source tab']); })
           .catch(function (err) { a.toast(a.errMsg(err), true); }).then(function () { a.busy(btn, false); });
       } else {
-        if (!confirm('Release "' + b.name + '"?\n\nIts ' + a.fmt(b.pulled) + ' contacts will no longer be marked as used and can be pulled again. Only do this if the batch was never sent.')) return;
+        if (!confirm('Release "' + b.name + '"?\n\nIts ' + a.fmt(b.pulled) + ' contacts will no longer be marked as used and can be pulled again' +
+          (b.audience ? ', and the audience "' + b.audience + '" is removed from the Audiences page' : '') + '. Only do this if the batch was never sent.')) return;
         a.busy(btn, true, '…');
-        a.call('releaseBatch', id).then(function () { a.toast('Released "' + b.name + '".'); return load(); })
+        a.call('releaseBatch', id).then(function () { a.toast('Released "' + b.name + '".'); a.reload(); return load(); })
           .catch(function (err) { a.toast(a.errMsg(err), true); a.busy(btn, false); });
       }
     });
@@ -229,10 +236,12 @@
 
   function renderBatches() {
     var a = A(), list = L.state.batches || [];
-    a.$('lsBatches').innerHTML = list.length ? '<tr><th>Batch</th><th>Sheet</th><th class="num">Contacts</th><th>Pulled</th><th></th></tr>' +
+    a.$('lsBatches').innerHTML = list.length ? '<tr><th>Batch</th><th>Sheet</th><th class="num">Contacts</th><th>Pulled</th><th>In Audiences</th><th></th></tr>' +
       list.map(function (b) {
         return '<tr><td><div class="nm">' + a.esc(b.name) + '</div><div class="muted">' + a.esc(b.tabs) + '</div></td><td>' + a.esc(b.sheet) + '</td>' +
           '<td class="num"><b>' + a.fmt(b.pulled) + '</b></td><td>' + a.dateShort(b.createdAt) + '<div class="muted">' + a.esc(String(b.by || '').split('@')[0]) + '</div></td>' +
+          '<td>' + (b.audience ? '<span style="color:var(--good)">✓</span> <span class="muted">' + a.esc(b.audience) + '</span>'
+            : '<button class="btn small" data-aud="' + a.esc(b.id) + '">+ Add to Audiences</button>') + '</td>' +
           '<td style="text-align:right"><button class="btn small" data-dl="' + a.esc(b.id) + '">⬇ CSV</button> <button class="btn small ghost danger" data-rel="' + a.esc(b.id) + '">Release</button></td></tr>';
       }).join('') : '<tr><td class="empty">No batches pulled yet.</td></tr>';
   }

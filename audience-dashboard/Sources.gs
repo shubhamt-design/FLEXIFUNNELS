@@ -14,7 +14,7 @@
 var SOURCES_TAB = '_Sources';
 var BATCHES_TAB = '_Batches';
 var SOURCES_HEADER = ['ID', 'Name', 'Tabs (JSON)', 'Total rows', 'Last scanned', 'Hidden'];
-var BATCHES_HEADER = ['Batch ID', 'Batch name', 'Sheet', 'Tabs', 'Pulled', 'Created at', 'Created by'];
+var BATCHES_HEADER = ['Batch ID', 'Batch name', 'Sheet', 'Tabs', 'Pulled', 'Created at', 'Created by', 'Audience'];
 var USED_HEADER = ['Batch ID', 'Name', 'Email', 'Phone', 'Source tab', 'Sheet'];
 
 /** Called from setup(): creates the tabs, the Used spreadsheet and the trigger. */
@@ -152,7 +152,7 @@ function getSourcesState() {
     .filter(function (r) { return r[0]; })
     .map(function (r) {
       return { id: r[0], name: r[1], sheet: r[2], tabs: r[3], pulled: +r[4] || 0,
-        createdAt: r[5] ? new Date(r[5]).toISOString() : '', by: r[6] };
+        createdAt: r[5] ? new Date(r[5]).toISOString() : '', by: r[6], audience: r[7] || '' };
     }).reverse() : [];
   return {
     sources: readSources_(),
@@ -267,11 +267,15 @@ function pullBatch(sourceId, tabNames, phoneOnly, count, batchName) {
     var data = take.map(function (r) { return [id, r[0], r[1], r[2], r[3], p.source.name]; });
     ensureRows_(used, used.getLastRow() + data.length);
     used.getRange(used.getLastRow() + 1, 1, data.length, USED_HEADER.length).setNumberFormat('@').setValues(data);
-    db_().getSheetByName(BATCHES_TAB).appendRow([id, batchName, p.source.name,
-      tabNames.length + ' tab' + (tabNames.length > 1 ? 's' : ''), take.length, new Date(), user]);
-    log_(user, 'Pulled batch', batchName + ': ' + take.length + ' contacts from ' + p.source.name);
+    // also saved as an audience, so it can be used on the Audiences page
+    var audience = saveRowsAsAudience_(batchName, take, 'Lead sheets: ' + p.source.name + ' (batch ' + id + ')', user);
+    var bs = db_().getSheetByName(BATCHES_TAB);
+    if (!bs.getRange(1, 8).getValue()) bs.getRange(1, 8).setValue('Audience');
+    bs.appendRow([id, batchName, p.source.name,
+      tabNames.length + ' tab' + (tabNames.length > 1 ? 's' : ''), take.length, new Date(), user, audience]);
+    log_(user, 'Pulled batch', batchName + ': ' + take.length + ' contacts from ' + p.source.name + ' — saved as audience "' + audience + '"');
     return { id: id, name: batchName, pulled: take.length, available: p.rows.length, steps: p.steps,
-      perTab: perTab_(take), rows: take };
+      perTab: perTab_(take), rows: take, audience: audience };
   } finally {
     lock.releaseLock();
   }
@@ -280,12 +284,47 @@ function pullBatch(sourceId, tabNames, phoneOnly, count, batchName) {
 /** Contacts of an earlier batch, for re-download. */
 function getBatchRows(batchId) {
   guard_();
+  return batchRows_(batchId);
+}
+
+function batchRows_(batchId) {
   var sh = usedSheet_();
   var n = sh.getLastRow() - 1;
   if (n < 1) return [];
   return sh.getRange(2, 1, n, USED_HEADER.length).getValues()
     .filter(function (r) { return r[0] === batchId; })
     .map(function (r) { return [r[1], r[2], String(r[3]), r[4]]; });
+}
+
+/** Row number (1-based) of a batch in the _Batches tab, or -1. */
+function batchRow_(batchId) {
+  var bs = db_().getSheetByName(BATCHES_TAB);
+  var ids = bs.getRange(1, 1, bs.getLastRow(), 1).getValues();
+  for (var i = 1; i < ids.length; i++) if (ids[i][0] === batchId) return i + 1;
+  return -1;
+}
+
+/** For batches pulled before batches were saved as audiences: add one now. */
+function addBatchToAudiences(batchId) {
+  var user = guard_();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(120000);
+  try {
+    var row = batchRow_(batchId);
+    if (row < 0) throw new Error('Batch not found.');
+    var bs = db_().getSheetByName(BATCHES_TAB);
+    var r = bs.getRange(row, 1, 1, BATCHES_HEADER.length).getValues()[0];
+    if (r[7] && findMetaRow_(r[7]) > 0) return { audience: r[7] };
+    var rows = batchRows_(batchId);
+    if (!rows.length) throw new Error('This batch has no contacts left to save.');
+    var audience = saveRowsAsAudience_(r[1], rows, 'Lead sheets: ' + r[2] + ' (batch ' + batchId + ')', user);
+    if (!bs.getRange(1, 8).getValue()) bs.getRange(1, 8).setValue('Audience');
+    bs.getRange(row, 8).setValue(audience);
+    log_(user, 'Saved batch as audience', r[1] + ' → "' + audience + '" (' + rows.length + ')');
+    return { audience: audience };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Undo a batch: its contacts become available again. */
@@ -301,10 +340,16 @@ function releaseBatch(batchId) {
       sh.getRange(2, 1, n, USED_HEADER.length).clearContent();
       if (keep.length) sh.getRange(2, 1, keep.length, USED_HEADER.length).setValues(keep);
     }
-    var bs = db_().getSheetByName(BATCHES_TAB);
-    var ids = bs.getRange(1, 1, bs.getLastRow(), 1).getValues();
-    for (var i = ids.length - 1; i >= 1; i--) if (ids[i][0] === batchId) bs.deleteRow(i + 1);
-    log_(user, 'Released batch', batchId + ' — its contacts can be pulled again');
+    var bs = db_().getSheetByName(BATCHES_TAB), removedAudience = '';
+    var row = batchRow_(batchId);
+    if (row > 0) {
+      var aud = bs.getRange(row, 8).getValue();
+      // the batch was never sent, so its audience copy goes too
+      if (aud && deleteAudience_(aud)) removedAudience = aud;
+      bs.deleteRow(row);
+    }
+    log_(user, 'Released batch', batchId + ' — its contacts can be pulled again' +
+      (removedAudience ? '; audience "' + removedAudience + '" removed' : ''));
     return true;
   } finally {
     lock.releaseLock();

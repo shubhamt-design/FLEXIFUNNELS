@@ -17,6 +17,7 @@ function makeEnv(initial) {
       }
       return out;
     }
+    getValue() { return this.getValues()[0][0]; }
     getDisplayValue() { return String(this.getValues()[0][0]); }
     getDisplayValues() { return this.getValues().map(r => r.map(String)); }
     setValues(v) {

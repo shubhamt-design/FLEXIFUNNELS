@@ -68,12 +68,30 @@ const used1 = new Set(b1.rows.map(r => r[1]));
 assert.ok(b2.rows.every(r => !used1.has(r[1])), 'second batch has no overlap');
 assert.strictEqual((b2.steps.find(s => s.label === 'Already used in earlier batches') || {}).count, -20);
 assert.strictEqual(ctx.previewPool(src.id, all, true).available, 10);
+// every pulled batch is also a saved audience (Audiences page)
+let auds = ctx.getState().audiences;
+eq(auds.map(a => [a.name, a.contacts]), [['Webinar 18 Oct', 20], ['Webinar 25 Oct', 20]]);
+assert.strictEqual(b1.audience, 'Webinar 18 Oct');
+eq(ctx.getSourcesState().batches.map(b => b.audience), ['Webinar 25 Oct', 'Webinar 18 Oct']);
+eq(ctx.buildList(['Webinar 25 Oct'], ['Webinar 18 Oct'], true).final, 20);              // usable like any audience
+// same batch name again -> "(2)"
+const dupName = ctx.pullBatch(src.id, all, true, 1, 'Webinar 25 Oct');
+assert.strictEqual(dupName.audience, 'Webinar 25 Oct (2)');
+ctx.releaseBatch(dupName.id);
 
 // re-download + release
 assert.strictEqual(ctx.getBatchRows(b1.id).length, 20);
 st = ctx.getSourcesState();
 assert.strictEqual(st.batches.length, 2);
 ctx.releaseBatch(b1.id);
+assert.ok(!ctx.getState().audiences.some(a => a.name === 'Webinar 18 Oct'), 'released batch audience removed');
+// an old batch without an audience (pulled before this feature) can be added
+const bsTab = env.files[ctx.PropertiesService.getScriptProperties().getProperty('DB_ID')].getSheetByName('_Batches');
+bsTab.getRange(2, 8).setValue('');
+ctx.deleteAudience('Webinar 25 Oct');
+assert.strictEqual(ctx.getSourcesState().batches[0].audience, '');
+eq(ctx.addBatchToAudiences(b2.id), { audience: 'Webinar 25 Oct' });
+assert.strictEqual(ctx.getState().audiences.find(a => a.name === 'Webinar 25 Oct').contacts, 20);
 assert.strictEqual(ctx.previewPool(src.id, all, true).available, 30);
 assert.strictEqual(ctx.getSourcesState().batches.length, 1);
 
@@ -96,7 +114,7 @@ upload('Web 3', [['D', 'd@x.com', '']]);
 const built = ctx.buildList(['Web 1', 'Web 2'], ['Web 3'], true);
 eq(built.rows.map(r => r[0]), ['A', 'C']);
 eq(built.mergedTotal, 4);
-assert.strictEqual(ctx.getState().audiences.length, 3);
+assert.strictEqual(ctx.getState().audiences.length, 5); // 3 uploads + 2 pulled batches
 // live sessions: session tabs of the live sheet, read fresh every time
 const reg = (i, ts) => [ts || '03/11/2026 10:0' + i, 'R' + i, `r${i}@x.com`, '+91' + (9200000000 + i)];
 const busTab = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([1, 2, 3, 4].map(i => reg(i)));

@@ -107,18 +107,41 @@ function deleteAudience(name) {
   var lock = LockService.getScriptLock();
   lock.waitLock(60000);
   try {
-    var ss = db_();
-    var meta = ss.getSheetByName(META_TAB);
-    var rowIdx = findMetaRow_(name);
-    if (rowIdx < 0) throw new Error('Audience not found: ' + name);
-    meta.deleteRow(rowIdx);
-    var tab = ss.getSheetByName(name);
-    if (tab) ss.deleteSheet(tab);
+    if (!deleteAudience_(name)) throw new Error('Audience not found: ' + name);
     log_(user, 'Deleted audience', name);
     return true;
   } finally {
     lock.releaseLock();
   }
+}
+
+/** Remove an audience (meta row + tab). Returns false if it does not exist. Caller holds the lock. */
+function deleteAudience_(name) {
+  var ss = db_();
+  var rowIdx = findMetaRow_(name);
+  if (rowIdx < 0) return false;
+  ss.getSheetByName(META_TAB).deleteRow(rowIdx);
+  var tab = ss.getSheetByName(name);
+  if (tab) ss.deleteSheet(tab);
+  return true;
+}
+
+/**
+ * Save cleaned [name, email, phone, ...] rows as a new audience. If the name is
+ * taken, " (2)", " (3)" … is added. Returns the name used. Caller holds the lock.
+ */
+function saveRowsAsAudience_(name, rows, source, user) {
+  var base = String(name || '').replace(/[\[\]\*\?\/\\:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Batch';
+  var finalName = null;
+  for (var i = 1; i < 50 && !finalName; i++) {
+    try { finalName = checkNewName_(i === 1 ? base : base + ' (' + i + ')'); } catch (e) { if (!/already exists/.test(e.message)) throw e; }
+  }
+  if (!finalName) throw new Error('Could not find a free audience name for "' + base + '".');
+  var data = rows.map(function (r) { return [r[0], r[1], r[2]]; });
+  writeAudienceTab_(finalName, data);
+  db_().getSheetByName(META_TAB).appendRow([finalName, data.length, countPhones_(data), data.length, 0, 0, 0,
+    source || '', new Date(), user]);
+  return finalName;
 }
 
 /* ------------------------------------------------------------------ */
