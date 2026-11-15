@@ -61,6 +61,11 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 - A pull combines the ticked tabs **in tab order, top to bottom**, removes duplicates, buyers, opt-outs, the reminder-team list, emails at `CONFIG.IGNORE_EMAIL_DOMAINS` and anyone pulled before (from any sheet), then takes the first N.
 - Pulled contacts are stored in a separate spreadsheet, **Audience Dashboard – Used leads** (created by `setup`). **Release** a batch to make its contacts available again.
 
+## Speed
+
+- Live sessions / past lists open from tab names; only the newest 10 sessions (7 past dates) are counted on each open. Older tabs show counts from `warmSheetCaches`, which runs every hour (its trigger is installed automatically the first time the page is used) — "—" means not counted yet. **Show older** and searching count them on demand.
+- Contacts are always read at the moment a list is built or downloaded, so cached counts never make a download out of date.
+
 ## Limits
 
 - Google Sheets holds 10 million cells. Each contact uses 3, so roughly **3 million contacts** in total across all audiences. Delete old audiences you no longer need.

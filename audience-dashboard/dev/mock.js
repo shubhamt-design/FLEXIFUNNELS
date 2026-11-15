@@ -63,13 +63,14 @@
       return wait([
         { key: 'aug', label: 'August 2026 UTM', tabs: [{ name: '17 Nov 2026 7:30 PM Flexi Genie 10 Mins Busines', rows: 212 }, { name: '17 Nov 2026 7:30 PM Flexi Genie 10 Mins Reg Team', rows: 640 }, { name: '15 Nov 2026 11 AM Flexi Genie 10 Mins Busines', rows: 1840 }] },
         { key: 'sakshi', label: 'Sakshi 10 Min Data Sheet', tabs: [{ name: '17 Nov 2026 7:30 PM', rows: 96 }, { name: '15 Nov 2026 11 AM', rows: 431 }] },
-        { key: 'past', label: 'Active Campaign List Upload 11 - 2026', tabs: [{ name: '12 NOV 2026 10 Mins Workshop missed', rows: 9786 }, { name: '12 NOV 2026 10 Mins Workshop pitch', rows: 410 }, { name: '11 NOV 2026 10 Mins Workshop missed', rows: 9749 }] }
+        { key: 'past', label: 'Active Campaign List Upload 11 - 2026', tabs: [{ name: '12 NOV 2026 10 Mins Workshop missed', rows: 9786 }, { name: '12 NOV 2026 10 Mins Workshop pitch', rows: 410 }, { name: '11 NOV 2026 10 Mins Workshop missed', rows: null }] }
       ], 900);
     },
-    getLiveSessions: function (src) {
+    getLiveSessions: function (src, all) {
       if (src === 'sakshi') {
-        var st = function (k, d, tm, rows) { var title = d + ' ' + tm; return { key: k, date: k, time: tm, title: title, tabs: [{ name: title, label: title, rows: rows, usable: true, lastEntry: rows ? '15/11/2026 10:58' : '' }] }; };
-        return wait({ src: 'sakshi', sheetName: 'Sakshi 10 Min Data Sheet', sheetUrl: '#', checkedAt: new Date().toISOString(), other: [],
+        var n = 0;
+        var st = function (k, d, tm, rows) { if (!all && ++n > 3) rows = null; var title = d + ' ' + tm; return { key: k, date: k, time: tm, title: title, tabs: [{ name: title, label: title, rows: rows, usable: true, lastEntry: rows ? '15/11/2026 10:58' : '' }] }; };
+        return wait({ src: 'sakshi', all: !!all, sheetName: 'Sakshi 10 Min Data Sheet', sheetUrl: '#', checkedAt: new Date().toISOString(), other: [],
           sessions: [st('2026-11-17', '17 Nov 2026', '7:30 PM', 96), st('2026-11-15b', '15 Nov 2026', '7:30 PM', 210), st('2026-11-15', '15 Nov 2026', '11 AM', 431), st('2026-11-12', '12 Nov 2026', '7:30 PM', 388), st('2026-11-11', '11 Nov 2026', '7:30 PM', 402)] }, 500);
       }
       function sess(key, date, time, title, tabs) { return { key: key, date: date, time: time, title: title, tabs: tabs }; }

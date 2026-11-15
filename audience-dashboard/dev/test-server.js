@@ -171,4 +171,24 @@ const mixedBuild = ctx.buildList(['src:sakshi::15 Nov 2026 11 AM', 'src:past::11
 eq(mixedBuild.steps.filter(x => x.add).map(x => x.label), ['15 Nov 2026 11 AM', '11 NOV 2026 10 Mins Workshop missed', 'Web 2']);
 eq(mixedBuild.rows.map(r => r[1]).sort(), ['', 'd@x.com', 'm2@x.com', 's1@x.com']);   // '' = phone-only contact C from Web 2
 assert.strictEqual(mixedBuild.steps.find(x => x.label === 'Internal / test emails').count, -1);
+// speed: only the newest sessions are counted when the page opens; the rest come from the hourly warm-up
+const bigTabs = {};
+for (let d = 1; d <= 14; d++) bigTabs[d + ' Nov 2026 7:30 PM'] = [['timestamp_incoming_webhook', 'first_name', 'email', 'phone']].concat([[ 't', 'X' + d, `x${d}@x.com`, '+91' + (9400000000 + d) ]]);
+const big = env.make('Big Live Sheet', bigTabs);
+ctx.CONFIG.LIVE_SHEETS.push({ key: 'big', label: 'Big Live Sheet', id: big.id });
+let bs = ctx.getLiveSessions('big');
+assert.strictEqual(bs.sessions.length, 14);
+eq(bs.sessions.slice(0, 10).map(x => x.tabs[0].rows), [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);    // newest 10 counted live
+eq(bs.sessions.slice(10).map(x => [x.tabs[0].rows, x.tabs[0].cached]), [[null, true], [null, true], [null, true], [null, true]]);
+ctx.warmSheetCaches();                                                                   // hourly trigger
+bs = ctx.getLiveSessions('big');
+eq(bs.sessions.slice(10).map(x => x.tabs[0].rows), [1, 1, 1, 1]);                         // now from the cache
+eq(ctx.getLiveSessions('big', true).sessions.map(x => x.tabs[0].cached), Array(14).fill(false)); // "show older" counts all
+// a cached count never limits a download: data is read fresh
+big.getSheetByName('1 Nov 2026 7:30 PM').appendRow(['t', 'New', 'new1@x.com', '+919499999999']);
+assert.strictEqual(ctx.getLiveList([{ src: 'big', name: '1 Nov 2026 7:30 PM' }], true).final, 2);
+assert.ok(ctx.ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'warmSheetCaches'), 'hourly warm-up installed');
+// catalog: names + cached counts, newest first
+const bigCat = ctx.getSheetCatalog().find(c => c.key === 'big');
+eq(bigCat.tabs.slice(0, 3).map(t => t.name), ['14 Nov 2026 7:30 PM', '13 Nov 2026 7:30 PM', '12 Nov 2026 7:30 PM']);
 console.log('Server tests passed.');

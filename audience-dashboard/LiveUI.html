@@ -86,6 +86,7 @@
   var KINDS = [['missed', 'Missed'], ['attended (no buyers)', 'Attended (no buyers)'], ['attended (with buyers)', 'Attended (with buyers)'],
     ['pitch', 'Pitch'], ['non-pitch', 'Non-pitch'], ['', 'All']];
   function A() { return window.AD; }
+  function rowsTxt(r) { return r == null ? '<span title="Not counted yet – counts refresh every hour, or click Show older">—</span>' : A().fmt(r); }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function pk(name, src) { return (src || V.cur) + '::' + name; }        // pick key: "sheetKey::tab name"
   function splitKey(k) { var i = k.indexOf('::'); return { src: k.slice(0, i), name: k.slice(i + 2) }; }
@@ -111,10 +112,10 @@
     });
   }
 
-  function load() {
-    var a = A(), key = V.cur;
-    if (!V.dataBy[key]) a.$('lvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading sessions…</div>';
-    return a.call('getLiveSessions', key).then(function (d) {
+  function load(all) {
+    var a = A(), key = V.cur, prev = V.dataBy[key];
+    if (!prev) a.$('lvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading sessions…</div>';
+    return a.call('getLiveSessions', key, !!all || !!(prev && prev.all)).then(function (d) {
       V.dataBy[key] = d;
       var known = allTabs();
       V.picked.forEach(function (k) { if (splitKey(k).src === key && !known[k]) V.picked.delete(k); });
@@ -147,18 +148,18 @@
       var usable = s.tabs.filter(function (t) { return t.usable; });
       var all = usable.length && usable.every(function (t) { return V.picked.has(pk(t.name)); });
       var some = usable.some(function (t) { return V.picked.has(pk(t.name)); });
-      var total = usable.reduce(function (x, t) { return x + t.rows; }, 0);
+      var total = usable.some(function (t) { return t.rows == null; }) ? null : usable.reduce(function (x, t) { return x + t.rows; }, 0);
       // one-tab sessions (e.g. Sakshi's sheet): a single line, no repeated tab row
       var single = s.tabs.length === 1 && usable.length === 1 ? s.tabs[0] : null;
       return '<div class="sess' + (some ? ' picked' : '') + '" data-k="' + a.esc(s.key) + '">' +
         '<label class="sess-head"><input type="checkbox" data-sess="' + a.esc(s.key) + '"' + (all ? ' checked' : '') + '>' +
         '<span class="sess-title" title="' + a.esc(s.title) + '">' + a.esc(s.title) + '</span>' + badge(s) +
-        '<span class="sess-total">' + a.fmt(total) + '</span></label>' +
+        '<span class="sess-total">' + rowsTxt(total) + '</span></label>' +
         (single ? (single.lastEntry ? '<div class="sess-tabs"><span class="ct" style="font-size:12px;color:var(--text-2)">last registration ' + a.esc(single.lastEntry) + '</span></div>' : '') + '</div>' :
         '<div class="sess-tabs">' + s.tabs.map(function (t) {
           if (!t.usable) return '<div class="sess-tab" style="color:var(--text-3)"><span></span><span class="lb">' + a.esc(t.label) + '</span><span class="ct">no data yet</span></div>';
           return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(pk(t.name)) ? ' checked' : '') + '>' +
-            '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows' +
+            '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + rowsTxt(t.rows) + ' rows' +
             (t.lastEntry ? ' · last ' + a.esc(t.lastEntry) : '') + '</span></label>';
         }).join('') + '</div></div>');
     }).join('');
@@ -166,7 +167,7 @@
       html += '<details style="margin-top:14px"><summary class="tagline" style="cursor:pointer">Other tabs with contacts (' + V.data.other.length + ')</summary>' +
         '<div class="sess-tabs" style="margin-left:0">' + V.data.other.map(function (t) {
           return '<label class="sess-tab"><input type="checkbox" data-tab="' + a.esc(t.name) + '"' + (V.picked.has(pk(t.name)) ? ' checked' : '') + '><span class="lb">' +
-            a.esc(t.name) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span></label>';
+            a.esc(t.name) + '</span><span class="ct">' + rowsTxt(t.rows) + ' rows</span></label>';
         }).join('') + '</div></details>';
     }
     a.$('lvList').innerHTML = html || '<div class="empty">' + (q ? 'No session matches.' : 'No session tabs found.') + '</div>';
@@ -197,10 +198,10 @@
   }
 
   /* ---------- past webinar lists ---------- */
-  function loadPast() {
+  function loadPast(all) {
     var a = A();
-    a.$('pvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading past lists…</div>';
-    return a.call('getPastLists').then(function (d) {
+    if (!V.past) a.$('pvList').innerHTML = '<div class="empty"><span class="spin"></span> Reading past lists…</div>';
+    return a.call('getPastLists', !!all || !!(V.past && V.past.all)).then(function (d) {
       V.past = d;
       a.$('pvSheet').textContent = d.sheetName + ' ↗'; a.$('pvSheet').href = d.sheetUrl;
       var known = pastTabs(); V.pastPicked.forEach(function (n) { if (!known[n]) V.pastPicked.delete(n); });
@@ -215,7 +216,7 @@
     function keep(t) { return (!V.kind || t.kind === V.kind) && (!q || t.name.toLowerCase().indexOf(q) >= 0); }
     function row(t) {
       return '<label class="sess-tab"><input type="checkbox" data-past="' + a.esc(t.name) + '"' + (V.pastPicked.has(t.name) ? ' checked' : '') + '>' +
-        '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + a.fmt(t.rows) + ' rows</span></label>';
+        '<span class="lb" title="' + a.esc(t.name) + '">' + a.esc(t.label) + '</span><span class="ct">' + rowsTxt(t.rows) + ' rows</span></label>';
     }
     var days = V.past.days.map(function (d) { return { date: d.date, tabs: d.tabs.filter(keep) }; }).filter(function (d) { return d.tabs.length; });
     var shown = q || V.pastAll ? days : days.slice(0, 7);
@@ -240,8 +241,15 @@
       }
       changed();
     });
-    a.$('lvSearch').addEventListener('input', render);
-    a.$('lvMore').addEventListener('click', function () { V.showAll = true; render(); });
+    a.$('lvSearch').addEventListener('input', function () {
+      render();
+      // a search can show older sessions: count them too (once)
+      if (this.value.trim() && V.data && !V.data.all && !V.countingAll) { V.countingAll = true; load(true).then(function () { V.countingAll = false; }); }
+    });
+    a.$('lvMore').addEventListener('click', function () {
+      V.showAll = true; render();
+      if (V.data && !V.data.all) { var btn = this; a.$('lvChecked').textContent = 'Counting older sessions…'; load(true); }
+    });
     a.$('lvClear').addEventListener('click', function () { V.picked.clear(); V.pastPicked.clear(); if (V.past) renderPast(); changed(); });
     a.$('pvLoad').addEventListener('click', function () {
       var btn = this; a.busy(btn, true, 'Loading…'); loadPast().then(function () { a.busy(btn, false); });
@@ -262,7 +270,7 @@
     });
     a.$('pvKinds').addEventListener('click', function (e) { var k = e.target.getAttribute('data-kind'); if (k === null) return; V.kind = k; renderPast(); });
     a.$('pvSearch').addEventListener('input', renderPast);
-    a.$('pvMore').addEventListener('click', function () { V.pastAll = true; renderPast(); });
+    a.$('pvMore').addEventListener('click', function () { V.pastAll = true; renderPast(); if (V.past && !V.past.all) loadPast(true); });
     a.$('pvList').addEventListener('change', function (e) {
       var n = e.target.getAttribute('data-past'); if (!n) return;
       if (e.target.checked) V.pastPicked.add(n); else V.pastPicked.delete(n);
