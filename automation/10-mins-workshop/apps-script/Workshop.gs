@@ -478,12 +478,14 @@ function sortWithBuyersData_() {
 
     if (outputData.length > 1) {
 
+      // Keep only real people: Name, Email or Phone must be present.
+      // Formula rows that show #N/A (and Time 0) are ignored.
       const rows =
         outputData
           .slice(1)
           .filter(function(row) {
-            return row.some(function(x) {
-              return String(x).trim() !== "";
+            return [row[0], row[1], row[2]].some(function(x) {
+              return String(cleanCell_(x)).trim() !== "";
             });
           });
 
@@ -510,10 +512,10 @@ function sortWithBuyersData_() {
 
   sorted.forEach(function(row) {
     sortedData.push([
-      row[0] || "",
-      row[1] || "",
-      normalizePhone_(row[2]),
-      parseTime_(row[3])
+      cleanCell_(row[0]),
+      cleanCell_(row[1]),
+      normalizePhone_(cleanCell_(row[2])),
+      parseTime_(cleanCell_(row[3]))
     ]);
   });
 
@@ -559,11 +561,12 @@ function splitSortedAttendees_() {
 
     const row = data[i];
 
-    const name  = row[0] || "";
-    const email = row[1] || "";
-    const phone = normalizePhone_(row[2]);
-    const time  = parseTime_(row[3]);
+    const name  = cleanCell_(row[0]);
+    const email = cleanCell_(row[1]);
+    const phone = normalizePhone_(cleanCell_(row[2]));
+    const time  = parseTime_(cleanCell_(row[3]));
 
+    // Skip empty / #N/A-only rows so they never reach Missed
     if (
       !String(name).trim() &&
       !String(email).trim() &&
@@ -1194,6 +1197,31 @@ function matchWorkshopAttendeesWithProfession_(showAlert) {
         "\nNot Matched: " + notMatched
       );
   }
+
+}
+
+
+/* ============================================================
+   CLEAN CELL
+   ============================================================
+ * Turns spreadsheet error values (#N/A, #REF!, #VALUE!, ...)
+ * and null/undefined into "". Other values are returned as-is.
+ * ============================================================ */
+
+function cleanCell_(value) {
+
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (
+    typeof value === "string" &&
+    /^#(N\/A|REF!|VALUE!|DIV\/0!|NAME\?|NUM!|NULL!|ERROR!)/i.test(value.trim())
+  ) {
+    return "";
+  }
+
+  return value;
 
 }
 
