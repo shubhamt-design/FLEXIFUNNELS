@@ -36,7 +36,12 @@ EXTRA_CSS = r'''
 .hero-under{display:flex;flex-direction:column;align-items:center;width:100%}
 @media (max-width:980px){
   .hero-split{grid-template-columns:1fr;gap:26px;margin-top:22px}
-  .hero-split .reg{order:-1}
+  .hero-left{display:contents}
+  .hero-split .watch{order:1;text-align:center;margin:0 0 -14px!important}
+  .hero-split .hero-vid{order:2}
+  .hero-split .reg{order:3}
+  .hero-split .when-line{order:4;margin-top:0}
+  .hero-split .ticks{order:5;margin-top:0}
   .hero-split .when-line{justify-content:center}
   .reg{padding:26px 18px 20px}
   .reg h2{font-size:23px}
