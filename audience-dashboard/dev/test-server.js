@@ -219,4 +219,34 @@ const addAll = ctx.addAllBatchesToAudiences();
 assert.strictEqual(addAll.added.length, before.length);
 assert.ok(ctx.getSourcesState().batches.every(b => b.audience));
 eq(ctx.addAllBatchesToAudiences(), { added: [] });                                     // nothing left to add
+// ---- cell limit: tabs are narrow; a pull that hits the limit changes nothing; repairStorage frees space ----
+const dataSS = env.files[ctx.PropertiesService.getScriptProperties().getProperty('DB_ID')];
+const aud1 = dataSS.getSheetByName('Web 1');
+assert.strictEqual(aud1.getMaxColumns(), 3, 'audience tabs are only 3 columns wide');
+// simulate the old wide tabs + a failed pull's leftovers
+dataSS.getSheets().forEach(t => { t.maxCols = 26; t.maxRows = Math.max(t.maxRows, 1000); });
+dataSS.insertSheet('TFP all audience 12th batch - 7K');                        // empty tab left by a failed pull
+const usedSS = env.files[ctx.PropertiesService.getScriptProperties().getProperty('USED_ID')];
+usedSS.getSheetByName('Used').appendRow(['B-ORPHAN', 'O', 'orphan@x.com', '919999000001', 'Tab', 'August 2026 UTM']);
+// at the limit, a pull fails cleanly
+ctx.releaseBatch(b3.id);                                                          // make contacts available again
+dataSS.cellLimit = dataSS.cells() + 100;
+const usedBefore = usedSS.getSheetByName('Used').getLastRow(), batchesBefore = ctx.getSourcesState().batches.length;
+assert.throws(() => ctx.pullBatch(src.id, all, true, 5, 'At the limit'), /nothing was marked as used/);
+assert.strictEqual(usedSS.getSheetByName('Used').getLastRow(), usedBefore, 'no contacts marked used');
+assert.strictEqual(ctx.getSourcesState().batches.length, batchesBefore, 'no batch recorded');
+assert.ok(!dataSS.getSheetByName('At the limit') || dataSS.getSheetByName('At the limit').getLastRow() <= 1);
+// repair
+const before2 = dataSS.cells();
+const rep = ctx.repairStorage();
+assert.ok(rep.cellsAfter < before2 / 4, 'cells reduced a lot: ' + before2 + ' -> ' + rep.cellsAfter);
+assert.ok(rep.emptyTabsDeleted.includes('TFP all audience 12th batch - 7K'));
+eq(rep.unfinishedBatches, ['Unfinished pull B-ORPHAN (1 contacts)']);
+assert.ok(ctx.getSourcesState().batches.some(b => b.id === 'B-ORPHAN'));
+assert.strictEqual(dataSS.getSheetByName('Web 1').getMaxColumns(), 3);
+assert.strictEqual(ctx.getState().audiences.find(a => a.name === 'Web 1').contacts, 2);  // data untouched
+eq(ctx.getAudienceRows('Web 1').map(r => r[0]), ['A', 'C']);
+// after the repair the pull works again
+dataSS.cellLimit = dataSS.cells() + 200000;
+assert.strictEqual(ctx.pullBatch(src.id, all, true, 5, 'After repair').pulled, 5);
 console.log('Server tests passed.');

@@ -31,14 +31,16 @@ function makeEnv(initial) {
     setNumberFormat() { return this; }
   }
   class Sheet {
-    constructor(ss, name, data) { this.ss = ss; this.name = name; this.data = data || []; this.maxRows = Math.max(1000, this.data.length); this.id = Math.floor(Math.random() * 1e9); }
+    constructor(ss, name, data) { this.ss = ss; this.name = name; this.data = data || []; this.maxRows = Math.max(1000, this.data.length); this.maxCols = 26; this.id = Math.floor(Math.random() * 1e9); }
+    getMaxColumns() { return this.maxCols; }
+    deleteColumns(start, n) { this.maxCols -= n; this.data.forEach(r => r.splice(start - 1, n)); }
     trim() { while (this.data.length && !(this.data[this.data.length - 1] || []).some(x => x !== '' && x != null)) this.data.pop(); }
     getName() { return this.name; } setName(n) { this.name = n; }
     getSheetId() { return this.id; } getParent() { return this.ss; }
     getLastRow() { this.trim(); return this.data.length; }
     getLastColumn() { return Math.max(0, ...this.data.map(r => r.length)); }
     getMaxRows() { return this.maxRows; }
-    insertRowsAfter(_, n) { this.maxRows += n; }
+    insertRowsAfter(_, n) { this.ss.checkCells(n * this.maxCols); this.maxRows += n; }
     deleteRows(start, n) { this.data.splice(start - 1, n); this.maxRows -= n; }
     deleteRow(r) { this.data.splice(r - 1, 1); }
     getRange(a, b, c, d) {
@@ -55,7 +57,9 @@ function makeEnv(initial) {
     getId() { return this.id; } getName() { return this.name; } getUrl() { return 'https://sheet/' + this.id; }
     getSheets() { return this.sheets; }
     getSheetByName(n) { return this.sheets.find(s => s.name === n) || null; }
-    insertSheet(n) { if (this.getSheetByName(n)) throw new Error('exists'); const s = new Sheet(this, n, []); this.sheets.push(s); return s; }
+    insertSheet(n) { if (this.getSheetByName(n)) throw new Error('exists'); this.checkCells(26 * 1000); const s = new Sheet(this, n, []); this.sheets.push(s); return s; }
+    cells() { return this.sheets.reduce((t, x) => t + x.maxRows * x.maxCols, 0); }
+    checkCells(add) { if (this.cellLimit && this.cells() + add > this.cellLimit) throw new Error('This action would increase the number of cells in the workbook above the limit of ' + this.cellLimit + ' cells.'); }
     deleteSheet(s) { this.sheets = this.sheets.filter(x => x !== s); }
   }
   const props = {};

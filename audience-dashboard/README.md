@@ -68,7 +68,7 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 
 ## Limits
 
-- Google Sheets holds 10 million cells. Each contact uses 3, so roughly **3 million contacts** in total across all audiences. Delete old audiences you no longer need.
+- Google Sheets holds 10 million cells per spreadsheet and counts **every cell of every tab's grid**, empty or not (a new tab is 26 columns × 1,000 rows). The dashboard creates audience tabs only 3 columns wide, so roughly **3 million contacts** fit. If you ever see *"would increase the number of cells … above the limit"*, run **`repairStorage`** once from the editor: it trims all tabs to what they use, deletes leftover empty tabs and lists any unfinished pull as a batch you can release.
 - Uploads of 50,000 rows take about 30–60 seconds (sent in chunks with a progress bar).
 
 ## Files

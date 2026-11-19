@@ -254,7 +254,7 @@ function writeAudienceTab_(name, rows, replace) {
   var ss = db_();
   var sh = ss.getSheetByName(name);
   if (sh && !replace) throw new Error('A tab named "' + name + '" already exists.');
-  if (!sh) sh = ss.insertSheet(name);
+  if (!sh) sh = newNarrowSheet_(ss, name, 3);
   sh.clearContents();
   sh.getRange('A:C').setNumberFormat('@');
   var data = [['Name', 'Email', 'Phone']].concat(rows);
@@ -264,6 +264,27 @@ function writeAudienceTab_(name, rows, replace) {
   // Trim spare rows so big audiences don't waste the sheet's cell limit.
   var extra = sh.getMaxRows() - data.length;
   if (extra > 10) sh.deleteRows(data.length + 1, extra - 10);
+}
+
+/**
+ * Google counts EVERY cell of a tab's grid (26 columns × 1,000 rows by default)
+ * towards the 10-million-cell limit of a spreadsheet, even empty ones. Tabs are
+ * therefore created only as wide as they need to be.
+ */
+function newNarrowSheet_(ss, name, cols) {
+  var sh = ss.insertSheet(name);
+  trimSheet_(sh, cols);
+  return sh;
+}
+
+/** Delete columns beyond `cols` (or beyond the last used column) and spare empty rows. */
+function trimSheet_(sh, cols) {
+  var keepCols = Math.max(1, cols || sh.getLastColumn() || 1);
+  var maxCols = sh.getMaxColumns();
+  if (maxCols > keepCols) sh.deleteColumns(keepCols + 1, maxCols - keepCols);
+  var keepRows = Math.max(2, sh.getLastRow() + 1);
+  var maxRows = sh.getMaxRows();
+  if (maxRows > keepRows) sh.deleteRows(keepRows + 1, maxRows - keepRows);
 }
 
 /** New tabs have 1,000 rows; writing past the end throws, so grow first. */

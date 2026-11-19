@@ -47,10 +47,10 @@ var M = { NAME: 0, CONTACTS: 1, PHONES: 2, UPLOADED: 3, DUPES: 4, INVALID: 5, BU
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   PropertiesService.getScriptProperties().setProperty('DB_ID', ss.getId());
-  var meta = ss.getSheetByName(META_TAB) || ss.insertSheet(META_TAB);
+  var meta = ss.getSheetByName(META_TAB) || newNarrowSheet_(ss, META_TAB, META_HEADER.length);
   if (meta.getLastRow() === 0) meta.appendRow(META_HEADER);
   meta.setFrozenRows(1);
-  var log = ss.getSheetByName(LOG_TAB) || ss.insertSheet(LOG_TAB);
+  var log = ss.getSheetByName(LOG_TAB) || newNarrowSheet_(ss, LOG_TAB, 4);
   if (log.getLastRow() === 0) log.appendRow(['Time', 'User', 'Action', 'Details']);
   log.setFrozenRows(1);
 
@@ -133,7 +133,7 @@ function startUpload(name) {
   guard_();
   name = checkNewName_(name);
   var tab = STAGING_PREFIX + Date.now() + '_' + Math.floor(Math.random() * 1000);
-  var sh = db_().insertSheet(tab);
+  var sh = newNarrowSheet_(db_(), tab, 3);
   sh.getRange('A:C').setNumberFormat('@');
   return tab;
 }

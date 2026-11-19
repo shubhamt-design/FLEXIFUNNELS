@@ -21,7 +21,7 @@ var USED_HEADER = ['Batch ID', 'Name', 'Email', 'Phone', 'Source tab', 'Sheet'];
 function setupSources_() {
   var ss = db_();
   [[SOURCES_TAB, SOURCES_HEADER], [BATCHES_TAB, BATCHES_HEADER]].forEach(function (t) {
-    var sh = ss.getSheetByName(t[0]) || ss.insertSheet(t[0]);
+    var sh = ss.getSheetByName(t[0]) || newNarrowSheet_(ss, t[0], t[1].length);
     if (sh.getLastRow() === 0) sh.appendRow(t[1]);
     sh.setFrozenRows(1);
   });
@@ -44,6 +44,7 @@ function usedSheet_() {
     first.setName('Used');
     first.appendRow(USED_HEADER);
     first.setFrozenRows(1);
+    trimSheet_(first, USED_HEADER.length);
     first.getRange('A:F').setNumberFormat('@');
   }
   return ss.getSheetByName('Used');
@@ -263,12 +264,25 @@ function pullBatch(sourceId, tabNames, phoneOnly, count, batchName) {
     var take = p.rows.slice(0, count);
     if (!take.length) throw new Error('No fresh contacts left in the selected tabs.');
     var id = 'B' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyMMdd-HHmmss');
+    // 1. the audience copy (most likely step to fail, e.g. the 10-million-cell limit) — nothing is marked used yet
+    var audience;
+    try {
+      audience = saveRowsAsAudience_(batchName, take, 'Lead sheets: ' + p.source.name + ' (batch ' + id + ')', user);
+    } catch (e) {
+      throw new Error('Could not save the batch (nothing was marked as used): ' + cellLimitHint_(e));
+    }
+    // 2. mark the contacts as used — if this fails, the audience copy is removed again
     var used = usedSheet_();
     var data = take.map(function (r) { return [id, r[0], r[1], r[2], r[3], p.source.name]; });
-    ensureRows_(used, used.getLastRow() + data.length);
-    used.getRange(used.getLastRow() + 1, 1, data.length, USED_HEADER.length).setNumberFormat('@').setValues(data);
-    // also saved as an audience, so it can be used on the Audiences page
-    var audience = saveRowsAsAudience_(batchName, take, 'Lead sheets: ' + p.source.name + ' (batch ' + id + ')', user);
+    var startRow = used.getLastRow() + 1;
+    try {
+      ensureRows_(used, used.getLastRow() + data.length);
+      used.getRange(startRow, 1, data.length, USED_HEADER.length).setNumberFormat('@').setValues(data);
+    } catch (e) {
+      deleteAudience_(audience);
+      if (used.getLastRow() >= startRow) used.getRange(startRow, 1, used.getLastRow() - startRow + 1, USED_HEADER.length).clearContent();
+      throw new Error('Could not mark the contacts as used (nothing was saved): ' + cellLimitHint_(e));
+    }
     var bs = db_().getSheetByName(BATCHES_TAB);
     if (!bs.getRange(1, 8).getValue()) bs.getRange(1, 8).setValue('Audience');
     bs.appendRow([id, batchName, p.source.name,
@@ -360,6 +374,64 @@ function addAllBatchesToAudiences() {
     });
     if (added.length) log_(user, 'Saved batches as audiences', added.length + ': ' + added.join(', '));
     return { added: added };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function cellLimitHint_(e) {
+  var msg = String(e && e.message || e);
+  return /cells|limit/i.test(msg) ? msg + ' — run repairStorage() once from the Apps Script editor to free space.' : msg;
+}
+
+/**
+ * One-time clean-up (run from the editor):
+ *  - trims every tab of the data sheet and the Used-leads sheet to the columns /
+ *    rows it actually uses (Google counts empty cells towards the 10M limit);
+ *  - deletes leftover EMPTY tabs that no audience uses (failed uploads/pulls);
+ *  - lists contacts marked as used by a batch that never finished, as a batch
+ *    named "Unfinished pull …" so it can be released or added to Audiences.
+ * Nothing with data is deleted.
+ */
+function repairStorage() {
+  var user = guard_();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(300000);
+  try {
+    var ss = db_(), report = { cellsBefore: 0, cellsAfter: 0, emptyTabsDeleted: [], unfinishedBatches: [] };
+    var metaNames = {};
+    readMeta_().forEach(function (r) { metaNames[r[M.NAME]] = true; });
+    var cells = function (sh) { return sh.getMaxRows() * sh.getMaxColumns(); };
+    ss.getSheets().forEach(function (sh) { report.cellsBefore += cells(sh); });
+    ss.getSheets().forEach(function (sh) {
+      var name = sh.getName(), system = name.charAt(0) === '_' && name.indexOf(STAGING_PREFIX) !== 0;
+      if (!system && !metaNames[name] && sh.getLastRow() <= 1 && ss.getSheets().length > 1) {
+        ss.deleteSheet(sh); report.emptyTabsDeleted.push(name); return;
+      }
+      var cols = name === META_TAB ? META_HEADER.length : name === BATCHES_TAB ? BATCHES_HEADER.length
+        : name === SOURCES_TAB ? SOURCES_HEADER.length : name === LOG_TAB ? 4 : metaNames[name] ? 3 : 0;
+      trimSheet_(sh, cols);
+    });
+    ss.getSheets().forEach(function (sh) { report.cellsAfter += cells(sh); });
+
+    var used = usedSheet_();
+    trimSheet_(used, USED_HEADER.length);
+    // contacts of pulls that never finished (no row in _Batches)
+    var bs = ss.getSheetByName(BATCHES_TAB), known = {};
+    if (bs.getLastRow() > 1) bs.getRange(2, 1, bs.getLastRow() - 1, 1).getValues().forEach(function (r) { known[r[0]] = true; });
+    var n = used.getLastRow() - 1, orphan = {};
+    if (n > 0) used.getRange(2, 1, n, USED_HEADER.length).getValues().forEach(function (u) {
+      if (u[0] && !known[u[0]]) { var o = orphan[u[0]] = orphan[u[0]] || { count: 0, sheet: u[5] }; o.count++; }
+    });
+    Object.keys(orphan).forEach(function (id) {
+      var name = 'Unfinished pull ' + id;
+      bs.appendRow([id, name, orphan[id].sheet, '', orphan[id].count, new Date(), user, '']);
+      report.unfinishedBatches.push(name + ' (' + orphan[id].count + ' contacts)');
+    });
+    log_(user, 'Repaired storage', 'cells ' + report.cellsBefore + ' → ' + report.cellsAfter + '; empty tabs deleted: ' +
+      report.emptyTabsDeleted.length + '; unfinished pulls found: ' + report.unfinishedBatches.length);
+    Logger.log(JSON.stringify(report, null, 2));
+    return report;
   } finally {
     lock.releaseLock();
   }
