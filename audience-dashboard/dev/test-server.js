@@ -236,6 +236,8 @@ assert.throws(() => ctx.pullBatch(src.id, all, true, 5, 'At the limit'), /nothin
 assert.strictEqual(usedSS.getSheetByName('Used').getLastRow(), usedBefore, 'no contacts marked used');
 assert.strictEqual(ctx.getSourcesState().batches.length, batchesBefore, 'no batch recorded');
 assert.ok(!dataSS.getSheetByName('At the limit') || dataSS.getSheetByName('At the limit').getLastRow() <= 1);
+// someone typed a note into column E of an audience tab by hand: the repair must keep it
+dataSS.getSheetByName('Web 2').getRange(1, 5).setValue('hand-written note');
 // repair
 const before2 = dataSS.cells();
 const rep = ctx.repairStorage();
@@ -244,6 +246,10 @@ assert.ok(rep.emptyTabsDeleted.includes('TFP all audience 12th batch - 7K'));
 eq(rep.unfinishedBatches, ['Unfinished pull B-ORPHAN (1 contacts)']);
 assert.ok(ctx.getSourcesState().batches.some(b => b.id === 'B-ORPHAN'));
 assert.strictEqual(dataSS.getSheetByName('Web 1').getMaxColumns(), 3);
+assert.strictEqual(dataSS.getSheetByName('Web 2').getMaxColumns(), 5, 'column with data kept');
+assert.strictEqual(dataSS.getSheetByName('Web 2').getRange(1, 5).getValue(), 'hand-written note');
+// every audience still has all its contacts
+ctx.getState().audiences.forEach(a => assert.strictEqual(ctx.getAudienceRows(a.name).length, a.contacts, a.name));
 assert.strictEqual(ctx.getState().audiences.find(a => a.name === 'Web 1').contacts, 2);  // data untouched
 eq(ctx.getAudienceRows('Web 1').map(r => r[0]), ['A', 'C']);
 // after the repair the pull works again

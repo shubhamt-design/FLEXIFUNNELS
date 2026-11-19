@@ -277,9 +277,12 @@ function newNarrowSheet_(ss, name, cols) {
   return sh;
 }
 
-/** Delete columns beyond `cols` (or beyond the last used column) and spare empty rows. */
+/**
+ * Delete EMPTY columns beyond max(`cols`, last used column) and spare empty rows
+ * below the last used row. Never removes a cell that has anything in it.
+ */
 function trimSheet_(sh, cols) {
-  var keepCols = Math.max(1, cols || sh.getLastColumn() || 1);
+  var keepCols = Math.max(1, cols || 0, sh.getLastColumn());
   var maxCols = sh.getMaxColumns();
   if (maxCols > keepCols) sh.deleteColumns(keepCols + 1, maxCols - keepCols);
   var keepRows = Math.max(2, sh.getLastRow() + 1);
