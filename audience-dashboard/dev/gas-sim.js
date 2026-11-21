@@ -88,7 +88,7 @@ function makeEnv(initial) {
   };
   vm.createContext(ctx);
   const dir = path.join(__dirname, '..');
-  ['Logic.gs', 'Code.gs', 'Lists.gs', 'Sources.gs', 'Live.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
+  ['Logic.gs', 'Code.gs', 'Lists.gs', 'Sources.gs', 'Live.gs', 'Storage.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
   return { ctx, files, SS, props, make: (name, tabs) => new SS(name, tabs) };
 }
 module.exports = makeEnv;

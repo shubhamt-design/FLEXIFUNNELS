@@ -121,7 +121,8 @@ function getState() {
       sources: JSON.parse(props.getProperty('EXCLUDE_SOURCES') || '[]')
     },
     log: log,
-    dbUrl: db_().getUrl()
+    dbUrl: db_().getUrl(),
+    storage: storageSummary_()
   };
 }
 
@@ -133,7 +134,8 @@ function startUpload(name) {
   guard_();
   name = checkNewName_(name);
   var tab = STAGING_PREFIX + Date.now() + '_' + Math.floor(Math.random() * 1000);
-  var sh = newNarrowSheet_(db_(), tab, 3);
+  // temporary tab for the upload, in a storage spreadsheet with room for a big file
+  var sh = newNarrowSheet_(storeForNew_(60000), tab, 3);
   sh.getRange('A:C').setNumberFormat('@');
   return tab;
 }
@@ -142,7 +144,8 @@ function appendUpload(stagingTab, rows) {
   guard_();
   if (stagingTab.indexOf(STAGING_PREFIX) !== 0) throw new Error('Bad upload id');
   if (!rows || !rows.length) return 0;
-  var sh = db_().getSheetByName(stagingTab);
+  var sh = audienceSheet_(stagingTab);
+  if (!sh) throw new Error('Upload expired, please upload the file again.');
   var clean = rows.map(function (r) { return [str_(r[0]), str_(r[1]), str_(r[2])]; });
   ensureRows_(sh, sh.getLastRow() + clean.length);
   sh.getRange(sh.getLastRow() + 1, 1, clean.length, 3).setValues(clean);
@@ -157,9 +160,10 @@ function finishUpload(stagingTab, name, source) {
   try {
     name = checkNewName_(name);
     var ss = db_();
-    var staging = ss.getSheetByName(stagingTab);
+    var staging = audienceSheet_(stagingTab);
+    if (!staging) throw new Error('Upload expired, please upload the file again.');
     var raw = staging.getLastRow() ? staging.getRange(1, 1, staging.getLastRow(), 3).getValues() : [];
-    ss.deleteSheet(staging);
+    staging.getParent().deleteSheet(staging);
 
     var cleaned = cleanAndDedupe(raw, CONFIG.COUNTRY_CODE);
     var noBuyers = removeMatching(cleaned.rows, readExclusions_().all);
@@ -182,8 +186,8 @@ function finishUpload(stagingTab, name, source) {
 function cancelUpload(stagingTab) {
   guard_();
   if (stagingTab.indexOf(STAGING_PREFIX) !== 0) return;
-  var sh = db_().getSheetByName(stagingTab);
-  if (sh) db_().deleteSheet(sh);
+  var sh = audienceSheet_(stagingTab);
+  if (sh) sh.getParent().deleteSheet(sh);
 }
 
 /** Read a Google Sheet or CSV from a Drive link. Returns a 2-D array of text. */

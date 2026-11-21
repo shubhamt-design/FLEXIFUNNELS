@@ -489,7 +489,9 @@ table.tbl .muted { color: var(--text-3); font-size: 12px; }
     var total = aud.reduce(function (s, a) { return s + a.contacts; }, 0);
     var phones = aud.reduce(function (s, a) { return s + a.withPhone; }, 0);
     $('statContacts').textContent = fmt(total);
-    $('statContactsMeta').textContent = fmt(phones) + ' with phone number';
+    var store = (st.storage || []), cur = store[store.length - 1];
+    $('statContactsMeta').textContent = fmt(phones) + ' with phone number' + (cur && cur.cells ? ' · storage ' +
+      (store.length > 1 ? 'Data ' + cur.n + ' ' : '') + Math.round(cur.cells / 100000) + '% full' + (store.length > 1 ? ' (older sheets full, kept)' : '') : '');
     $('statBuyers').textContent = fmt(st.buyers.count);
     $('statSources').innerHTML = (st.buyers.sources || []).map(function (x) {
       return '<li><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.label) + ' ↗</a><span>' + fmt(x.count) + '</span></li>';

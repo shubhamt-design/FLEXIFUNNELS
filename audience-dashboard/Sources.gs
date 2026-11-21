@@ -413,6 +413,7 @@ function repairStorage() {
       trimSheet_(sh, cols);
     });
     ss.getSheets().forEach(function (sh) { report.cellsAfter += cells(sh); });
+    storeCells_(ss.getId(), true);
 
     var used = usedSheet_();
     trimSheet_(used, USED_HEADER.length);

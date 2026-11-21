@@ -121,8 +121,12 @@ function deleteAudience_(name) {
   var rowIdx = findMetaRow_(name);
   if (rowIdx < 0) return false;
   ss.getSheetByName(META_TAB).deleteRow(rowIdx);
-  var tab = ss.getSheetByName(name);
-  if (tab) ss.deleteSheet(tab);
+  var tab = audienceSheet_(name);
+  if (tab) {
+    var cells = tab.getMaxRows() * tab.getMaxColumns(), parent = tab.getParent();
+    parent.deleteSheet(tab);
+    addStoreCells_(parent.getId(), -cells);
+  }
   return true;
 }
 
@@ -244,17 +248,17 @@ function findMetaRow_(name) {
 
 function readAudience_(name) {
   if (findMetaRow_(name) < 0) throw new Error('Audience not found: ' + name);
-  var sh = db_().getSheetByName(name);
+  var sh = audienceSheet_(name);
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues()
     .map(function (r) { return [str_(r[0]), str_(r[1]), str_(r[2])]; });
 }
 
 function writeAudienceTab_(name, rows, replace) {
-  var ss = db_();
-  var sh = ss.getSheetByName(name);
+  var sh = audienceSheet_(name);
   if (sh && !replace) throw new Error('A tab named "' + name + '" already exists.');
-  if (!sh) sh = newNarrowSheet_(ss, name, 3);
+  if (!sh) sh = newNarrowSheet_(storeForNew_(rows.length), name, 3);
+  var cellsBefore = sh.getMaxRows() * sh.getMaxColumns();
   sh.clearContents();
   sh.getRange('A:C').setNumberFormat('@');
   var data = [['Name', 'Email', 'Phone']].concat(rows);
@@ -264,6 +268,7 @@ function writeAudienceTab_(name, rows, replace) {
   // Trim spare rows so big audiences don't waste the sheet's cell limit.
   var extra = sh.getMaxRows() - data.length;
   if (extra > 10) sh.deleteRows(data.length + 1, extra - 10);
+  addStoreCells_(sh.getParent().getId(), sh.getMaxRows() * sh.getMaxColumns() - cellsBefore);
 }
 
 /**

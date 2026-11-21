@@ -61,6 +61,10 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 - A pull combines the ticked tabs **in tab order, top to bottom**, removes duplicates, buyers, opt-outs, the reminder-team list, emails at `CONFIG.IGNORE_EMAIL_DOMAINS` and anyone pulled before (from any sheet), then takes the first N.
 - Pulled contacts are stored in a separate spreadsheet, **Audience Dashboard – Used leads** (created by `setup`), and each batch is also saved as an audience (Audiences page). **Release** a batch to make its contacts available again (its audience is removed too). Batches pulled before this existed get an **+ Add to Audiences** button.
 
+## Storage that never fills up
+
+Google allows 10 million cells per spreadsheet and counts every grid cell. Audience tabs are 3 columns wide, and when the main data sheet gets near 9 million cells the dashboard automatically creates **Audience Dashboard – Data 2** (then 3 …) and saves new audiences there (`Storage.gs`). The `_Audiences` list stays in the main sheet, so everything still works as one list: download, merge, subtract, buyer sync, delete. The Audiences page shows how full the current storage sheet is.
+
 ## Speed
 
 - Live sessions / past lists open from tab names; only the newest 10 sessions (7 past dates) are counted on each open. Older tabs show counts from `warmSheetCaches`, which runs every hour (its trigger is installed automatically the first time the page is used) — "—" means not counted yet. **Show older** and searching count them on demand.
@@ -81,6 +85,7 @@ Paste the new files, then **Deploy → Manage deployments → ✏ → Version: N
 | `Live.gs` | Live sessions: groups the session tabs of the live sheet and builds clean reminder lists from them |
 | `LiveUI.html` | The "Live sessions" page |
 | `LeadsUI.html` | The "Lead sheets (UTM)" page (included into `Index.html`) |
+| `Storage.gs` | Storage across spreadsheets: new audiences overflow into "Data 2", "Data 3" … when the main sheet is nearly full |
 | `Logic.gs` | Cleaning / matching rules (no Google services, unit-tested) |
 | `Index.html` | The dashboard UI |
 | `dev/test.js` | `node dev/test.js` — tests for the cleaning rules |

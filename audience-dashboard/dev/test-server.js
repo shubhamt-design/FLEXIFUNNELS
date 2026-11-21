@@ -255,4 +255,33 @@ eq(ctx.getAudienceRows('Web 1').map(r => r[0]), ['A', 'C']);
 // after the repair the pull works again
 dataSS.cellLimit = dataSS.cells() + 200000;
 assert.strictEqual(ctx.pullBatch(src.id, all, true, 5, 'After repair').pulled, 5);
+// ---- overflow: when the main data sheet is nearly full, new audiences go to "Data 2" automatically ----
+dataSS.cellLimit = undefined;
+const filler = dataSS.insertSheet('_filler'); filler.maxRows = Math.ceil((8990000 - dataSS.cells()) / 26) + 1000; // main sheet ~9M cells
+ctx.getStorageStatus();                                   // recount (the hourly job does this too)
+const storesBefore = Object.keys(env.files).length;
+const up = (function () { const id = ctx.startUpload('Overflow list'); ctx.appendUpload(id, [['Z1', 'z1@x.com', '9855555551'], ['Z2', 'z2@x.com', '9855555552'], ['Buyer', 'buyer@x.com', '']]); return ctx.finishUpload(id, 'Overflow list', 'test'); })();
+assert.strictEqual(up.saved, 2);
+const data2 = Object.values(env.files).find(f => f.name === 'Audience Dashboard – Data 2');
+assert.ok(data2, 'Data 2 created');
+assert.ok(data2.getSheetByName('Overflow list'), 'audience tab lives in Data 2');
+assert.ok(!dataSS.getSheetByName('Overflow list'), 'not in the full main sheet');
+assert.ok(!data2.getSheets().some(t => t.getName().indexOf('_upload_') === 0), 'temporary upload tab removed');
+// it behaves like any other audience
+assert.ok(ctx.getState().audiences.some(a => a.name === 'Overflow list'));
+eq(ctx.getAudienceRows('Overflow list').map(r => r[0]), ['Z1', 'Z2']);
+eq(ctx.buildList(['Overflow list', 'Web 1'], [], true).final, 4);
+// a later pull also lands in Data 2 (main still full), and no third sheet is made while Data 2 has room
+const storeIdsProp = JSON.parse(ctx.PropertiesService.getScriptProperties().getProperty('STORE_IDS'));
+assert.strictEqual(storeIdsProp.length, 1);
+// buyer sync reaches audiences in Data 2
+data2.getSheetByName('Overflow list').appendRow(['Late buyer', 'buyer@x.com', '']);
+ctx.syncBuyers();
+eq(ctx.getAudienceRows('Overflow list').map(r => r[0]), ['Z1', 'Z2']);
+// delete works across sheets
+ctx.deleteAudience('Overflow list');
+assert.ok(!data2.getSheetByName('Overflow list'));
+const status = ctx.getStorageStatus();
+eq(status.map(x => x.name), ['Audience Dashboard – Data', 'Audience Dashboard – Data 2']);
+assert.ok(status[1].cells < 5000, 'Data 2 is tiny: ' + status[1].cells);
 console.log('Server tests passed.');

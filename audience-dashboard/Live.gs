@@ -81,6 +81,7 @@ function cachedCount_(counts, name) {
 
 /** Hourly (trigger): count every tab of every connected sheet so pages open with numbers. */
 function warmSheetCaches() {
+  try { storeIds_().forEach(function (id) { storeCells_(id, true); }); } catch (e) { /* storage not set up yet */ }
   allSources_().forEach(function (s) {
     try {
       var ss = SpreadsheetApp.openById(s.id);
